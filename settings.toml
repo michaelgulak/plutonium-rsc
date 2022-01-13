@@ -1,0 +1,26 @@
+[server]
+address = "game.openrsc.com:43235"
+
+[ocr]
+ocr_type = "local"
+local_directory = "sleepwords"
+ocr_path = "./focr"
+
+[data]
+directory    = "data"
+landscape    = "Authentic_P2PLandscape.orsc"
+item_defs    = "ItemDefs.json"
+scenery_locs = "SceneryLocs.json"
+
+[accounts]
+directory = "accounts"
+
+[client]
+client_version = 10008
+
+[script]
+directory = "scripts"
+
+[logs]
+directory        = "logs"
+progress_reports = "progress_reports"

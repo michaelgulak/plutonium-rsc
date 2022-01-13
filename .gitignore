@@ -1,0 +1,7 @@
+/bot
+/accounts/*.toml
+/logs/*.log
+/logs/progress_reports/*.log
+/sleepwords/*.bmp
+/releases
+/scripts/falador_thiever.py

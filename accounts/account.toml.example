@@ -1,0 +1,14 @@
+[account]
+user = "myuser"
+pass = "mypass"
+autologin = true
+enabled = true
+debug = true
+
+[script]
+name            = "varrock_east_miner.py"
+progress_report = "20m"
+
+  [script.settings]
+  ore_type = "iron"
+  powermine = false

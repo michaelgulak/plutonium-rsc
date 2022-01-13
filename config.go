@@ -1,0 +1,203 @@
+package main
+
+import (
+	"errors"
+	"fmt"
+	"io/ioutil"
+	"math"
+	"os"
+	"reflect"
+	"strings"
+	"time"
+
+	"github.com/go-python/gpython/py"
+	"github.com/pelletier/go-toml"
+)
+
+type account struct {
+	username           string
+	password           string
+	autologin          bool
+	enabled            bool
+	debug              bool
+	script             *script
+	progressReportFile *os.File
+	progressReportDur  time.Duration
+	lastProgressReport time.Time
+}
+
+var (
+	settings config
+)
+
+type ocrSettings struct {
+	OcrType     string `toml:"ocr_type"`
+	OcrEndpoint string `toml:"ocr_endpoint"`
+	LocalDir    string `toml:"local_directory"`
+	OcrPath     string `toml:"ocr_path"`
+}
+
+type dataSettings struct {
+	Directory   string `toml:"directory"`
+	Landscape   string `toml:"landscape"`
+	ItemDefs    string `toml:"item_defs"`
+	SceneryLocs string `toml:"scenery_locs"`
+}
+
+type accountSettings struct {
+	Directory string `toml:"directory"`
+}
+
+type clientSettings struct {
+	ClientVersion int `toml:"client_version"`
+}
+
+type scriptSettings struct {
+	Directory string `toml:"directory"`
+}
+
+type serverSettings struct {
+	Address string `toml:"address"`
+}
+
+type logSettings struct {
+	Directory       string `toml:"directory"`
+	ProgressReports string `toml:"progress_reports"`
+}
+
+type config struct {
+	ServerSettings  *serverSettings  `toml:"server"`
+	OcrSettings     *ocrSettings     `toml:"ocr"`
+	DataSettings    *dataSettings    `toml:"data"`
+	AccountSettings *accountSettings `toml:"accounts"`
+	ClientSettings  *clientSettings  `toml:"client"`
+	ScriptSettings  *scriptSettings  `toml:"script"`
+	LogSettings     *logSettings     `toml:"logs"`
+}
+
+func parseConfig(filePath string) {
+	f, err := os.Open(filePath)
+	if err != nil {
+		fmt.Printf("Error opening settings file: %s\n", err)
+		os.Exit(1)
+	}
+	defer f.Close()
+	err = toml.NewDecoder(f).Decode(&settings)
+	if err != nil {
+		fmt.Printf("Error parsing settings file: %s\n", err)
+		os.Exit(1)
+	}
+}
+
+func loadAccounts() ([]*account, error) {
+	files, err := ioutil.ReadDir(settings.AccountSettings.Directory)
+	if err != nil {
+		return nil, err
+	}
+	var accounts []*account
+	for _, f := range files {
+		if !strings.HasSuffix(f.Name(), ".toml") {
+			continue
+		}
+		fmt.Printf("Loading account [%s]...", f.Name())
+		acctFile, err := toml.LoadFile(settings.AccountSettings.Directory + string(os.PathSeparator) + f.Name())
+		if err != nil {
+			return nil, err
+		}
+		acct := &account{
+			username: acctFile.Get("account.user").(string),
+			password: acctFile.Get("account.pass").(string),
+			script:   &script{},
+		}
+		if acctFile.Has("account.autologin") {
+			acct.autologin = acctFile.Get("account.autologin").(bool)
+		}
+		if acctFile.Has("account.enabled") {
+			acct.enabled = acctFile.Get("account.enabled").(bool)
+		} else {
+			acct.enabled = true
+		}
+		if acctFile.Has("account.debug") {
+			acct.debug = acctFile.Get("account.debug").(bool)
+		}
+		if acctFile.Has("script") {
+			acct.script.name = settings.ScriptSettings.Directory + string(os.PathSeparator) + acctFile.Get("script.name").(string)
+			if acctFile.Has("script.progress_report") {
+				str := acctFile.Get("script.progress_report").(string)
+				dur, err := time.ParseDuration(str)
+				if err != nil {
+					return nil, fmt.Errorf("invalid progress report field: %s", err)
+				}
+				acct.progressReportDur = dur
+			} else {
+				acct.progressReportDur = time.Duration(math.MaxInt)
+			}
+			if acctFile.Has("script.settings") {
+				scriptArgs := acctFile.Get("script.settings").(*toml.Tree).ToMap()
+				acct.script.settings = py.StringDict{}
+				for k, v := range scriptArgs {
+					switch v := v.(type) {
+					case map[string]interface{}:
+						return nil, errors.New("key/value pairs aren't supported")
+					case time.Time:
+						return nil, errors.New("dates aren't supported")
+					case bool:
+						acct.script.settings[k] = py.Bool(v)
+					case uint64:
+						acct.script.settings[k] = py.Int(v)
+					case int64:
+						acct.script.settings[k] = py.Int(v)
+					case []interface{}:
+						if len(v) == 0 {
+							acct.script.settings[k] = py.NewList()
+						} else {
+							switch v[0].(type) {
+							case []interface{}:
+								return nil, errors.New("multidimensional arrays aren't supported")
+							case time.Time:
+								return nil, errors.New("dates aren't supported")
+							case map[string]interface{}:
+								return nil, errors.New("key/value pairs aren't supported")
+							case int64:
+								var objs []py.Object
+								for _, v0 := range v {
+									objs = append(objs, py.Int(v0.(int64)))
+								}
+								acct.script.settings[k] = py.NewListFromItems(objs)
+							case uint64:
+								var objs []py.Object
+								for _, v0 := range v {
+									objs = append(objs, py.Int(v0.(uint64)))
+								}
+								acct.script.settings[k] = py.NewListFromItems(objs)
+							case string:
+								var objs []py.Object
+								for _, v0 := range v {
+									objs = append(objs, py.String(v0.(string)))
+								}
+								acct.script.settings[k] = py.NewListFromItems(objs)
+							case float64:
+								var objs []py.Object
+								for _, v0 := range v {
+									objs = append(objs, py.Float(v0.(float64)))
+								}
+								acct.script.settings[k] = py.NewListFromItems(objs)
+							default:
+								return nil, fmt.Errorf("unhandled type: %v", reflect.ValueOf(v))
+							}
+						}
+					case string:
+						acct.script.settings[k] = py.String(v)
+					case float64:
+						acct.script.settings[k] = py.Float(v)
+					default:
+						return nil, fmt.Errorf("unhandled type: %v", reflect.ValueOf(v))
+					}
+				}
+			}
+		}
+		accounts = append(accounts, acct)
+		fmt.Println("complete")
+	}
+	return accounts, nil
+}
