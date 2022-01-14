@@ -2,9 +2,8 @@
 address = "game.openrsc.com:43235"
 
 [ocr]
-ocr_type = "local"
-local_directory = "sleepwords"
-ocr_path = "./focr"
+ocr_type     = "server"
+ocr_endpoint = "http://198.211.5.116:9999/captcha"
 
 [data]
 directory    = "data"
