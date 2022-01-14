@@ -398,57 +398,58 @@ func main() {
 					continue clientLoop
 				}
 				fmt.Printf("[%s] Login response: %d\n", c.user, loginResponse)
-				switch loginResponse {
-				case 64: // successful
-				case 4: // currently logged in
-					c.writeErrorf("[%s] Account already logged in", c.user)
-					time.Sleep(time.Second * 5)
-					continue clientLoop
-				case 100: // something
-					c.writeErrorf("[%s] Weird server response", c.user)
-					time.Sleep(time.Second * 5)
-					continue clientLoop
-				case 3:
-					c.writeErrorf("[%s] Invalid username or password", c.user)
-					break clientLoop
-				case 5:
-					c.writeErrorf("[%s] The client has been updated", c.user)
-					break clientLoop
-				case 6:
-					c.writeErrorf("[%s] You may only use 1 character at once", c.user)
-					break clientLoop
-				case 7:
-					c.writeErrorf("[%s] Login attempts exceeded", c.user)
-					time.Sleep(60 * time.Second)
-					continue clientLoop
-				case 8:
-					c.writeErrorf("[%s] Server rejected session", c.user)
-					time.Sleep(5 * time.Second)
-					continue clientLoop
-				case 9:
-					c.writeErrorf("[%s] Error unable to login", c.user)
-					time.Sleep(5 * time.Second)
-					continue clientLoop
-				case 10:
-					c.writeErrorf("[%s] Username already in use", c.user)
-					time.Sleep(5 * time.Second)
-					continue clientLoop
-				case 11:
-					c.writeErrorf("[%s] Account temporariy disabled", c.user)
-					break clientLoop
-				case 12:
-					c.writeErrorf("[%s] Account permanently disabled", c.user)
-					break clientLoop
-				case 14:
-					c.writeErrorf("[%s] World full", c.user)
-					time.Sleep(5 * time.Second)
-					continue clientLoop
-				case 15, 16, 17, 18, 20, 21, 22, 23, 24, 25:
-					c.writeErrorf("[%s] Generic server error", c.user)
-					break clientLoop
-				default:
-					fmt.Printf("[%s] Unhandled login response [%d], closing account thread\n", c.user, loginResponse)
-					break clientLoop
+				if loginResponse&0x40 == 0 {
+					switch loginResponse {
+					case 4: // currently logged in
+						c.writeErrorf("[%s] Account already logged in", c.user)
+						time.Sleep(time.Second * 5)
+						continue clientLoop
+					case 100: // something
+						c.writeErrorf("[%s] Weird server response", c.user)
+						time.Sleep(time.Second * 5)
+						continue clientLoop
+					case 3:
+						c.writeErrorf("[%s] Invalid username or password", c.user)
+						break clientLoop
+					case 5:
+						c.writeErrorf("[%s] The client has been updated", c.user)
+						break clientLoop
+					case 6:
+						c.writeErrorf("[%s] You may only use 1 character at once", c.user)
+						break clientLoop
+					case 7:
+						c.writeErrorf("[%s] Login attempts exceeded", c.user)
+						time.Sleep(60 * time.Second)
+						continue clientLoop
+					case 8:
+						c.writeErrorf("[%s] Server rejected session", c.user)
+						time.Sleep(5 * time.Second)
+						continue clientLoop
+					case 9:
+						c.writeErrorf("[%s] Error unable to login", c.user)
+						time.Sleep(5 * time.Second)
+						continue clientLoop
+					case 10:
+						c.writeErrorf("[%s] Username already in use", c.user)
+						time.Sleep(5 * time.Second)
+						continue clientLoop
+					case 11:
+						c.writeErrorf("[%s] Account temporariy disabled", c.user)
+						break clientLoop
+					case 12:
+						c.writeErrorf("[%s] Account permanently disabled", c.user)
+						break clientLoop
+					case 14:
+						c.writeErrorf("[%s] World full", c.user)
+						time.Sleep(5 * time.Second)
+						continue clientLoop
+					case 15, 16, 17, 18, 20, 21, 22, 23, 24, 25:
+						c.writeErrorf("[%s] Generic server error", c.user)
+						break clientLoop
+					default:
+						fmt.Printf("[%s] Unhandled login response [%d], closing account thread\n", c.user, loginResponse)
+						break clientLoop
+					}
 				}
 
 				go func() {

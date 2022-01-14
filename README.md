@@ -8,7 +8,7 @@ You can download the bot for linux_amd64 or windows_amd64 from the [releases pag
 
 ## Building
 
-Make sure you have a newish version of [Go](https://go.dev/) installed, along with git.Then clone this repo with 
+Make sure you have a newish version of [Go](https://go.dev/) installed, along with git. Then clone this repo with 
 
 ```
 git clone https://gitlab.com/RLN_/plutonium

@@ -16,6 +16,3 @@ def loop():
         return 500
   
     return 500
-
-def on_npc_despawned(npc):
-    print("NPC Despawned: %d" % npc.sid)
