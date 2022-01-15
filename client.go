@@ -724,6 +724,15 @@ func (c *client) init() {
 	for i := 0; i < len(c.inventory); i++ {
 		c.inventory[i] = &item{}
 	}
+	for i := 0; i < len(c.groundItems); i++ {
+		c.groundItems[i] = &groundItem{}
+	}
+	for i := 0; i < len(c.objects); i++ {
+		c.objects[i] = &object{}
+	}
+	for i := 0; i < len(c.wallObjects); i++ {
+		c.wallObjects[i] = &wallObject{}
+	}
 }
 
 func (c *client) doCaptcha(buf []byte) {
@@ -1244,22 +1253,23 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		}
 	case 211: // remove world entities
 		count := length / 4
+
 		for i := 0; i < count; i++ {
 			x1 := (c.x + int(int16(p.readShort()))) >> 3
 			z1 := (c.z + int(int16(p.readShort()))) >> 3
 
 			groundItemCount := 0
 			for j := 0; j < c.groundItemCount; j++ {
-				x2 := (c.groundItems[i].x >> 3) - x1
-				z2 := (c.groundItems[i].z >> 3) - z1
+				x2 := (c.groundItems[j].x >> 3) - x1
+				z2 := (c.groundItems[j].z >> 3) - z1
 				if x2 != 0 || z2 != 0 {
-					if i != groundItemCount {
-						c.groundItems[groundItemCount] = c.groundItems[i]
+					if j != groundItemCount {
+						c.groundItems[groundItemCount] = c.groundItems[j]
 					}
 					groundItemCount++
 				} else {
 					if c.script != nil && c.script.onGroundItemDespawned != nil {
-						c.script.callOnGroundItemDespawned(c.groundItems[i])
+						c.script.callOnGroundItemDespawned(c.groundItems[j])
 					}
 				}
 			}
@@ -1273,7 +1283,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 				if x2 == 0 && z2 == 0 {
 					c.unregisterGameObject(c.objects[j])
 					if c.script != nil && c.script.onObjectDespawned != nil {
-						c.script.callOnObjectDespawned(c.objects[i])
+						c.script.callOnObjectDespawned(c.objects[j])
 					}
 				} else {
 					if objectCount != j {
@@ -1292,7 +1302,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 				if x2 == 0 && z2 == 0 {
 					c.unregisterWallObject(c.wallObjects[j])
 					if c.script != nil && c.script.onWallObjectDespawned != nil {
-						c.script.callOnWallObjectDespawned(c.wallObjects[i])
+						c.script.callOnWallObjectDespawned(c.wallObjects[j])
 					}
 				} else {
 					if wallObjectCount != j {
@@ -1446,11 +1456,9 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 
 					c.groundItemCount = count
 				} else {
-					c.groundItems[c.groundItemCount] = &groundItem{
-						id: id,
-						x:  x,
-						z:  z,
-					}
+					c.groundItems[c.groundItemCount].id = id
+					c.groundItems[c.groundItemCount].x = x
+					c.groundItems[c.groundItemCount].z = z
 					if c.script != nil && c.script.onGroundItemSpawned != nil {
 						c.script.callOnGroundItemSpawned(c.groundItems[c.groundItemCount])
 					}
