@@ -303,7 +303,7 @@ func (w *world) setUnwalkableTiles(o *objectLoc) {
 	destX := o.Pos.X
 	destZ := o.Pos.Y
 
-	if def.typ != 2 && def.typ != 3 {
+	if def.typ != 2 && def.typ != 3 && def.typ != 0 {
 		for x := destX; x <= objWidth-1+destX; x++ {
 			for y := destZ; y <= destZ+objHeight-1; y++ {
 				w.pathWalkerMap[(x<<32)|y] = struct{}{}
