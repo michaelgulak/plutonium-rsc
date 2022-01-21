@@ -45,6 +45,7 @@ type client struct {
 	localWorld         *localWorld
 	errorLogFile       *os.File
 	errorLogLock       *sync.Mutex
+	scriptKillSignal   chan struct{}
 
 	script *script
 
@@ -363,21 +364,22 @@ func main() {
 				default:
 				}
 				c := &client{
-					RSCPacket:       &RSCPacket{buf: make([]byte, 5000)},
-					user:            acc.username,
-					pass:            acc.password,
-					world:           world,
-					closed:          make(chan struct{}),
-					closedLock:      &sync.Mutex{},
-					packetChan:      make(chan *RSCPacket, 32),
-					sleepChan:       make(chan []byte, 1),
-					captchaChan:     make(chan []byte, 1),
-					sleepingFatigue: -1,
-					loading:         true,
-					account:         acc,
-					localWorld:      newLocalWorld(),
-					errorLogLock:    errorLogLock,
-					errorLogFile:    errorLogFile,
+					RSCPacket:        &RSCPacket{buf: make([]byte, 5000)},
+					user:             acc.username,
+					pass:             acc.password,
+					world:            world,
+					closed:           make(chan struct{}),
+					closedLock:       &sync.Mutex{},
+					packetChan:       make(chan *RSCPacket, 32),
+					sleepChan:        make(chan []byte, 1),
+					captchaChan:      make(chan []byte, 1),
+					sleepingFatigue:  -1,
+					loading:          true,
+					account:          acc,
+					localWorld:       newLocalWorld(),
+					errorLogLock:     errorLogLock,
+					errorLogFile:     errorLogFile,
+					scriptKillSignal: make(chan struct{}, 1),
 				}
 
 				c.init()
@@ -473,10 +475,9 @@ func main() {
 				}()
 
 				var (
-					waitTime       int
-					lastRun        = time.Unix(0, 0)
-					combatWaitFlag bool
-					combatWait     = closing
+					waitTime     int
+					lastRun      = time.Unix(0, 0)
+					localClosing = closing
 				)
 
 				if c.account.progressReportDur == time.Duration(math.MaxInt) {
@@ -534,12 +535,11 @@ func main() {
 								}
 							}
 						}()
+					case <-c.scriptKillSignal:
+						c.close()
+						fmt.Printf("[%s] Script kill signal received, terminating\n", c.user)
+						break clientLoop
 					case <-time.After(time.Duration(waitTime-int(time.Since(lastRun).Milliseconds())) * time.Millisecond):
-						if combatWaitFlag && !c.inCombat() {
-							c.close()
-							fmt.Printf("[%s] Account out of combat, terminating\n", c.user)
-							break clientLoop
-						}
 						if c.script != nil && c.script.running {
 							if c.sleeping == 0 && !c.loading {
 								waitTime = c.script.loop()
@@ -548,14 +548,24 @@ func main() {
 								waitTime = 500
 								lastRun = time.Now()
 							}
-						} else { // this is necessary for combatWaitFlag
-							waitTime = 2000
+						} else {
+							waitTime = 0xfffffff
 							lastRun = time.Now()
 						}
-					case <-combatWait:
+					case <-localClosing:
 						if c.script != nil && c.script.running {
-							combatWaitFlag = true
-							combatWait = nil
+							if c.script.onKillSignal != nil {
+								c.script.callOnKillSignal()
+								localClosing = nil
+								go func() {
+									time.Sleep(15 * time.Second)
+									c.close()
+								}()
+							} else {
+								c.close()
+								fmt.Printf("[%s] No kill signal handler, terminating\n", c.user)
+								break clientLoop
+							}
 						} else {
 							c.close()
 							fmt.Printf("[%s] Script not running, terminating\n", c.user)

@@ -48,6 +48,7 @@ type script struct {
 	onObjectDespawned     *py.Function
 	onWallObjectSpawned   *py.Function
 	onWallObjectDespawned *py.Function
+	onKillSignal          *py.Function
 
 	bankOptionMenuTimeout time.Time
 }
@@ -294,6 +295,16 @@ func (s *script) callOnWallObjectDespawned(o *wallObject) {
 	if err != nil {
 		py.TracebackDump(err)
 		s.c.writeErrorf("[%s] Error in onWallObjectDespawned handler, stopping script: %s", s.c.user, err)
+		s.c.account.autologin = false
+		s.running = false
+	}
+}
+
+func (s *script) callOnKillSignal() {
+	_, err := s.onKillSignal.M__call__(nil, nil)
+	if err != nil {
+		py.TracebackDump(err)
+		s.c.writeErrorf("[%s] Error in onKillSignal handler, stopping script: %s", s.c.user, err)
 		s.c.account.autologin = false
 		s.running = false
 	}
@@ -615,6 +626,9 @@ func (s *script) addHooks(module *py.Module, c *client) {
 	if onWallObjectDespawned, ok := module.Globals["on_wall_object_despawned"]; ok {
 		s.onWallObjectDespawned = onWallObjectDespawned.(*py.Function)
 	}
+	if onKillSignal, ok := module.Globals["on_kill_signal"]; ok {
+		s.onKillSignal = onKillSignal.(*py.Function)
+	}
 }
 
 func (s *script) addGlobals(module *py.Module, c *client) {
@@ -623,6 +637,10 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		Name:       "settings",
 		Dict:       s.settings,
 	}
+	module.Globals["stop_account"] = py.MustNewMethod("stop_account", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		s.c.scriptKillSignal <- struct{}{}
+		return py.None, nil
+	}, py.METH_CLASS, "")
 	module.Globals["SLEEPING_BAG"] = py.Int(1263)
 	module.Globals["BANKERS"] = py.NewListFromItems(generateBankersSlice())
 	module.Globals["create_packet"] = py.MustNewMethod("create_packet", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {

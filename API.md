@@ -11,6 +11,10 @@
 
 Return a string dict from this function to generate a progress report.
 
+###### on_kill_signal()
+
+After this is called, the script has 15 seconds to clean up (ie. get out of combat) and call stop_account(), otherwise the bot will kill the account loop.
+
 ###### on_server_message(msg)
 ###### on_trade_request(name)
 ###### on_chat_message(msg, from_name)
@@ -31,6 +35,10 @@ Return a string dict from this function to generate a progress report.
 
 
 ## Base
+
+###### stop_account()
+
+Tells the bot to close the account loop, terminating the running account. Usually used with on_kill_signal() after the account is out of combat and the script prepares everything to be able to kill the account loop.
 
 ###### in_rect(x, z, width, height)
 ###### set_fatigue_tricking(True)
