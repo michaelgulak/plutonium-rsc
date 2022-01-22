@@ -30,22 +30,24 @@ const (
 
 type client struct {
 	*RSCPacket
-	conn               net.Conn
-	user               string
-	pass               string
-	packetChan         chan *RSCPacket
-	lastSentPacketTime time.Time
-	closed             chan struct{}
-	closedLock         *sync.Mutex
-	sleepChan          chan []byte
-	captchaChan        chan []byte
-	world              *world
-	lenBuf             [2]byte
-	account            *account
-	localWorld         *localWorld
-	errorLogFile       *os.File
-	errorLogLock       *sync.Mutex
-	scriptKillSignal   chan struct{}
+	conn                net.Conn
+	user                string
+	pass                string
+	packetChan          chan *RSCPacket
+	lastSentPacketTime  time.Time
+	closed              chan struct{}
+	closedLock          *sync.Mutex
+	sleepChan           chan []byte
+	captchaChan         chan []byte
+	cancelSleep         chan struct{}
+	firstWakeupReceived bool
+	world               *world
+	lenBuf              [2]byte
+	account             *account
+	localWorld          *localWorld
+	errorLogFile        *os.File
+	errorLogLock        *sync.Mutex
+	scriptKillSignal    chan struct{}
 
 	script *script
 
@@ -373,6 +375,7 @@ func main() {
 					packetChan:       make(chan *RSCPacket, 32),
 					sleepChan:        make(chan []byte, 1),
 					captchaChan:      make(chan []byte, 1),
+					cancelSleep:      make(chan struct{}),
 					sleepingFatigue:  -1,
 					loading:          true,
 					account:          acc,
@@ -463,7 +466,9 @@ func main() {
 						default:
 							message, err := c.readPacket()
 							if err != nil {
-								c.writeErrorf("[%s] Read error: %s", c.user, err)
+								if err != io.EOF {
+									c.writeErrorf("[%s] Read error: %s", c.user, err)
+								}
 								c.close()
 								break out
 							}
@@ -472,6 +477,40 @@ func main() {
 						}
 					}
 					c.conn.Close()
+				}()
+
+				go func() {
+				loop:
+					for {
+						select {
+						case <-c.closed:
+							break loop
+						case <-c.cancelSleep:
+						case buf := <-c.sleepChan:
+							t := time.NewTicker(time.Millisecond * 500)
+							for {
+								select {
+								case <-c.closed:
+									break loop
+								case <-c.cancelSleep:
+									fmt.Printf("[%s] Cancelled sleep\n", c.user)
+									continue loop
+								case <-t.C:
+									if c.script != nil && c.script.fatigueTricking {
+										c.captchaChan <- buf
+										continue loop
+									} else if sleepFatigue := atomic.LoadInt64(&c.sleepingFatigue); sleepFatigue == 0 {
+										c.captchaChan <- buf
+										continue loop
+									} else {
+										if c.account.debug {
+											fmt.Printf("[%s] Sleep fatigue at %d\n", c.user, sleepFatigue)
+										}
+									}
+								}
+							}
+						}
+					}
 				}()
 
 				var (
@@ -509,32 +548,6 @@ func main() {
 						}
 					case buf := <-c.captchaChan:
 						c.doCaptcha(buf)
-					case buf := <-c.sleepChan:
-						go func() {
-						out:
-							for {
-								select {
-								case <-c.closed:
-									break out
-								default:
-									if atomic.LoadInt64(&c.sleeping) == 0 {
-										break
-									}
-									if c.script != nil && c.script.fatigueTricking {
-										c.captchaChan <- buf
-										break out
-									} else if sleepFatigue := atomic.LoadInt64(&c.sleepingFatigue); sleepFatigue == 0 {
-										c.captchaChan <- buf
-										break out
-									} else {
-										if c.account.debug {
-											fmt.Printf("[%s] Sleep fatigue at %d\n", c.user, sleepFatigue)
-										}
-									}
-									time.Sleep(500 * time.Millisecond)
-								}
-							}
-						}()
 					case <-c.scriptKillSignal:
 						c.close()
 						fmt.Printf("[%s] Script kill signal received, terminating\n", c.user)
@@ -1297,7 +1310,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 					}
 				} else {
 					if objectCount != j {
-						c.objects[j] = c.objects[objectCount]
+						c.objects[objectCount] = c.objects[j]
 					}
 					objectCount++
 				}
@@ -1316,7 +1329,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 					}
 				} else {
 					if wallObjectCount != j {
-						c.wallObjects[j] = c.wallObjects[wallObjectCount]
+						c.wallObjects[wallObjectCount] = c.wallObjects[j]
 					}
 					wallObjectCount++
 				}
@@ -1733,6 +1746,11 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			c.inventory[c.inventoryCount] = &item{}
 		}
 	case 84: // wake up
+		if c.firstWakeupReceived {
+			c.cancelSleep <- struct{}{}
+		} else {
+			c.firstWakeupReceived = true
+		}
 		atomic.StoreInt64(&c.sleepingFatigue, -1)
 		atomic.StoreInt64(&c.sleeping, 0)
 		if c.account.debug {
@@ -2038,6 +2056,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		if c.account.debug {
 			fmt.Printf("[%s] Sleep word incorrect\n", c.user)
 		}
+		c.cancelSleep <- struct{}{}
 	case 36: // telegrab bubble
 	case 222: // welcome box
 	case 19: // server configs
