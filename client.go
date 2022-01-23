@@ -439,8 +439,9 @@ func main() {
 						time.Sleep(5 * time.Second)
 						continue clientLoop
 					case 11:
-						c.writeErrorf("[%s] Account temporariy disabled", c.user)
-						break clientLoop
+						c.writeErrorf("[%s] Account temporariy disabled, waiting 5 mins", c.user)
+						time.Sleep(5 * time.Minute)
+						continue clientLoop
 					case 12:
 						c.writeErrorf("[%s] Account permanently disabled", c.user)
 						break clientLoop
@@ -1545,6 +1546,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 				if player != nil {
 					player.currentHP = currentHP
 					player.maxHP = maxHP
+					if serverIndex == c.serverIndex {
+						c.currentStats[3] = currentHP
+						c.baseStats[3] = maxHP
+					}
 					if c.script != nil && c.script.onPlayerDamaged != nil {
 						c.script.callOnPlayerDamaged(damage, player)
 					}
@@ -1597,6 +1602,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 				if player != nil {
 					player.currentHP = currentHP
 					player.maxHP = maxHP
+					if serverIndex == c.serverIndex {
+						c.currentStats[3] = currentHP
+						c.baseStats[3] = maxHP
+					}
 				}
 				_ = heal
 			case 9:
@@ -1605,6 +1614,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 				if player != nil {
 					player.currentHP = currentHP
 					player.maxHP = maxHP
+					if serverIndex == c.serverIndex {
+						c.currentStats[3] = currentHP
+						c.baseStats[3] = maxHP
+					}
 				}
 			}
 		}
