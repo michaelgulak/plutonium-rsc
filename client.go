@@ -489,6 +489,7 @@ func main() {
 						case <-c.cancelSleep:
 						case buf := <-c.sleepChan:
 							t := time.NewTicker(time.Millisecond * 500)
+							gotMinusOneTimes := 0
 							for {
 								select {
 								case <-c.closed:
@@ -496,6 +497,7 @@ func main() {
 								case <-c.cancelSleep:
 									fmt.Printf("[%s] Cancelled sleep\n", c.user)
 									continue loop
+								case buf = <-c.sleepChan:
 								case <-t.C:
 									if c.script != nil && c.script.fatigueTricking {
 										c.captchaChan <- buf
@@ -504,6 +506,14 @@ func main() {
 										c.captchaChan <- buf
 										continue loop
 									} else {
+										if atomic.LoadInt64(&c.sleepingFatigue) == -1 {
+											gotMinusOneTimes++
+											if gotMinusOneTimes >= 10 {
+												c.writeErrorf("[%s] Sleeping stuck, sending word\n", c.user)
+												c.captchaChan <- buf
+												continue loop
+											}
+										}
 										if c.account.debug {
 											fmt.Printf("[%s] Sleep fatigue at %d\n", c.user, sleepFatigue)
 										}
