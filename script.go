@@ -701,7 +701,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["random"] = py.MustNewMethod("random", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		min := int(args[0].(py.Int))
 		max := int(args[1].(py.Int))
-		return py.Int(min + rand.Intn(max-min)), nil
+		return py.Int(min + rand.Intn(max-min+1)), nil
 	}, py.METH_CLASS, "")
 	module.Globals["set_fatigue_tricking"] = py.MustNewMethod("set_fatigue_tricking", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		s.fatigueTricking = bool(args[0].(py.Bool))
