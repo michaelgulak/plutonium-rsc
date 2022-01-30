@@ -16,16 +16,6 @@ git clone https://gitlab.com/RLN_/plutonium
 
 Enter the directory it creates and type `go build`. 
 
-You'll also need to build FOCR.
-
-For Mac OS or other linux archs ensure you have g++ installed, clone FOCR via
-
-```
-git clone https://gitlab.com/RLN_/focr-resurrection
-```
-
-followed by running `make` in the directory it creates. Then copy the `focr` binary to the plutonium root direcory.
-
 ## Run bot
 
 Just make sure your working directory is the bot directory and run `./bot` on Linux or `./bot.exe` on Windows. If you want to run just one instance of a bot for any reason, for example to skip the tutorial you can do: 
@@ -35,6 +25,40 @@ Just make sure your working directory is the bot directory and run `./bot` on Li
 ```
 
 Note that you can't specify script settings with this method.
+
+## Change OCR to local
+
+By default the bot uses a sleep server. If you wish to change the OCR to local you'll also need to build FOCR.
+
+For Linux or Mac OS ensure you have g++ installed, clone FOCR via
+
+```
+git clone https://gitlab.com/RLN_/focr-resurrection
+```
+
+followed by running `make` in the directory it creates. Then copy the `focr` binary to the plutonium root direcory.
+
+For windows, you'll need to create a solution in Visual Studio and then build focr.exe.
+
+Then you'll need to edit `settings.toml` to specify the local path of focr. Change the settings to be:
+
+On Linux/Mac: 
+
+```toml
+[ocr]
+ocr_type = "local"
+local_directory = "sleepwords"
+ocr_path = "./focr"
+```
+
+On Windows:
+
+```toml
+[ocr]
+ocr_type = "local"
+local_directory = "sleepwords"
+ocr_path = "./focr.exe"
+```
 
 ## Bot Configuration
 
