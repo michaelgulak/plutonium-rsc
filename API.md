@@ -3,6 +3,7 @@
 ## Globals
 
 `BANKERS` list of ids of bankers
+
 `SLEEPING_BAG` id of sleeping bag.
 
 ## Events
@@ -91,6 +92,9 @@ Proper use is like this:
 ###### set_autologin(True)
 ###### is_appearance_screen()
 ###### send_appearance_update(head_gender, head_type, body_type, hair_colour, top_colour, pants_colour, skin_colour)
+###### random(min, max)
+
+Returns a random integer between min and max, inclusive.
 
 ## Ground items
 
