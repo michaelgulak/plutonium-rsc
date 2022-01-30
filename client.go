@@ -91,7 +91,7 @@ type client struct {
 	prayers                   [50]bool
 	fatigue                   int
 	sleepingFatigue           int64
-	sleeping                  int64
+	sleeping                  bool
 	combatStyle               int
 	optionMenuVisible         bool
 	optionMenuCount           int
@@ -376,7 +376,6 @@ func main() {
 					sleepChan:        make(chan []byte, 1),
 					captchaChan:      make(chan []byte, 1),
 					cancelSleep:      make(chan struct{}),
-					sleepingFatigue:  -1,
 					loading:          true,
 					account:          acc,
 					localWorld:       newLocalWorld(),
@@ -481,43 +480,28 @@ func main() {
 				}()
 
 				go func() {
+					t := time.NewTicker(time.Duration(math.MaxInt))
+					t.Stop()
+					var buf []byte
 				loop:
 					for {
 						select {
 						case <-c.closed:
 							break loop
 						case <-c.cancelSleep:
-						case buf := <-c.sleepChan:
-							t := time.NewTicker(time.Millisecond * 500)
-							gotMinusOneTimes := 0
-							for {
-								select {
-								case <-c.closed:
-									break loop
-								case <-c.cancelSleep:
-									fmt.Printf("[%s] Cancelled sleep\n", c.user)
-									continue loop
-								case buf = <-c.sleepChan:
-								case <-t.C:
-									if c.script != nil && c.script.fatigueTricking {
-										c.captchaChan <- buf
-										continue loop
-									} else if sleepFatigue := atomic.LoadInt64(&c.sleepingFatigue); sleepFatigue == 0 {
-										c.captchaChan <- buf
-										continue loop
-									} else {
-										if atomic.LoadInt64(&c.sleepingFatigue) == -1 {
-											gotMinusOneTimes++
-											if gotMinusOneTimes >= 10 {
-												c.writeErrorf("[%s] Sleeping stuck, sending word\n", c.user)
-												c.captchaChan <- buf
-												continue loop
-											}
-										}
-										if c.account.debug {
-											fmt.Printf("[%s] Sleep fatigue at %d\n", c.user, sleepFatigue)
-										}
-									}
+							t.Stop()
+						case buf = <-c.sleepChan:
+							t = time.NewTicker(500 * time.Millisecond)
+						case <-t.C:
+							if c.script != nil && c.script.fatigueTricking {
+								t.Stop()
+								c.captchaChan <- buf
+							} else if sleepFatigue := atomic.LoadInt64(&c.sleepingFatigue); sleepFatigue == 0 {
+								t.Stop()
+								c.captchaChan <- buf
+							} else {
+								if c.account.debug {
+									fmt.Printf("[%s] Sleep fatigue at %d\n", c.user, sleepFatigue)
 								}
 							}
 						}
@@ -565,7 +549,7 @@ func main() {
 						break clientLoop
 					case <-time.After(time.Duration(waitTime-int(time.Since(lastRun).Milliseconds())) * time.Millisecond):
 						if c.script != nil && c.script.running {
-							if c.sleeping == 0 && !c.loading {
+							if !c.sleeping && !c.loading {
 								waitTime = c.script.loop()
 								lastRun = time.Now()
 							} else {
@@ -1661,7 +1645,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		if c.account.debug {
 			fmt.Printf("[%s] Got sleep image\n", c.user)
 		}
-		atomic.StoreInt64(&c.sleeping, 1)
+		if !c.sleeping {
+			atomic.StoreInt64(&c.sleepingFatigue, int64(c.fatigue))
+		}
+		c.sleeping = true
 		bs := p.readBytes(length)
 
 		c.sleepChan <- bs
@@ -1774,8 +1761,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		} else {
 			c.firstWakeupReceived = true
 		}
-		atomic.StoreInt64(&c.sleepingFatigue, -1)
-		atomic.StoreInt64(&c.sleeping, 0)
+		c.sleeping = false
 		if c.account.debug {
 			fmt.Printf("[%s] Woke up\n", c.user)
 		}
