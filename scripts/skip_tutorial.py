@@ -12,13 +12,13 @@ def loop():
         return 3000
     
     if is_appearance_screen():
-        head_gender = random(0, 2)
-        head = HEAD_SPRITES[random(0, len(HEAD_SPRITES))]
-        body_type = BODY_SPRITES[random(0, len(BODY_SPRITES))]
-        hair_colour = random(0, 10)
-        top_colour = random(0, 15)
-        pants_colour = random(0, 15)
-        skin_colour = random(0, 5)
+        head_gender = random(0, 1)
+        head = HEAD_SPRITES[random(0, len(HEAD_SPRITES)-1)]
+        body_type = BODY_SPRITES[random(0, len(BODY_SPRITES)-1)]
+        hair_colour = random(0, 9)
+        top_colour = random(0, 14)
+        pants_colour = random(0, 14)
+        skin_colour = random(0, 4)
 
         print("GENDER=%d" % head_gender)
         print("HEAD=%d" % head)
