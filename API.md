@@ -94,7 +94,7 @@ Proper use is like this:
 ###### send_appearance_update(head_gender, head_type, body_type, hair_colour, top_colour, pants_colour, skin_colour)
 ###### random(min, max)
 
-Returns a random integer between min and max, inclusive.
+Returns a random integer between min and max, inclusive. Min and max must be >= 0.
 
 ## Ground items
 
