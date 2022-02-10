@@ -78,7 +78,7 @@ Proper use is like this:
 ###### get_combat_style()
 ###### set_combat_style(idx)
 ###### get_max_stat(idx)
-###### get_current_level(idx)
+###### get_current_stat(idx)
 ###### get_experience(idx)
 ###### get_hp_percent()
 ###### skip_tutorial()
