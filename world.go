@@ -78,16 +78,16 @@ func (z *world) getRegionFromSectorCoordinates(regionX int, regionY int) *region
 	return z.regions[regionX][regionY]
 }
 
-func (z *world) getTile(x int, y int) int {
+func (z *world) getTile(x int, y int) int32 {
 	if !withinWorld(x, y) {
-		return math.MaxInt
+		return math.MaxInt32
 	}
 	return z.getRegion(x, y).getTileValue(x%48, y%48)
 }
 
 type region struct {
-	tiles   [][]int
-	tile    int
+	tiles   [][]int32
+	tile    int32
 	regionX int
 	regionY int
 }
@@ -96,10 +96,10 @@ func newRegion(regionX int, regionY int) (z *region) {
 	z = &region{}
 	z.regionX = regionX
 	z.regionY = regionY
-	z.tile = math.MaxInt
-	z.tiles = make([][]int, 48)
+	z.tile = math.MaxInt32
+	z.tiles = make([][]int32, 48)
 	for i := 0; i < 48; i++ {
-		z.tiles[i] = make([]int, 48)
+		z.tiles[i] = make([]int32, 48)
 		for j := 0; j < 48; j++ {
 			z.tiles[i][j] = 0
 		}
@@ -144,8 +144,8 @@ func (r *region) checkRedundantRegion() {
 		t.projectileAllowed == t2.projectileAllowed
 }*/
 
-func (z *region) getTileValue(regionX int, regionY int) int {
-	if z.tile != math.MaxInt {
+func (z *region) getTileValue(regionX int, regionY int) int32 {
+	if z.tile != math.MaxInt32 {
 		return z.tile
 	}
 	return z.tiles[regionX][regionY]
@@ -458,28 +458,28 @@ func (c *client) registerGameObject(o *object) {
 			} else if dir == 0 {
 				//z.getTile(x, y).traversalMask |= WALL_EAST
 				c.localWorld.setTileOr(x, y, wallEast)
-				if c.world.getTile(x-1, y) != math.MaxInt {
+				if c.world.getTile(x-1, y) != math.MaxInt32 {
 					//z.getTile(x-1, y).traversalMask |= WALL_WEST
 					c.localWorld.setTileOr(x-1, y, wallWest)
 				}
 			} else if dir == 2 {
 				//z.getTile(x, y).traversalMask |= WALL_SOUTH
 				c.localWorld.setTileOr(x, y, wallSouth)
-				if c.world.getTile(x, y+1) != math.MaxInt {
+				if c.world.getTile(x, y+1) != math.MaxInt32 {
 					//z.getTile(x, y+1).traversalMask |= WALL_NORTH
 					c.localWorld.setTileOr(x, y+1, wallNorth)
 				}
 			} else if dir == 4 {
 				//z.getTile(x, y).traversalMask |= WALL_WEST
 				c.localWorld.setTileOr(x, y, wallWest)
-				if c.world.getTile(x+1, y) != math.MaxInt {
+				if c.world.getTile(x+1, y) != math.MaxInt32 {
 					//z.getTile(x+1, y).traversalMask |= WALL_EAST
 					c.localWorld.setTileOr(x+1, y, wallEast)
 				}
 			} else if dir == 6 {
 				//z.getTile(x, y).traversalMask |= WALL_NORTH
 				c.localWorld.setTileOr(x, y, wallNorth)
-				if c.world.getTile(x, y-1) != math.MaxInt {
+				if c.world.getTile(x, y-1) != math.MaxInt32 {
 					//z.getTile(x, y-1).traversalMask |= WALL_SOUTH
 					c.localWorld.setTileOr(x, y-1, wallSouth)
 				}
@@ -498,14 +498,14 @@ func (c *client) registerWallObject(o *wallObject) {
 	if dir == 0 {
 		//w.getTile(x, y).traversalMask |= WALL_NORTH
 		c.localWorld.setTileOr(x, y, wallNorth)
-		if c.world.getTile(x, y-1) != math.MaxInt {
+		if c.world.getTile(x, y-1) != math.MaxInt32 {
 			//w.getTile(x, y-1).traversalMask |= WALL_SOUTH
 			c.localWorld.setTileOr(x, y-1, wallSouth)
 		}
 	} else if dir == 1 {
 		//w.getTile(x, y).traversalMask |= WALL_EAST
 		c.localWorld.setTileOr(x, y, wallEast)
-		if c.world.getTile(x-1, y) != math.MaxInt {
+		if c.world.getTile(x-1, y) != math.MaxInt32 {
 			//w.getTile(x-1, y).traversalMask |= WALL_WEST
 			c.localWorld.setTileOr(x-1, y, wallWest)
 		}
@@ -589,14 +589,14 @@ func (c *client) unregisterWallObject(o *wallObject) {
 	}
 }
 
-func (c *client) getTile(x, z int) int {
+func (c *client) getTile(x, z int) int32 {
 	return c.world.getTile(x, z)
 }
 
-func (c *client) combinedTile(x, z int) int {
+func (c *client) combinedTile(x, z int) int32 {
 	tile1 := c.getTile(x, z)
-	if tile1 == math.MaxInt {
-		return math.MaxInt
+	if tile1 == math.MaxInt32 {
+		return math.MaxInt32
 	}
 	tile2 := c.localWorld.getTileTraversalMask(x, z)
 
@@ -605,26 +605,26 @@ func (c *client) combinedTile(x, z int) int {
 
 func newLocalWorld() *localWorld {
 	return &localWorld{
-		tiles: make(map[int64]int),
+		tiles: make(map[int32]int32),
 	}
 }
 
 type localWorld struct {
-	tiles map[int64]int
+	tiles map[int32]int32
 }
 
-func (c *localWorld) setTileAnd(x, z, traversalMask int) {
-	xz := (int64(x) << 32) | int64(z)
+func (c *localWorld) setTileAnd(x, z int, traversalMask int32) {
+	xz := (int32(x) << 16) | int32(z)
 	c.tiles[xz] = c.tiles[xz] & traversalMask
 }
 
-func (c *localWorld) setTileOr(x, z, traversalMask int) {
-	xz := (int64(x) << 32) | int64(z)
+func (c *localWorld) setTileOr(x, z int, traversalMask int32) {
+	xz := (int32(x) << 16) | int32(z)
 	c.tiles[xz] = c.tiles[xz] | traversalMask
 }
 
-func (c *localWorld) getTileTraversalMask(x, z int) int {
-	xz := (int64(x) << 32) | int64(z)
+func (c *localWorld) getTileTraversalMask(x, z int) int32 {
+	xz := (int32(x) << 16) | int32(z)
 	if tile, ok := c.tiles[xz]; ok {
 		return tile
 	}

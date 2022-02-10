@@ -6,13 +6,13 @@ import (
 )
 
 var (
-	wallNorth  = 1 << 0
-	wallEast   = 1 << 1
-	wallSouth  = 1 << 2
-	wallWest   = 1 << 3
-	fullBlockA = 1 << 4
-	fullBlockB = 1 << 5
-	fullBlockC = 1 << 6
+	wallNorth  int32 = 1 << 0
+	wallEast   int32 = 1 << 1
+	wallSouth  int32 = 1 << 2
+	wallWest   int32 = 1 << 3
+	fullBlockA int32 = 1 << 4
+	fullBlockB int32 = 1 << 5
+	fullBlockC int32 = 1 << 6
 	//_object       = 1 << 7
 	wallNorthEast = wallNorth | wallEast
 	wallNorthWest = wallNorth | wallWest
@@ -199,7 +199,7 @@ func (z *aStarpathfinder) generateTraversalInfo(c *client, center *point, depth 
 					}
 				}
 				tile := c.combinedTile(cdx, cdy)
-				if tile == math.MaxInt {
+				if tile == math.MaxInt32 {
 					continue
 				}
 				if tile&(fullBlockA|fullBlockB|fullBlockC) != 0 {
@@ -231,7 +231,7 @@ func (z *aStarpathfinder) generateTraversalInfo(c *client, center *point, depth 
 				}
 			} else {
 				tile := c.combinedTile(center.getX()-x, center.getY()+y)
-				if tile == math.MaxInt {
+				if tile == math.MaxInt32 {
 					continue
 				}
 				curposx = x + depth

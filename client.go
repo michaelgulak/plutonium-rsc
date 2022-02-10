@@ -34,7 +34,8 @@ type client struct {
 	user                string
 	pass                string
 	packetChan          chan *RSCPacket
-	lastSentPacketTime  time.Time
+	lastSentPacketTime  int64
+	sendLock            *sync.Mutex
 	closed              chan struct{}
 	closedLock          *sync.Mutex
 	sleepChan           chan []byte
@@ -260,6 +261,7 @@ func main() {
 	pprof.StartCPUProfile(f)
 	defer pprof.StopCPUProfile()
 	*/
+	//defer profile.Start(profile.MemProfile, profile.ProfilePath("."), profile.NoShutdownHook).Stop()
 
 	flag.StringVar(&user, "u", "", "OpenRSC username")
 	flag.StringVar(&pass, "p", "", "OpenRSC password")
@@ -370,6 +372,7 @@ func main() {
 					user:             acc.username,
 					pass:             acc.password,
 					world:            world,
+					sendLock:         &sync.Mutex{},
 					closed:           make(chan struct{}),
 					closedLock:       &sync.Mutex{},
 					packetChan:       make(chan *RSCPacket, 32),
@@ -483,21 +486,34 @@ func main() {
 					t := time.NewTicker(time.Duration(math.MaxInt))
 					t.Stop()
 					var buf []byte
+
+					drainTimer := func() {
+						t.Stop()
+						select {
+						case <-t.C:
+						default:
+						}
+					}
 				loop:
 					for {
 						select {
 						case <-c.closed:
+							drainTimer()
 							break loop
 						case <-c.cancelSleep:
-							t.Stop()
+							drainTimer()
+							if c.account.debug {
+								fmt.Printf("[%s] Cancelled sleep\n", c.user)
+							}
 						case buf = <-c.sleepChan:
+							drainTimer()
 							t = time.NewTicker(500 * time.Millisecond)
 						case <-t.C:
 							if c.script != nil && c.script.fatigueTricking {
-								t.Stop()
+								drainTimer()
 								c.captchaChan <- buf
 							} else if sleepFatigue := atomic.LoadInt64(&c.sleepingFatigue); sleepFatigue == 0 {
-								t.Stop()
+								drainTimer()
 								c.captchaChan <- buf
 							} else {
 								if c.account.debug {
@@ -508,10 +524,35 @@ func main() {
 					}
 				}()
 
+				go func() {
+					var diff int64
+					t := time.NewTimer(time.Second * 5)
+					for {
+						select {
+						case <-c.closed:
+							if !t.Stop() {
+								<-t.C
+							}
+							return
+						case <-t.C:
+							diff = time.Now().Unix() - atomic.LoadInt64(&c.lastSentPacketTime)
+
+							if diff >= 5 {
+								c.createPacket(67)
+								c.sendPacket()
+
+								t.Reset(5 * time.Second)
+							} else {
+								t.Reset(time.Duration(5-diff) * time.Second)
+							}
+						}
+					}
+				}()
+
 				var (
-					waitTime     int
-					lastRun      = time.Unix(0, 0)
-					localClosing = closing
+					progressReportTimer = time.NewTimer(acc.progressReportDur - time.Since(acc.lastProgressReport))
+					scriptTimer         = time.NewTimer(500 * time.Millisecond)
+					localClosing        = closing
 				)
 
 				if c.account.progressReportDur == time.Duration(math.MaxInt) {
@@ -528,37 +569,38 @@ func main() {
 				for {
 					select {
 					case <-c.closed:
+						if !progressReportTimer.Stop() {
+							<-progressReportTimer.C
+						}
+						if !scriptTimer.Stop() {
+							<-scriptTimer.C
+						}
 						break loop
 					case packet := <-c.packetChan:
 						opcode := packet.readByteAsInt()
 						c.handlePacket(packet, opcode, len(packet.buf)-1)
-					case <-time.After(time.Duration(5-time.Since(c.lastSentPacketTime).Seconds()) * time.Second):
-						c.createPacket(67) // ping
-						c.sendPacket()
-					case <-time.After(acc.progressReportDur - time.Since(acc.lastProgressReport)):
+					case <-progressReportTimer.C:
 						acc.lastProgressReport = time.Now()
 						if c.script != nil && c.script.running && c.account.progressReportDur != time.Duration(math.MaxInt) {
 							c.script.callOnProgressReport()
-							c.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(acc.progressReportDur-time.Since(acc.lastProgressReport)).Format(time.RFC1123))
+							c.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(acc.progressReportDur).Format(time.RFC1123))
 						}
+						progressReportTimer.Reset(acc.progressReportDur)
 					case buf := <-c.captchaChan:
 						c.doCaptcha(buf)
 					case <-c.scriptKillSignal:
 						c.close()
 						fmt.Printf("[%s] Script kill signal received, terminating\n", c.user)
 						break clientLoop
-					case <-time.After(time.Duration(waitTime-int(time.Since(lastRun).Milliseconds())) * time.Millisecond):
+					case <-scriptTimer.C:
 						if c.script != nil && c.script.running {
 							if !c.sleeping && !c.loading {
-								waitTime = c.script.loop()
-								lastRun = time.Now()
+								scriptTimer.Reset(time.Duration(c.script.loop()) * time.Millisecond)
 							} else {
-								waitTime = 500
-								lastRun = time.Now()
+								scriptTimer.Reset(500 * time.Millisecond)
 							}
 						} else {
-							waitTime = 0xfffffff
-							lastRun = time.Now()
+							scriptTimer.Reset(time.Duration(math.MaxInt))
 						}
 					case <-localClosing:
 						if c.script != nil && c.script.running {
@@ -646,7 +688,7 @@ func doAccountCreations(fileStr string) {
 		}
 		_ = sessionPacket
 
-		p.createPacket(2)
+		p.createPacket0(2)
 		p.writeBytes([]byte(username))
 		p.writeByte(10)
 		p.writeBytes([]byte(password))
@@ -892,6 +934,8 @@ func (client *client) login() (int, error) {
 }
 
 func (c *client) sendPacket() error {
+	defer c.sendLock.Unlock()
+
 	c.finish()
 	wrote := 0
 	length := c.RSCPacket.i
@@ -910,7 +954,7 @@ func (c *client) sendPacket() error {
 		wrote += n
 	}
 	c.RSCPacket.i = 0
-	c.lastSentPacketTime = time.Now()
+	atomic.StoreInt64(&c.lastSentPacketTime, time.Now().Unix())
 	return err
 }
 

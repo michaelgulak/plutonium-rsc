@@ -4,6 +4,4 @@
 /logs/progress_reports/*.log
 /sleepwords/*.bmp
 /releases
-/scripts/falador_thiever.py
-/scripts/edgeville_skeletons.py
-/scripts/paladins.py
+/mem.pprof
