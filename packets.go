@@ -183,7 +183,7 @@ func (c *client) atWallObject(obj *wallObject) {
 	c.createPacket(14)
 	c.writeShort(obj.x)
 	c.writeShort(obj.z)
-	c.writeShort(obj.dir)
+	c.writeByte(byte(obj.dir))
 	c.sendPacket()
 }
 
@@ -195,7 +195,7 @@ func (c *client) atWallObject2(obj *wallObject) {
 	c.createPacket(127)
 	c.writeShort(obj.x)
 	c.writeShort(obj.z)
-	c.writeShort(obj.dir)
+	c.writeByte(byte(obj.dir))
 	c.sendPacket()
 }
 
