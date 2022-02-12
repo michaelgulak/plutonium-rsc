@@ -793,6 +793,9 @@ func (c *client) init() {
 	for i := 0; i < len(c.wallObjects); i++ {
 		c.wallObjects[i] = &wallObject{}
 	}
+	for i := 0; i < len(c.ignoreList); i++ {
+		c.ignoreList[i] = &ignored{}
+	}
 }
 
 func (c *client) doCaptcha(buf []byte) {
