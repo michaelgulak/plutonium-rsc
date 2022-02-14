@@ -7,6 +7,7 @@
 - [ ] Figure out a way to clean up localWorld tiles
 - [ ] Add types for distance calculation (euclidean, manhattan, path)
 - [ ] Make a frontend for the bot
+- [ ] Make scripts retain state between logouts
 
 ### Functions
 

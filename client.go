@@ -1329,7 +1329,9 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 				z2 := (c.groundItems[j].z >> 3) - z1
 				if x2 != 0 || z2 != 0 {
 					if j != groundItemCount {
-						c.groundItems[groundItemCount] = c.groundItems[j]
+						c.groundItems[groundItemCount].id = c.groundItems[j].id
+						c.groundItems[groundItemCount].x = c.groundItems[j].x
+						c.groundItems[groundItemCount].z = c.groundItems[j].z
 					}
 					groundItemCount++
 				} else {
@@ -1352,7 +1354,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 					}
 				} else {
 					if objectCount != j {
-						c.objects[objectCount] = c.objects[j]
+						c.objects[objectCount].id = c.objects[j].id
+						c.objects[objectCount].x = c.objects[j].x
+						c.objects[objectCount].z = c.objects[j].z
+						c.objects[objectCount].dir = c.objects[j].dir
 					}
 					objectCount++
 				}
@@ -1371,7 +1376,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 					}
 				} else {
 					if wallObjectCount != j {
-						c.wallObjects[wallObjectCount] = c.wallObjects[j]
+						c.wallObjects[wallObjectCount].id = c.wallObjects[j].id
+						c.wallObjects[wallObjectCount].x = c.wallObjects[j].x
+						c.wallObjects[wallObjectCount].z = c.wallObjects[j].z
+						c.wallObjects[wallObjectCount].dir = c.wallObjects[j].dir
 					}
 					wallObjectCount++
 				}
@@ -1396,7 +1404,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 					}
 				} else {
 					if count != i {
-						c.objects[count] = c.objects[i]
+						c.objects[count].id = c.objects[i].id
+						c.objects[count].x = c.objects[i].x
+						c.objects[count].z = c.objects[i].z
+						c.objects[count].dir = c.objects[i].dir
 					}
 					count++
 				}
@@ -1436,7 +1447,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 					}
 				} else {
 					if count != i {
-						c.wallObjects[count] = c.wallObjects[i]
+						c.wallObjects[count].id = c.wallObjects[i].id
+						c.wallObjects[count].x = c.wallObjects[i].x
+						c.wallObjects[count].z = c.wallObjects[i].z
+						c.wallObjects[count].dir = c.wallObjects[i].dir
 					}
 					count++
 				}
@@ -1489,9 +1503,15 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 					dz := (c.groundItems[i].z >> 3) - z
 					if dx != 0 || dz != 0 {
 						if i != count {
-							c.groundItems[count] = c.groundItems[i]
+							c.groundItems[count].id = c.groundItems[i].id
+							c.groundItems[count].x = c.groundItems[i].x
+							c.groundItems[count].z = c.groundItems[i].z
 						}
 						count++
+					} else {
+						if c.script != nil && c.script.onGroundItemDespawned != nil {
+							c.script.callOnGroundItemDespawned(c.groundItems[i])
+						}
 					}
 				}
 				c.groundItemCount = count
@@ -1513,7 +1533,9 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 							}
 						} else {
 							if i != count {
-								c.groundItems[count] = c.groundItems[i]
+								c.groundItems[count].id = c.groundItems[i].id
+								c.groundItems[count].x = c.groundItems[i].x
+								c.groundItems[count].z = c.groundItems[i].z
 							}
 							count++
 						}
