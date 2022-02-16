@@ -583,16 +583,65 @@ func (c *client) followPlayer(p *player) {
 	c.sendPacket()
 }
 
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
+}
+
 func (c *client) offerItemToTrade(amount int, it *item) {
 	if c.account.debug {
 		fmt.Printf("[%s] OFFERITEM (%d,%d,%d)\n", c.user, amount, it.id, it.slot)
 	}
-	c.createPacket(46)
-	c.writeByte(1)
-	c.writeShort(it.id)
-	c.writeInt(amount)
-	c.writeShort(0)
-	c.sendPacket()
+	offerSuccess := false
+	offered := 0
+	def := itemDefs[it.id]
+
+	for i := 0; i < c.myTradeCount; i++ {
+		if it.id == c.myTradeItems[i].id {
+			if def.IsStackable > 0 {
+				c.myTradeItems[i].amount = c.myTradeItems[i].amount + amount
+				if c.myTradeItems[i].amount > it.amount {
+					c.myTradeItems[i].amount = it.amount
+				}
+				offerSuccess = true
+			} else {
+				offered++
+			}
+		}
+	}
+
+	invAvailable := c.getInventoryCountByID(it.id)
+	if invAvailable <= offered {
+		offerSuccess = true
+	}
+
+	if !offerSuccess {
+		for i := 0; i < amount && c.myTradeCount < 12 && invAvailable > offered; i++ {
+			c.myTradeItems[c.myTradeCount].id = it.id
+			c.myTradeItems[c.myTradeCount].amount = 1
+			offerSuccess = true
+			offered++
+			c.myTradeCount++
+			if i == 0 && def.IsStackable > 0 {
+				c.myTradeItems[c.myTradeCount-1].amount = min(amount, it.amount)
+				break
+			}
+		}
+	}
+
+	if offerSuccess {
+		c.createPacket(46)
+		c.writeByte(byte(c.myTradeCount))
+
+		for i := 0; i < c.myTradeCount; i++ {
+			c.writeShort(c.myTradeItems[i].id)
+			c.writeInt(c.myTradeItems[i].amount)
+			c.writeShort(0)
+		}
+		c.sendPacket()
+	}
 }
 
 func (c *client) acceptTradeOffer() {

@@ -8,6 +8,7 @@
 - [ ] Add types for distance calculation (euclidean, manhattan, path)
 - [ ] Make a frontend for the bot
 - [ ] Make scripts retain state between logouts
+- [ ] Add log function for scripts (so it prints username before argument)
 
 ### Functions
 

@@ -796,6 +796,9 @@ func (c *client) init() {
 	for i := 0; i < len(c.ignoreList); i++ {
 		c.ignoreList[i] = &ignored{}
 	}
+	for i := 0; i < len(c.myTradeItems); i++ {
+		c.myTradeItems[i] = &tradeItem{}
+	}
 }
 
 func (c *client) doCaptcha(buf []byte) {

@@ -1402,7 +1402,11 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		return py.Int(c.playerCount), nil
 	}, py.METH_CLASS, "")
 	module.Globals["get_player_by_name"] = py.MustNewMethod("get_player_by_name", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-		return c.getPlayerByName(string(args[0].(py.String))), nil
+		player := c.getPlayerByName(string(args[0].(py.String)))
+		if player == nil {
+			return py.None, nil
+		}
+		return player, nil
 	}, py.METH_CLASS, "")
 	module.Globals["attack_player"] = py.MustNewMethod("attack_player", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.attackPlayer(args[0].(*player))
