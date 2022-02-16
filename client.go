@@ -1859,6 +1859,9 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		if c.account.debug {
 			fmt.Printf("[%s] Private message [%s]: %s\n", c.user, playerName, message)
 		}
+		if c.script != nil && c.script.onPrivateMessage != nil {
+			c.script.callOnPrivateMessage(message, playerName)
+		}
 	case 87: // private message sent
 		playerName := p.readString()
 		message := p.readEncryptedString()
