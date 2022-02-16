@@ -423,7 +423,8 @@ func main() {
 						break clientLoop
 					case 6:
 						c.writeErrorf("[%s] You may only use 1 character at once", c.user)
-						break clientLoop
+						time.Sleep(60 * time.Second)
+						continue clientLoop
 					case 7:
 						c.writeErrorf("[%s] Login attempts exceeded", c.user)
 						time.Sleep(60 * time.Second)
