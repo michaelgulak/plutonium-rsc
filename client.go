@@ -423,7 +423,7 @@ func main() {
 						break clientLoop
 					case 6:
 						c.writeErrorf("[%s] You may only use 1 character at once", c.user)
-						time.Sleep(60 * time.Second)
+						time.Sleep(6 * time.Minute)
 						continue clientLoop
 					case 7:
 						c.writeErrorf("[%s] Login attempts exceeded", c.user)
@@ -454,7 +454,8 @@ func main() {
 						continue clientLoop
 					case 15, 16, 17, 18, 20, 21, 22, 23, 24, 25:
 						c.writeErrorf("[%s] Generic server error", c.user)
-						break clientLoop
+						time.Sleep(time.Minute)
+						continue clientLoop
 					default:
 						fmt.Printf("[%s] Unhandled login response [%d], closing account thread\n", c.user, loginResponse)
 						break clientLoop

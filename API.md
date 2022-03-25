@@ -53,7 +53,7 @@ Can walk long distances across the map similar to the APOS PathWalker by Storm b
 
 ###### walk_path_depth_to(x, z, depth)
 
-Capped at 800 depth to prevent burning out cpus. If you find this isn't enough for a long distance journey, then break up the calls to walk_path_to into shorter distances in conjunction with in_radius_of. Using a depth of 200 is preferred over the max of 800.FIXME: need a more efficient algorithm for walking long distances.
+Capped at 800 depth to prevent burning out cpus. If you find this isn't enough for a long distance journey, then break up the calls to walk_path_to into shorter distances in conjunction with in_radius_of. Using a depth of 200 is preferred over the max of 800. FIXME: need a more efficient algorithm for walking long distances.
 
 The same as walk_path_to except it takes a depth for the internal A Star algorithm. The depth is set to euclidean distance \* 4 for walk_path_to.
 
@@ -327,4 +327,4 @@ Contains the following fields: `id`, `name`, `stage`.
 ###### write_short(int)
 ###### write_int(int)
 ###### write_bytes(bytearray)
-###### send_packet
+###### send_packet()

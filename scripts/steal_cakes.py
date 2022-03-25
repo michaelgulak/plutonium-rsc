@@ -1,3 +1,5 @@
+# Make sure you start this script with at least one cake in your inventory.
+
 click_timeout = 0
 cake_stolen   = 0
 
