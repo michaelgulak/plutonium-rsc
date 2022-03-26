@@ -40,14 +40,14 @@ func withinWorld(x, y int) bool {
 }
 
 type world struct {
-	regions       map[int]map[int]*region
-	pathWalkerMap map[int]struct{}
+	regions       map[int32]map[int32]*region
+	pathWalkerMap map[int32]struct{}
 }
 
 func newWorld() (z *world) {
 	z = &world{
-		regions:       map[int]map[int]*region{},
-		pathWalkerMap: map[int]struct{}{},
+		regions:       map[int32]map[int32]*region{},
+		pathWalkerMap: map[int32]struct{}{},
 	}
 	return
 }
@@ -69,13 +69,13 @@ func (z *world) getRegion(x int, y int) *region {
 }
 
 func (z *world) getRegionFromSectorCoordinates(regionX int, regionY int) *region {
-	if _, ok := z.regions[regionX]; !ok {
-		z.regions[regionX] = map[int]*region{}
+	if _, ok := z.regions[int32(regionX)]; !ok {
+		z.regions[int32(regionX)] = map[int32]*region{}
 	}
-	if _, ok := z.regions[regionX][regionY]; !ok {
-		z.regions[regionX][regionY] = newRegion(regionX, regionY)
+	if _, ok := z.regions[int32(regionX)][int32(regionY)]; !ok {
+		z.regions[int32(regionX)][int32(regionY)] = newRegion(regionX, regionY)
 	}
-	return z.regions[regionX][regionY]
+	return z.regions[int32(regionX)][int32(regionY)]
 }
 
 func (z *world) getTile(x int, y int) int32 {
@@ -306,7 +306,7 @@ func (w *world) setUnwalkableTiles(o *objectLoc) {
 	if def.typ != 2 && def.typ != 3 && def.typ != 0 {
 		for x := destX; x <= objWidth-1+destX; x++ {
 			for y := destZ; y <= destZ+objHeight-1; y++ {
-				w.pathWalkerMap[(x<<32)|y] = struct{}{}
+				w.pathWalkerMap[int32(x<<16)|int32(y)] = struct{}{}
 			}
 		}
 	} /* else {

@@ -181,7 +181,7 @@ func (z *aStarpathfinder) generateTraversalInfo(c *client, center *point, depth 
 				if !withinWorld(cdx, cdy) {
 					continue
 				}
-				_, ok := c.world.pathWalkerMap[(cdx<<32)|cdy]
+				_, ok := c.world.pathWalkerMap[int32(cdx<<16)|int32(cdy)]
 				curposx = x + depth
 				curposy = y + depth
 				if ok {
@@ -272,7 +272,7 @@ func (z *aStarpathfinder) generateTraversalInfo(c *client, center *point, depth 
 }
 
 func (z *aStarpathfinder) findNextnode() *node {
-	minimum := 0xffffffff
+	minimum := math.MaxInt
 	minnode := (*node)(nil)
 	for _, node := range z.opennodes {
 		if node.hCost < minimum {
