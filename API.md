@@ -283,7 +283,6 @@ Contains the following fields: `id`, `amount`.
 
 ###### get_bank_items()
 ###### deposit(id, amount)
-###### deposit_all()
 ###### withdraw(id, amount)
 ###### get_bank_count(id OR ids=[...])
 ###### get_bank_size()

@@ -46,8 +46,6 @@ type client struct {
 	lenBuf              [2]byte
 	account             *account
 	localWorld          *localWorld
-	errorLogFile        *os.File
-	errorLogLock        *sync.Mutex
 	scriptKillSignal    chan struct{}
 
 	script *script
@@ -250,7 +248,7 @@ func main() {
 
 	go func() {
 		<-sigs
-		fmt.Println("[BOT] Received kill signal, waiting until every account is out of combat")
+		fmt.Println("[BOT] Received kill signal")
 		close(closing)
 	}()
 
@@ -327,24 +325,7 @@ func main() {
 
 	wg := &sync.WaitGroup{}
 	loadScriptLock := &sync.Mutex{}
-	errorLogLock := &sync.Mutex{}
 
-	_, err = os.Stat(settings.LogSettings.Directory + string(os.PathSeparator) + "error.log")
-	var errorLogFile *os.File
-	if os.IsNotExist(err) {
-		errorLogFile, err = os.Create(settings.LogSettings.Directory + string(os.PathSeparator) + "error.log")
-		if err != nil {
-			fmt.Printf("Error creating log file: %s\n", err)
-			os.Exit(1)
-		}
-	} else {
-		errorLogFile, err = os.OpenFile(settings.LogSettings.Directory+string(os.PathSeparator)+"error.log", os.O_APPEND|os.O_WRONLY, os.ModeAppend)
-		if err != nil {
-			fmt.Printf("Error opening log file: %s\n", err)
-			os.Exit(1)
-		}
-	}
-	defer errorLogFile.Close()
 	for _, acc := range accounts {
 		if !acc.enabled {
 			continue
@@ -382,8 +363,6 @@ func main() {
 					loading:          true,
 					account:          acc,
 					localWorld:       newLocalWorld(),
-					errorLogLock:     errorLogLock,
-					errorLogFile:     errorLogFile,
 					scriptKillSignal: make(chan struct{}, 1),
 				}
 
@@ -392,15 +371,14 @@ func main() {
 				if acc.script != nil {
 					c.script = acc.script
 					if err := c.script.load(loadScriptLock, c); err != nil {
-						c.writeErrorf("[%s] Script load error [%s]: %s", c.user, acc.script.name, err)
+						fmt.Printf("[%s] Script load error [%s]: %s\n", c.user, acc.script.name, err)
 						break clientLoop
 					}
-					c.script.running = true
 				}
 
 				loginResponse, err := c.login()
 				if err != nil {
-					c.writeErrorf("[%s] Login error: %s", c.user, err)
+					fmt.Printf("[%s] Login error: %s\n", c.user, err)
 					time.Sleep(5 * time.Second)
 					continue clientLoop
 				}
@@ -408,57 +386,58 @@ func main() {
 				if loginResponse&0x40 == 0 {
 					switch loginResponse {
 					case 4: // currently logged in
-						c.writeErrorf("[%s] Account already logged in", c.user)
+						fmt.Printf("[%s] Account already logged in\n", c.user)
 						time.Sleep(time.Second * 5)
 						continue clientLoop
 					case 100: // something
-						c.writeErrorf("[%s] Weird server response", c.user)
+						fmt.Printf("[%s] Weird server response\n", c.user)
 						time.Sleep(time.Second * 5)
 						continue clientLoop
 					case 3:
-						c.writeErrorf("[%s] Invalid username or password", c.user)
+						fmt.Printf("[%s] Invalid username or password\n", c.user)
 						break clientLoop
 					case 5:
-						c.writeErrorf("[%s] The client has been updated", c.user)
+						fmt.Printf("[%s] The client has been updated\n", c.user)
 						break clientLoop
 					case 6:
-						c.writeErrorf("[%s] You may only use 1 character at once", c.user)
+						fmt.Printf("[%s] You may only use 1 character at once\n", c.user)
 						time.Sleep(6 * time.Minute)
 						continue clientLoop
 					case 7:
-						c.writeErrorf("[%s] Login attempts exceeded", c.user)
+						fmt.Printf("[%s] Login attempts exceeded\n", c.user)
 						time.Sleep(60 * time.Second)
 						continue clientLoop
 					case 8:
-						c.writeErrorf("[%s] Server rejected session", c.user)
+						fmt.Printf("[%s] Server rejected session\n", c.user)
 						time.Sleep(5 * time.Second)
 						continue clientLoop
 					case 9:
-						c.writeErrorf("[%s] Error unable to login", c.user)
+						fmt.Printf("[%s] Error unable to login\n", c.user)
 						time.Sleep(5 * time.Second)
 						continue clientLoop
 					case 10:
-						c.writeErrorf("[%s] Username already in use", c.user)
+						fmt.Printf("[%s] Username already in use\n", c.user)
 						time.Sleep(5 * time.Second)
 						continue clientLoop
 					case 11:
-						c.writeErrorf("[%s] Account temporariy disabled, waiting 5 mins", c.user)
+						fmt.Printf("[%s] Account temporariy disabled, waiting 5 mins\n", c.user)
 						time.Sleep(5 * time.Minute)
 						continue clientLoop
 					case 12:
-						c.writeErrorf("[%s] Account permanently disabled", c.user)
+						fmt.Printf("[%s] Account permanently disabled\n", c.user)
 						break clientLoop
 					case 14:
-						c.writeErrorf("[%s] World full", c.user)
+						fmt.Printf("[%s] World full\n", c.user)
 						time.Sleep(5 * time.Second)
 						continue clientLoop
 					case 15, 16, 17, 18, 20, 21, 22, 23, 24, 25:
-						c.writeErrorf("[%s] Generic server error", c.user)
+						fmt.Printf("[%s] Generic server error\n", c.user)
 						time.Sleep(time.Minute)
 						continue clientLoop
 					default:
-						fmt.Printf("[%s] Unhandled login response [%d], closing account thread\n", c.user, loginResponse)
-						break clientLoop
+						fmt.Printf("[%s] Unhandled login response \n", c.user)
+						time.Sleep(time.Minute)
+						continue clientLoop
 					}
 				}
 
@@ -472,7 +451,7 @@ func main() {
 							message, err := c.readPacket()
 							if err != nil {
 								if err != io.EOF {
-									c.writeErrorf("[%s] Read error: %s", c.user, err)
+									fmt.Printf("[%s] Read error: %s\n", c.user, err)
 								}
 								c.close()
 								break out
@@ -752,32 +731,13 @@ func doAccountCreations(fileStr string) {
 func (c *client) writeProgressReportf(s0 string, args ...interface{}) error {
 	_, err := c.account.progressReportFile.Write([]byte(fmt.Sprintf(s0, args...)))
 	if err != nil {
-		c.writeErrorf("[%s] Unable to save progress report: %s", c.user, err)
+		fmt.Printf("[%s] Unable to save progress report: %s\n", c.user, err)
 		return err
 	}
 	if runtime.GOOS == "windows" {
 		_, err = c.account.progressReportFile.Write([]byte("\r\n"))
 	} else {
 		_, err = c.account.progressReportFile.Write([]byte{'\n'})
-	}
-	return err
-}
-
-func (c *client) writeErrorf(s0 string, args ...interface{}) error {
-	c.errorLogLock.Lock()
-	defer c.errorLogLock.Unlock()
-
-	fmt.Printf(s0, args...)
-	fmt.Println()
-	_, err := c.errorLogFile.Write([]byte(fmt.Sprintf(s0, args...)))
-	if err != nil {
-		fmt.Printf("[%s] Error writing to error log file: %s\n", c.user, err)
-		return err
-	}
-	if runtime.GOOS == "windows" {
-		_, err = c.errorLogFile.Write([]byte("\r\n"))
-	} else {
-		_, err = c.errorLogFile.Write([]byte{'\n'})
 	}
 	return err
 }
@@ -818,26 +778,20 @@ func (c *client) doCaptcha(buf []byte) {
 		path := settings.OcrSettings.LocalDir + string(os.PathSeparator) + randName
 		f, err := os.Create(path)
 		if err != nil {
-			c.writeErrorf("[%s] Error creating sleep bmp file: %s", c.user, err)
+			fmt.Printf("[%s] Error creating sleep bmp file: %s\n", c.user, err)
 			return
 		}
 		_, err = io.Copy(f, bytes.NewReader(bmpData))
 		f.Close()
 		if err != nil {
-			c.writeErrorf("[%s] Error copying sleepword bytes to file: %s", c.user, err)
+			fmt.Printf("[%s] Error copying sleepword bytes to file: %s\n", c.user, err)
 			os.Remove(path)
 			return
 		}
-		var cmd *exec.Cmd
-		switch runtime.GOOS {
-		case "linux", "darwin", "android", "freebsd", "ios", "netbsd", "openbsd", "plan9", "solaris":
-			cmd = exec.Command(settings.OcrSettings.OcrPath, path)
-		case "windows":
-			cmd = exec.Command(settings.OcrSettings.OcrPath, path)
-		}
+		cmd := exec.Command(settings.OcrSettings.OcrPath, path)
 		bs, err := cmd.CombinedOutput()
 		if err != nil {
-			c.writeErrorf("[%s] Error getting sleepword from external ocr: %s", c.user, err)
+			fmt.Printf("[%s] Error getting sleepword from external ocr: %s\n", c.user, err)
 			os.Remove(path)
 			return
 		}
@@ -847,7 +801,7 @@ func (c *client) doCaptcha(buf []byte) {
 		body := bytes.NewReader(bmpData)
 		resp, err := http.Post(settings.OcrSettings.OcrEndpoint, "application/octet-stream", body)
 		if err != nil {
-			c.writeErrorf("[%s] Sleep server error: %s", c.user, err)
+			fmt.Printf("[%s] Sleep server error: %s\n", c.user, err)
 			return
 		}
 
@@ -857,12 +811,8 @@ func (c *client) doCaptcha(buf []byte) {
 			sleepWord = scanner.Text()
 		}
 	default:
-		c.writeErrorf("[%s] Unknown ocr setting", c.user)
+		fmt.Printf("[%s] Unknown ocr setting\n", c.user)
 		return
-	}
-
-	if c.account.debug {
-		fmt.Printf("[%s] Sending sleep word: %s\n", c.user, sleepWord)
 	}
 
 	c.sendSleepWord(sleepWord)
@@ -956,7 +906,7 @@ func (c *client) sendPacket() error {
 		n, err = c.conn.Write(c.RSCPacket.buf[wrote:length])
 		if err != nil {
 			c.close()
-			c.writeErrorf("[%s] Error writing packet to stream: %s", c.user, err)
+			fmt.Printf("[%s] Error writing packet to stream: %s\n", c.user, err)
 			break
 		}
 		wrote += n
@@ -968,19 +918,6 @@ func (c *client) sendPacket() error {
 
 func (c *client) readPacket() (*RSCPacket, error) {
 	var length int
-	defer func() {
-		if err := recover(); err != nil {
-			c.writeErrorf("Report this to a developer: Read packet length=%d", length)
-			c.writeErrorf("Error: %s", err)
-			c.closedLock.Lock()
-			select {
-			case <-c.closed:
-			default:
-				close(c.closed)
-			}
-			c.closedLock.Unlock()
-		}
-	}()
 	lengthPacketRead := 0
 	for lengthPacketRead < 2 {
 		c.conn.SetReadDeadline(time.Now().Add(time.Second * readWriteTimeout))
