@@ -89,6 +89,7 @@ type client struct {
 	groundItemCount           int
 	prayers                   [50]bool
 	fatigue                   int
+	accurateFatigue           float64
 	sleepingFatigue           int64
 	sleeping                  bool
 	combatStyle               int
@@ -1628,6 +1629,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		}
 	case 114: // fatigue
 		c.fatigue = p.readShort()
+		c.accurateFatigue = (float64(p.readShort()) / 750) * 100
 	case 53: // Update inventory
 		for i := 0; i < 30; i++ {
 			c.inventory[i].amount = 0

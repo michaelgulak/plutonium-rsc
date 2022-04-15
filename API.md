@@ -71,6 +71,7 @@ Proper use is like this:
 ###### get_pid()
 ###### logout()
 ###### get_fatigue()
+###### get_accurate_fatigue()
 ###### get_x()
 ###### get_z()
 ###### in_combat()
@@ -139,6 +140,7 @@ Contains the following fields: `id`, `amount`, `equipped`, `slot`.
 ###### use_item_on_object(item, object)
 ###### use_item_on_wall_object(item, wall_object)
 ###### use_item_on_player(item, player)
+###### use_item_on_npc(item, npc)
 ###### use_sleeping_bag()
 
 ## NPCs
@@ -146,6 +148,7 @@ Contains the following fields: `id`, `amount`, `equipped`, `slot`.
 #### NPC Object
 
 Contains the following fields: `x`, `z`, `sid`, `sprite`, `current_hp`, `max_hp`. 
+
 Contains the following methods: `in_combat()`, `is_talking()`.
 
 ###### get_npcs()
@@ -158,7 +161,6 @@ Contains the following methods: `in_combat()`, `is_talking()`.
 ###### talk_to_npc(npc)
 ###### thieve_npc(npc)
 ###### cast_on_npc(spell_id, npc)
-###### use_item_on_npc(item, npc)
 
 ## Quest menu
 
@@ -173,7 +175,8 @@ Contains the following methods: `in_combat()`, `is_talking()`.
 
 #### Player Object
 
-Contains the following fields: `x`, `z`, `pid`, `sprite`, `current_hp`, `max_hp`, `username`, `combat_level`. 
+Contains the following fields: `x`, `z`, `pid`, `sprite`, `current_hp`, `max_hp`, `username`, `combat_level`.
+
 Contains the following methods: `in_combat()`, `is_talking()`.
 
 ###### get_my_player()
@@ -188,7 +191,7 @@ Contains the following methods: `in_combat()`, `is_talking()`.
 
 ## Chat
 
-##### Friend Object
+#### Friend Object
 
 Contains the following fields: `username`, `online`.
 

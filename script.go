@@ -728,6 +728,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["get_fatigue"] = py.MustNewMethod("get_fatigue", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.fatigue), nil
 	}, py.METH_CLASS, "")
+	module.Globals["get_accurate_fatigue"] = py.MustNewMethod("get_fatigue", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return py.Float(c.accurateFatigue), nil
+	}, py.METH_CLASS, "")
 	module.Globals["get_x"] = py.MustNewMethod("get_x", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.x), nil
 	}, py.METH_CLASS, "")
