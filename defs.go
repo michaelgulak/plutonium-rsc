@@ -1878,6 +1878,7 @@ func loadDefs() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	defer f.Close()
 
 	err = json.NewDecoder(f).Decode(&itemDefs)
 	if err != nil {

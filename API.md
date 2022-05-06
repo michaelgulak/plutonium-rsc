@@ -86,7 +86,7 @@ Proper use is like this:
 ###### is_reachable(x, z)
 ###### is_ground_item_reachable(ground_item)
 ###### is_object_reachable(object)
-###### is_wall_object_reachable(wallobject)
+###### is_wall_object_reachable(wall_object)
 ###### distance_to(x, z)
 ###### distance(x1, z1, x2, z2)
 ###### in_radius_of(x, z, radius)
@@ -147,7 +147,7 @@ Contains the following fields: `id`, `amount`, `equipped`, `slot`.
 
 #### NPC Object
 
-Contains the following fields: `x`, `z`, `sid`, `sprite`, `current_hp`, `max_hp`. 
+Contains the following fields: `id`, `x`, `z`, `sid`, `sprite`, `current_hp`, `max_hp`. 
 
 Contains the following methods: `in_combat()`, `is_talking()`.
 

@@ -92,11 +92,7 @@ def bank():
     
 def thieve():
     global thieve_timeout, move_timer
-
-    if get_pid() < 300:
-        logout()
-        return 1000
-
+    
     if get_fatigue() > 95:
         use_sleeping_bag()
         return 4000

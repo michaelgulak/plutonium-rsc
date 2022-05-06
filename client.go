@@ -380,7 +380,7 @@ func main() {
 				loginResponse, err := c.login()
 				if err != nil {
 					fmt.Printf("[%s] Login error: %s\n", c.user, err)
-					time.Sleep(5 * time.Second)
+					time.Sleep(15 * time.Second)
 					continue clientLoop
 				}
 				fmt.Printf("[%s] Login response: %d\n", c.user, loginResponse)
@@ -401,13 +401,21 @@ func main() {
 						fmt.Printf("[%s] The client has been updated\n", c.user)
 						break clientLoop
 					case 6:
-						fmt.Printf("[%s] You may only use 1 character at once\n", c.user)
-						time.Sleep(6 * time.Minute)
-						continue clientLoop
+						fmt.Printf("[%s] You may only use 1 character at once, waiting 5-7 minutes\n", c.user)
+						select {
+						case <-time.After((5 * time.Minute) + time.Duration(rand.Int63n(int64(2*time.Minute)))):
+							continue clientLoop
+						case <-closing:
+							break clientLoop
+						}
 					case 7:
-						fmt.Printf("[%s] Login attempts exceeded\n", c.user)
-						time.Sleep(60 * time.Second)
-						continue clientLoop
+						fmt.Printf("[%s] Login attempts exceeded, waiting 5-7 minutes\n", c.user)
+						select {
+						case <-time.After((5 * time.Minute) + time.Duration(rand.Int63n(int64(2*time.Minute)))):
+							continue clientLoop
+						case <-closing:
+							break clientLoop
+						}
 					case 8:
 						fmt.Printf("[%s] Server rejected session\n", c.user)
 						time.Sleep(5 * time.Second)
@@ -418,27 +426,44 @@ func main() {
 						continue clientLoop
 					case 10:
 						fmt.Printf("[%s] Username already in use\n", c.user)
-						time.Sleep(5 * time.Second)
+						time.Sleep(10 * time.Second)
 						continue clientLoop
 					case 11:
-						fmt.Printf("[%s] Account temporariy disabled, waiting 5 mins\n", c.user)
-						time.Sleep(5 * time.Minute)
-						continue clientLoop
+						fmt.Printf("[%s] Account temporariy disabled, waiting 5-7 minutes\n", c.user)
+						select {
+						case <-time.After((5 * time.Minute) + time.Duration(rand.Int63n(int64(2*time.Minute)))):
+							continue clientLoop
+						case <-closing:
+							break clientLoop
+						}
 					case 12:
-						fmt.Printf("[%s] Account permanently disabled\n", c.user)
-						break clientLoop
+						fmt.Printf("[%s] Account permanently disabled, waiting 5-7 minutes\n", c.user)
+						select {
+						case <-time.After((5 * time.Minute) + time.Duration(rand.Int63n(int64(2*time.Minute)))):
+							continue clientLoop
+						case <-closing:
+							break clientLoop
+						}
 					case 14:
 						fmt.Printf("[%s] World full\n", c.user)
 						time.Sleep(5 * time.Second)
 						continue clientLoop
 					case 15, 16, 17, 18, 20, 21, 22, 23, 24, 25:
-						fmt.Printf("[%s] Generic server error\n", c.user)
-						time.Sleep(time.Minute)
-						continue clientLoop
+						fmt.Printf("[%s] Generic server error, waiting 5-7 minutes\n", c.user)
+						select {
+						case <-time.After((5 * time.Minute) + time.Duration(rand.Int63n(int64(2*time.Minute)))):
+							continue clientLoop
+						case <-closing:
+							break clientLoop
+						}
 					default:
 						fmt.Printf("[%s] Unhandled login response \n", c.user)
-						time.Sleep(time.Minute)
-						continue clientLoop
+						select {
+						case <-time.After(time.Minute):
+							continue clientLoop
+						case <-closing:
+							break clientLoop
+						}
 					}
 				}
 

@@ -15,7 +15,7 @@ scenery_locs = "SceneryLocs.json"
 directory = "accounts"
 
 [client]
-client_version = 10008
+client_version = 10009
 
 [script]
 directory = "scripts"

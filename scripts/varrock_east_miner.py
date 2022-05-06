@@ -96,7 +96,7 @@ def mine():
             and time.time() <= previous_rock_timeout:
             continue
         obj = get_object_from_coords(rock.x, rock.z)
-        if obj.id != rock.id:
+        if obj == None or obj.id != rock.id:
             continue
         
         current_rock = rock
