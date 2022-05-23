@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
+	"math"
 	"math/rand"
 	"os"
 	"runtime"
@@ -587,16 +588,16 @@ func (c *client) generateLongPath(x, z, depth int) *longPath {
 		path *path
 	)
 	if depth == -1 {
-		depth = 32
+		depth = int(math.Pow(2, math.Ceil(math.Log2(c.distanceTo(x, z)))))
 		for {
+			if depth > 512 {
+				return nil
+			}
 			p = newAStarpathfinder(c, &point{c.x, c.z}, &point{x, z}, true, false, depth)
 			path = p.findPath()
 
 			if path != nil {
 				break
-			}
-			if depth >= 512 {
-				return nil
 			}
 			depth <<= 1
 		}
