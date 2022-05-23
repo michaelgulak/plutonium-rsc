@@ -47,15 +47,13 @@ Tells the bot to close the account loop, terminating the running account. Usuall
 ###### walk_to(x, z)
 ###### walk_path_to(x, z)
 
-Capped at 200 distance to prevent burning out cpus. If you find this isn't enough for a long distance journey, then break up the calls to walk_path_to into shorter distances in conjunction with in_radius_of. Using a distance of 50 is preferred over the max of 200. FIXME: need a more efficient algorithm for walking long distances.
+*DEPRECATED*: Use calculate_path.
 
-Can walk long distances across the map similar to the APOS PathWalker by Storm but with a simplified API and shouldn't have as many issues finding paths. Returns true or false depending on whether a path was found or not. Note that this function is expensive. Don't use it for too far of distances and return a high wait time before calling it again.
+Will fail to path in certain circumstances where the euclidean distance is a lot shorter than the path distance.
 
 ###### walk_path_depth_to(x, z, depth)
 
-Capped at 800 depth to prevent burning out cpus. If you find this isn't enough for a long distance journey, then break up the calls to walk_path_to into shorter distances in conjunction with in_radius_of. Using a depth of 200 is preferred over the max of 800. FIXME: need a more efficient algorithm for walking long distances.
-
-The same as walk_path_to except it takes a depth for the internal A Star algorithm. The depth is set to euclidean distance \* 4 for walk_path_to.
+*DEPRECATED*: Use calculate_path.
 
 ###### open_bank()
 
@@ -142,6 +140,49 @@ Contains the following fields: `id`, `amount`, `equipped`, `slot`.
 ###### use_item_on_player(item, player)
 ###### use_item_on_npc(item, npc)
 ###### use_sleeping_bag()
+
+
+## Paths
+
+#### Path Object
+
+Contains the following methods: `complete`, `reset`, `process`, `walk`, `next_x`, `next_z`.
+
+The `process` method must be called before calling `walk`. This is to make handling obstacles with `next_x` and `next_z` cleaner. For example you may want to call `process`, check if `next_z` is beyond some gate or other obstacle, then handle the obstacle before continuing to walk.
+
+###### calculate_path(x, z, depth)
+
+Returns a path object or `None` if a path was not found.
+
+The `depth` argument is optional. Use a depth for the A* algorithm for optimal use of this method. Otherwise it will test depths sequentially, wasting CPU. Euclidean distance or a multiple of it is usually sufficient. However in some cases it will not be.
+
+Correct usage is something like this:
+
+```python
+path = None
+
+def loop():
+    global path
+
+    if path != None:
+        path.process()
+        if not path.complete():
+            path.walk()
+            return 600
+        else:
+            path = None
+
+    if get_x() != 128 or get_z() != 640:
+        path = calculate_path(128, 640)
+        if path == None:
+            print("failed to path")
+            stop_script()
+            return 1000
+
+        return 250
+
+    return 1000
+```
 
 ## NPCs
 

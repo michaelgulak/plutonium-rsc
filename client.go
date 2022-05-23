@@ -516,10 +516,11 @@ func main() {
 							drainTimer()
 							t = time.NewTicker(500 * time.Millisecond)
 						case <-t.C:
-							if c.script != nil && c.script.fatigueTricking {
+							sleepFatigue := atomic.LoadInt64(&c.sleepingFatigue)
+							if c.script != nil && c.script.fatigueTricking && sleepFatigue <= 92 {
 								drainTimer()
 								c.captchaChan <- buf
-							} else if sleepFatigue := atomic.LoadInt64(&c.sleepingFatigue); sleepFatigue == 0 {
+							} else if sleepFatigue == 0 {
 								drainTimer()
 								c.captchaChan <- buf
 							} else {

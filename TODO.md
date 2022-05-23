@@ -2,12 +2,9 @@
 
 ### Bot
 
-- [ ] *HIGH PRIORITY*: Optimize or change A Star algorithm such that it can path longer distances
-- [ ] Switch `server` arrays to use maps. ie. npcsServer and playersServer
-- [ ] Figure out a way to clean up localWorld tiles
-- [ ] Add types for distance calculation (euclidean, manhattan, path)
+- [x] *HIGH PRIORITY*: Optimize or change A Star algorithm such that it can path longer distances
 - [ ] Make a frontend for the bot
-- [ ] Make scripts retain state between logouts
+- [x] Make scripts retain state between logouts
 - [ ] Add log function for scripts (so it prints username before argument)
 
 ### Functions

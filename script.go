@@ -485,6 +485,52 @@ func (n *quest) Type() *py.Type {
 	}
 }
 
+func (n *longPath) Type() *py.Type {
+	return &py.Type{
+		ObjectType: py.ObjectType,
+		Name:       "path",
+		Dict: py.StringDict{
+			"complete": py.MustNewMethod("complete", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+				return py.Bool(n.currentPt >= len(n.points)), nil
+			}, py.METH_CLASS, ""),
+			"reset": py.MustNewMethod("reset", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+				n.currentPt = 0
+				return py.None, nil
+			}, py.METH_CLASS, ""),
+			"next_x": py.MustNewMethod("next_x", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+				if n.currentPt >= len(n.points) {
+					return py.Int(-1), nil
+				}
+				return py.Int(n.points[n.currentPt].x), nil
+			}, py.METH_CLASS, ""),
+			"next_z": py.MustNewMethod("next_z", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+				if n.currentPt >= len(n.points) {
+					return py.Int(-1), nil
+				}
+				return py.Int(n.points[n.currentPt].y), nil
+			}, py.METH_CLASS, ""),
+			"process": py.MustNewMethod("process", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+				if n.currentPt >= len(n.points) {
+					return nil, nil
+				}
+				pt := n.points[n.currentPt]
+				if pt.x == n.c.x && pt.y == n.c.z {
+					n.currentPt++
+				}
+				return nil, nil
+			}, py.METH_CLASS, ""),
+			"walk": py.MustNewMethod("walk", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+				if n.currentPt >= len(n.points) {
+					return nil, nil
+				}
+				pt := n.points[n.currentPt]
+				n.c.walkTo(pt.x, pt.y, pt.x, pt.y, false, false)
+				return nil, nil
+			}, py.METH_CLASS, ""),
+		},
+	}
+}
+
 func generateBankersSlice() []py.Object {
 	objs := make([]py.Object, len(bankersID))
 	for i := 0; i < len(objs); i++ {
@@ -527,6 +573,63 @@ func (c *client) generateLongPathPoint(x, z, depth int) *point {
 	}
 
 	return pt
+}
+
+type longPath struct {
+	points    []*point
+	currentPt int
+	c         *client
+}
+
+func (c *client) generateLongPath(x, z, depth int) *longPath {
+	var (
+		p    *aStarpathfinder
+		path *path
+	)
+	if depth == -1 {
+		depth = 32
+		for {
+			p = newAStarpathfinder(c, &point{c.x, c.z}, &point{x, z}, true, false, depth)
+			path = p.findPath()
+
+			if path != nil {
+				break
+			}
+			if depth >= 512 {
+				return nil
+			}
+			depth <<= 1
+		}
+	} else {
+		p = newAStarpathfinder(c, &point{c.x, c.z}, &point{x, z}, true, false, depth)
+		path = p.findPath()
+
+		if path == nil {
+			return nil
+		}
+	}
+
+	path.waypoints.PushBack(&point{x, z})
+
+	count := 0
+	coordsAwayThreshold := 10
+	lp := &longPath{points: []*point{}, c: c}
+
+	if path.waypoints.Len() < coordsAwayThreshold {
+		lp.points = append(lp.points, path.waypoints.Back().Value.(*point))
+	} else {
+		for e := path.waypoints.Front(); e != nil; e = e.Next() {
+			if count%coordsAwayThreshold-1 == 0 {
+				lp.points = append(lp.points, e.Value.(*point))
+			}
+			count++
+		}
+		if count-1%coordsAwayThreshold-1 != 0 {
+			lp.points = append(lp.points, path.waypoints.Back().Value.(*point))
+		}
+	}
+
+	return lp
 }
 
 func (s *script) loop() int {
@@ -686,6 +789,26 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["stop_script"] = py.MustNewMethod("stop_script", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		s.running = false
 		return py.None, nil
+	}, py.METH_CLASS, "")
+	module.Globals["calculate_path"] = py.MustNewMethod("calculate_path", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		x, z := int(args[0].(py.Int)), int(args[1].(py.Int))
+		depth := -1
+		if len(args) > 2 {
+			switch v := args[2].(type) {
+			case py.Int:
+				depth = int(v)
+			case py.Float:
+				depth = int(float64(v))
+			}
+		}
+		path := c.generateLongPath(x, z, depth)
+		if path == nil {
+			if s.c.account.debug {
+				fmt.Printf("[%s] Path not found to (%d, %d)\n", c.user, x, z)
+			}
+			return py.None, nil
+		}
+		return path, nil
 	}, py.METH_CLASS, "")
 	module.Globals["walk_path_to"] = py.MustNewMethod("walk_path_to", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x, z := int(args[0].(py.Int)), int(args[1].(py.Int))
