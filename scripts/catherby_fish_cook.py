@@ -5,7 +5,7 @@ import time
 # Script block should look like this:
 # [script]
 # name            = "catherby_fish_cook.py"
-# progress_report = "20m"
+# progress_reports = "20m"
 
 #   [script.settings]
 #   fish_type = "shrimp/anchovies"
@@ -37,6 +37,7 @@ fishing_spot = None
 fish_banked  = {}
 fish_timeout = 0
 cook_timeout = 0
+move_timer = False
 
 if settings.fish_type == "shrimp/anchovies":
     fishing_spot = FishingSpot((418,500), 1, RAW_FISH_IDS[SHRIMP_ANCHOVIES], COOKED_FISH_IDS[SHRIMP_ANCHOVIES], EQUIPMENT[SHRIMP_ANCHOVIES])
@@ -54,7 +55,14 @@ else:
     raise RuntimeError("Unknown fish type")
 
 def fish():
-    global fish_timeout
+    global fish_timeout, move_timer
+
+    if move_timer:
+        if get_x() != fishing_spot.coord[0] or get_z() != fishing_spot.coord[1] - 2:
+            walk_to(fishing_spot.coord[0], fishing_spot.coord[1] - 2)
+            return 600
+        else:
+            move_timer = False
 
     if get_x() != fishing_spot.coord[0] or get_z() != fishing_spot.coord[1] - 1:
         walk_path_to(fishing_spot.coord[0], fishing_spot.coord[1] - 1)
@@ -141,12 +149,14 @@ def loop():
     return fish()
 
 def on_server_message(msg):
-    global fish_timeout, cook_timeout
+    global fish_timeout, cook_timeout, move_timer
 
     if msg.startswith("You accidentally") or msg.endswith("nicely cooked"):
         cook_timeout = 0
     elif msg.startswith("You fail") or msg.startswith("You catch"):
         fish_timeout = 0
+    elif msg.startswith("@cya@You have been standing"):
+        move_timer = True
 
 def on_progress_report():
     count = 0

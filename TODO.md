@@ -2,10 +2,7 @@
 
 ### Bot
 
-- [x] *HIGH PRIORITY*: Optimize or change A Star algorithm such that it can path longer distances
 - [ ] Make a frontend for the bot
-- [x] Make scripts retain state between logouts
-- [ ] Add log function for scripts (so it prints username before argument)
 
 ### Functions
 

@@ -44,6 +44,10 @@ Tells the bot to close the account loop, terminating the running account. Usuall
 ###### in_rect(x, z, width, height)
 ###### set_fatigue_tricking(True)
 ###### stop_script()
+###### log(str)
+
+Prints to the console with user prefix.
+
 ###### walk_to(x, z)
 ###### walk_path_to(x, z)
 

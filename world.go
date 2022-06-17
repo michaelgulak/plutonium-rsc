@@ -11,7 +11,6 @@ import (
 )
 
 var (
-	//allowedWallIdTypes = []int{5, 6, 14, 42, 63, 128, 229, 230}
 	maxWorldHeight = 4032 // 3776
 	maxWorldWidth  = 1008 // 944
 )
@@ -107,18 +106,6 @@ func newRegion(regionX int, regionY int) (z *region) {
 	return
 }
 
-/*func NewTileValue() (z *tileValue) {
-	z = &tileValue{}
-	z.traversalMask = FULL_BLOCK
-	z.diagWallVal = 0
-	z.horizontalWallVal = 0
-	z.overlay = 0
-	z.verticalWallVal = 0
-	z.elevation = 0
-	z.projectileAllowed = false
-	return
-}*/
-
 func (r *region) checkRedundantRegion() {
 	allTilesEqual := true
 	firstTile := r.tiles[0][0]
@@ -133,16 +120,6 @@ func (r *region) checkRedundantRegion() {
 		r.tiles = nil
 	}
 }
-
-/*func (t *tileValue) equals(t2 *tileValue) bool {
-	return t.traversalMask == t2.traversalMask &&
-		t.diagWallVal == t2.diagWallVal &&
-		t.horizontalWallVal == t2.horizontalWallVal &&
-		t.overlay == t2.overlay &&
-		t.verticalWallVal == t2.verticalWallVal &&
-		t.elevation == t2.elevation &&
-		t.projectileAllowed == t2.projectileAllowed
-}*/
 
 func (z *region) getTileValue(regionX int, regionY int) int32 {
 	if z.tile != math.MaxInt32 {
@@ -173,7 +150,6 @@ func (z *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, 
 				continue
 			}
 			sectorTile := s.getTile2(x, y)
-			//tile := z.getTile(bx, by)
 			if int(sectorTile.groundOverlay) == 250 {
 				sectorTile.groundOverlay = 2
 			}
@@ -185,36 +161,19 @@ func (z *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, 
 			if verticalWall > 0 && doorDefs[verticalWall-1].unknown == 0 && doorDefs[verticalWall-1].doorType != 0 {
 				z.getRegion(bx, by).tiles[bx%48][by%48] |= 1       // 1
 				z.getRegion(bx, by-1).tiles[bx%48][(by-1)%48] |= 4 // 4
-				/*if projectileClipAllowed(verticalWall) {
-					tile.projectileAllowed = true
-					z.getTile(bx, by-1).projectileAllowed = true
-				}*/
 			}
 			horizontalWall := int(sectorTile.horizontalWall)
 			if horizontalWall > 0 && doorDefs[horizontalWall-1].unknown == 0 && doorDefs[horizontalWall-1].doorType != 0 {
 				z.getRegion(bx, by).tiles[bx%48][by%48] |= 2
 				z.getRegion(bx-1, by).tiles[(bx-1)%48][by%48] |= 8 // 8
-				/*if projectileClipAllowed(horizontalWall) {
-					tile.projectileAllowed = true
-					z.getTile(bx-1, by).projectileAllowed = true
-				}*/
 			}
 			diagonalWalls := int(sectorTile.diagonalWalls)
 			if diagonalWalls > 0 && diagonalWalls < 12000 && doorDefs[diagonalWalls-1].unknown == 0 && doorDefs[diagonalWalls-1].doorType != 0 {
 				z.getRegion(bx, by).tiles[bx%48][by%48] |= 0x20
-				/*if projectileClipAllowed(diagonalWalls) {
-					tile.projectileAllowed = true
-				}*/
 			}
 			if diagonalWalls > 12000 && diagonalWalls < 24000 && doorDefs[diagonalWalls-12001].unknown == 0 && doorDefs[diagonalWalls-12001].doorType != 0 {
 				z.getRegion(bx, by).tiles[bx%48][by%48] |= 0x10
-				/*if projectileClipAllowed(diagonalWalls) {
-					tile.projectileAllowed = true
-				}*/
 			}
-			/*if tile.overlay == 2 || tile.overlay == 11 {
-				tile.projectileAllowed = true
-			}*/
 		}
 	}
 	return true
@@ -309,40 +268,8 @@ func (w *world) setUnwalkableTiles(o *objectLoc) {
 				w.pathWalkerMap[int32(x<<16)|int32(y)] = struct{}{}
 			}
 		}
-	} /* else {
-		if o.Direction == 0 {
-			objWidth++
-			destZ--
-		}
-
-		if o.Direction == 2 {
-			objHeight++
-		}
-
-		if o.Direction == 6 {
-			destZ--
-			objHeight++
-		}
-
-		if o.Direction == 4 {
-			objWidth++
-		}
-		for x := destX; x <= objWidth+(destX-1); x++ {
-			for y := destZ; y <= objHeight+destZ-1; y++ {
-				w.pathWalkerMap[(x<<32)|y] = struct{}{}
-			}
-		}
-	}*/
-}
-
-/*func projectileClipAllowed(wallID int) bool {
-	for _, allowedWallIdType := range allowedWallIdTypes {
-		if allowedWallIdType == wallID {
-			return true
-		}
 	}
-	return false
-}*/
+}
 
 type sector struct {
 	tiles []*tile
@@ -453,34 +380,25 @@ func (c *client) registerGameObject(o *object) {
 	for x := o.x; x < o.x+width; x++ {
 		for y := o.z; y < o.z+height; y++ {
 			if def.typ == 1 {
-				//z.getTile(x, y).traversalMask |= FULL_BLOCK_C
 				c.localWorld.setTileOr(x, y, fullBlockC)
 			} else if dir == 0 {
-				//z.getTile(x, y).traversalMask |= WALL_EAST
 				c.localWorld.setTileOr(x, y, wallEast)
 				if c.world.getTile(x-1, y) != math.MaxInt32 {
-					//z.getTile(x-1, y).traversalMask |= WALL_WEST
 					c.localWorld.setTileOr(x-1, y, wallWest)
 				}
 			} else if dir == 2 {
-				//z.getTile(x, y).traversalMask |= WALL_SOUTH
 				c.localWorld.setTileOr(x, y, wallSouth)
 				if c.world.getTile(x, y+1) != math.MaxInt32 {
-					//z.getTile(x, y+1).traversalMask |= WALL_NORTH
 					c.localWorld.setTileOr(x, y+1, wallNorth)
 				}
 			} else if dir == 4 {
-				//z.getTile(x, y).traversalMask |= WALL_WEST
 				c.localWorld.setTileOr(x, y, wallWest)
 				if c.world.getTile(x+1, y) != math.MaxInt32 {
-					//z.getTile(x+1, y).traversalMask |= WALL_EAST
 					c.localWorld.setTileOr(x+1, y, wallEast)
 				}
 			} else if dir == 6 {
-				//z.getTile(x, y).traversalMask |= WALL_NORTH
 				c.localWorld.setTileOr(x, y, wallNorth)
 				if c.world.getTile(x, y-1) != math.MaxInt32 {
-					//z.getTile(x, y-1).traversalMask |= WALL_SOUTH
 					c.localWorld.setTileOr(x, y-1, wallSouth)
 				}
 			}
@@ -496,24 +414,18 @@ func (c *client) registerWallObject(o *wallObject) {
 	dir := o.dir
 	x, y := o.x, o.z
 	if dir == 0 {
-		//w.getTile(x, y).traversalMask |= WALL_NORTH
 		c.localWorld.setTileOr(x, y, wallNorth)
 		if c.world.getTile(x, y-1) != math.MaxInt32 {
-			//w.getTile(x, y-1).traversalMask |= WALL_SOUTH
 			c.localWorld.setTileOr(x, y-1, wallSouth)
 		}
 	} else if dir == 1 {
-		//w.getTile(x, y).traversalMask |= WALL_EAST
 		c.localWorld.setTileOr(x, y, wallEast)
 		if c.world.getTile(x-1, y) != math.MaxInt32 {
-			//w.getTile(x-1, y).traversalMask |= WALL_WEST
 			c.localWorld.setTileOr(x-1, y, wallWest)
 		}
 	} else if dir == 2 {
-		//w.getTile(x, y).traversalMask |= FULL_BLOCK_A
 		c.localWorld.setTileOr(x, y, fullBlockA)
 	} else if dir == 3 {
-		//w.getTile(x, y).traversalMask |= FULL_BLOCK_B
 		c.localWorld.setTileOr(x, y, fullBlockB)
 	}
 }
@@ -536,26 +448,17 @@ func (c *client) unregisterGameObject(o *object) {
 	for x := o.x; x < o.x+width; x++ {
 		for y := o.z; y < o.z+height; y++ {
 			if def.typ == 1 {
-				//z.getTile(x, y).traversalMask &= 0xffbf
 				c.localWorld.setTileAnd(x, y, 0xffbf)
 			} else if dir == 0 {
-				//z.getTile(x, y).traversalMask &= 0xfffd
-				//z.getTile(x-1, y).traversalMask &= 65535 - 8
 				c.localWorld.setTileAnd(x, y, 0xfffd)
 				c.localWorld.setTileAnd(x-1, y, 65535-8)
 			} else if dir == 2 {
-				//z.getTile(x, y).traversalMask &= 0xfffb
-				//z.getTile(x, y+1).traversalMask &= 65535 - 1
 				c.localWorld.setTileAnd(x, y, 0xfffb)
 				c.localWorld.setTileAnd(x, y+1, 65535-1)
 			} else if dir == 4 {
-				//z.getTile(x, y).traversalMask &= 0xfff7
-				//z.getTile(x+1, y).traversalMask &= 65535 - 2
 				c.localWorld.setTileAnd(x, y, 0xfff7)
 				c.localWorld.setTileAnd(x+1, y, 65535-2)
 			} else if dir == 6 {
-				//z.getTile(x, y).traversalMask &= 0xfffe
-				//z.getTile(x, y-1).traversalMask &= 65535 - 4
 				c.localWorld.setTileAnd(x, y, 0xfffe)
 				c.localWorld.setTileAnd(x, y-1, 65535-4)
 			}
@@ -571,21 +474,15 @@ func (c *client) unregisterWallObject(o *wallObject) {
 	dir := o.dir
 	x, y := o.x, o.z
 	if dir == 0 {
-		//w.getTile(x, y).traversalMask &= 0xfffe
 		c.localWorld.setTileAnd(x, y, 0xfffe)
-		//w.getTile(x, y-1).traversalMask &= 65535 - 4
 		c.localWorld.setTileAnd(x, y-1, 65535-4)
 	} else if dir == 1 {
-		//w.getTile(x, y).traversalMask &= 0xfffd
 		c.localWorld.setTileAnd(x, y, 0xfffd)
-		//w.getTile(x-1, y).traversalMask &= 65535 - 8
 		c.localWorld.setTileAnd(x-1, y, 65535-8)
 	} else if dir == 2 {
-		//w.getTile(x, y).traversalMask &= 0xffef
 		c.localWorld.setTileAnd(x, y, 0xffef)
 	} else if dir == 3 {
 		c.localWorld.setTileAnd(x, y, 0xffdf)
-		//w.getTile(x, y).traversalMask &= 0xffdf
 	}
 }
 

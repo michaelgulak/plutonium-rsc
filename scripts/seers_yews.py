@@ -7,11 +7,6 @@ import time
 AXES     = [87, 12, 88, 203, 204, 405]
 YEW_LOGS = 635
 
-class YewTree:
-    def __init__(self, id, coord):
-        self.id = id
-        self.coord = coord
-
 logs_banked   = 0
 click_timeout = 0
 

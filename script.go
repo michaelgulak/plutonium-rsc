@@ -747,6 +747,10 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		c.sendPacket()
 		return py.None, nil
 	}, py.METH_CLASS, "")
+	module.Globals["log"] = py.MustNewMethod("log", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		fmt.Printf("[%s] %s\n", c.user, args[0].(py.String))
+		return py.None, nil
+	}, py.METH_CLASS, "")
 	module.Globals["distance"] = py.MustNewMethod("distance", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Float(distance(int(args[0].(py.Int)), int(args[1].(py.Int)), int(args[2].(py.Int)), int(args[3].(py.Int)))), nil
 	}, py.METH_CLASS, "")
@@ -852,7 +856,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["get_fatigue"] = py.MustNewMethod("get_fatigue", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.fatigue), nil
 	}, py.METH_CLASS, "")
-	module.Globals["get_accurate_fatigue"] = py.MustNewMethod("get_fatigue", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_accurate_fatigue"] = py.MustNewMethod("get_accurate_fatigue", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Float(c.accurateFatigue), nil
 	}, py.METH_CLASS, "")
 	module.Globals["get_x"] = py.MustNewMethod("get_x", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
