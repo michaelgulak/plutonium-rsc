@@ -582,18 +582,18 @@ type longPath struct {
 	c         *client
 }
 
-func (c *client) generateLongPath(x, z, depth int) *longPath {
+func (c *client) generateLongPath(startX, startZ, x, z, depth int) *longPath {
 	var (
 		p    *aStarpathfinder
 		path *path
 	)
 	if depth == -1 {
-		depth = int(math.Pow(2, math.Ceil(math.Log2(c.distanceTo(x, z)))))
+		depth = int(math.Pow(2, math.Ceil(math.Log2(distance(startX, startZ, x, z)))))
 		for {
 			if depth > 512 {
 				return nil
 			}
-			p = newAStarpathfinder(c, &point{c.x, c.z}, &point{x, z}, true, false, depth)
+			p = newAStarpathfinder(c, &point{startX, startZ}, &point{x, z}, true, false, depth)
 			path = p.findPath()
 
 			if path != nil {
@@ -602,7 +602,7 @@ func (c *client) generateLongPath(x, z, depth int) *longPath {
 			depth <<= 1
 		}
 	} else {
-		p = newAStarpathfinder(c, &point{c.x, c.z}, &point{x, z}, true, false, depth)
+		p = newAStarpathfinder(c, &point{startX, startZ}, &point{x, z}, true, false, depth)
 		path = p.findPath()
 
 		if path == nil {
@@ -796,6 +796,27 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		return py.None, nil
 	}, py.METH_CLASS, "")
 	module.Globals["calculate_path"] = py.MustNewMethod("calculate_path", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		startX, startZ := int(args[0].(py.Int)), int(args[1].(py.Int))
+		x, z := int(args[2].(py.Int)), int(args[3].(py.Int))
+		depth := -1
+		if len(args) > 4 {
+			switch v := args[4].(type) {
+			case py.Int:
+				depth = int(v)
+			case py.Float:
+				depth = int(float64(v))
+			}
+		}
+		path := c.generateLongPath(startX, startZ, x, z, depth)
+		if path == nil {
+			if s.c.account.debug {
+				fmt.Printf("[%s] Path not found from (%d, %d) to (%d, %d)\n", c.user, startX, startZ, x, z)
+			}
+			return py.None, nil
+		}
+		return path, nil
+	}, py.METH_CLASS, "")
+	module.Globals["calculate_path_to"] = py.MustNewMethod("calculate_path_to", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x, z := int(args[0].(py.Int)), int(args[1].(py.Int))
 		depth := -1
 		if len(args) > 2 {
@@ -806,7 +827,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 				depth = int(float64(v))
 			}
 		}
-		path := c.generateLongPath(x, z, depth)
+		path := c.generateLongPath(c.x, c.z, x, z, depth)
 		if path == nil {
 			if s.c.account.debug {
 				fmt.Printf("[%s] Path not found to (%d, %d)\n", c.user, x, z)

@@ -154,9 +154,9 @@ Contains the following methods: `complete`, `reset`, `process`, `walk`, `next_x`
 
 The `process` method must be called before calling `walk`. This is to make handling obstacles with `next_x` and `next_z` cleaner. For example you may want to call `process`, check if `next_z` is beyond some gate or other obstacle, then handle the obstacle before continuing to walk.
 
-###### calculate_path(x, z, depth)
+###### calculate_path_to(x, z, depth)
 
-Returns a path object or `None` if a path was not found.
+Calculates a path from the client's current coordinates to the specified coordinates. Returns a path object or `None` if a path was not found.
 
 The `depth` argument is optional. Use a depth for the A* algorithm for optimal use of this method. Otherwise it will test depths sequentially, wasting CPU. Euclidean distance or a multiple of it is usually sufficient. However in some cases it will not be.
 
@@ -177,7 +177,7 @@ def loop():
             path = None
 
     if get_x() != 128 or get_z() != 640:
-        path = calculate_path(128, 640)
+        path = calculate_path_to(128, 640)
         if path == None:
             print("failed to path")
             stop_script()
@@ -187,6 +187,10 @@ def loop():
 
     return 1000
 ```
+
+###### calculate_path(start_x, start_z, x, z, depth)
+
+The same as `calculate_path_to` except it takes starting coordinates.
 
 ## NPCs
 
