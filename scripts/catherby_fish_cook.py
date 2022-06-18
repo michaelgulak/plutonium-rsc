@@ -5,7 +5,7 @@ import time
 # Script block should look like this:
 # [script]
 # name            = "catherby_fish_cook.py"
-# progress_reports = "20m"
+# progress_report = "20m"
 
 #   [script.settings]
 #   fish_type = "shrimp/anchovies"
