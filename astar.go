@@ -6,29 +6,28 @@ import (
 )
 
 var (
-	wallNorth  int32 = 1 << 0
-	wallEast   int32 = 1 << 1
-	wallSouth  int32 = 1 << 2
-	wallWest   int32 = 1 << 3
-	fullBlockA int32 = 1 << 4
-	fullBlockB int32 = 1 << 5
-	fullBlockC int32 = 1 << 6
-	//_object       = 1 << 7
-	wallNorthEast = wallNorth | wallEast
-	wallNorthWest = wallNorth | wallWest
-	wallSouthEast = wallSouth | wallEast
-	wallSouthWest = wallSouth | wallWest
-	fullBlock     = fullBlockA | fullBlockB | fullBlockC
-	westBlocked   = fullBlock | wallWest
-	southBlocked  = fullBlock | wallSouth
-	northBlocked  = fullBlock | wallNorth
-	eastBlocked   = fullBlock | wallEast
+	wallNorth     int32 = 1 << 0
+	wallEast      int32 = 1 << 1
+	wallSouth     int32 = 1 << 2
+	wallWest      int32 = 1 << 3
+	fullBlockA    int32 = 1 << 4
+	fullBlockB    int32 = 1 << 5
+	fullBlockC    int32 = 1 << 6
+	wallNorthEast       = wallNorth | wallEast
+	wallNorthWest       = wallNorth | wallWest
+	wallSouthEast       = wallSouth | wallEast
+	wallSouthWest       = wallSouth | wallWest
+	fullBlock           = fullBlockA | fullBlockB | fullBlockC
+	westBlocked         = fullBlock | wallWest
+	southBlocked        = fullBlock | wallSouth
+	northBlocked        = fullBlock | wallNorth
+	eastBlocked         = fullBlock | wallEast
 )
 
-type adjacent_direction int
+type adjacentDirection int
 
 const (
-	_south adjacent_direction = iota
+	_south adjacentDirection = iota
 	_southWest
 	_west
 	_northWest
@@ -38,10 +37,10 @@ const (
 	_southEast
 )
 
-type node_state int
+type nodeState int
 
 const (
-	initState node_state = iota
+	initState nodeState = iota
 	openState
 	closedState
 )
@@ -49,7 +48,7 @@ const (
 const basicCost = 10
 const diagCost = 14
 
-type aStarpathfinder struct {
+type astarPathFinder struct {
 	depth       int
 	costBoard   [][]*node
 	bestpath    *path
@@ -57,23 +56,13 @@ type aStarpathfinder struct {
 	pointStart  *point
 	pointEnd    *point
 	path        *path
-	opennodes   []*node
-	closednodes []*node
-	entity      bool
-	longPath    bool
+	openNodes   []*node
+	closedNodes []*node
 }
 
 type point struct {
 	x int
 	y int
-}
-
-func (p *point) getX() int {
-	return p.x
-}
-
-func (p *point) getY() int {
-	return p.y
 }
 
 func abs(a int) int {
@@ -84,8 +73,8 @@ func abs(a int) int {
 }
 
 func calcDistance(one, two *point) int {
-	xdiff := abs(one.getX() - two.getX())
-	ydiff := abs(one.getY() - two.getY())
+	xdiff := abs(one.x - two.x)
+	ydiff := abs(one.y - two.y)
 
 	var (
 		shortL int
@@ -105,14 +94,12 @@ func calcDistance(one, two *point) int {
 	return shortL*diagCost + (longL-shortL)*basicCost
 }
 
-func newAStarpathfinder(c *client, start *point, end *point, longPath bool, entity bool, depth int) (z *aStarpathfinder) {
-	z = &aStarpathfinder{}
-	z.entity = entity
-	z.longPath = longPath
+func newAstarPathFinder(c *client, start *point, end *point, depth int) (z *astarPathFinder) {
+	z = &astarPathFinder{}
 	z.costBoard = nil
 	z.bestpath = nil
-	z.opennodes = []*node{}
-	z.closednodes = []*node{}
+	z.openNodes = []*node{}
+	z.closedNodes = []*node{}
 	z.worldStart = start
 	z.pointStart = &point{depth, depth}
 	z.pointEnd = &point{start.x + depth - end.x, end.y - (start.y - depth)}
@@ -127,7 +114,7 @@ type node struct {
 	fCost        int
 	gCost        int
 	hCost        int
-	state        node_state
+	state        nodeState
 	southBlocked bool
 	northBlocked bool
 	westBlocked  bool
@@ -150,163 +137,124 @@ func newNode(x int, y int) (z *node) {
 	return
 }
 
-func (z *aStarpathfinder) buildPath() *path {
-	parent := z.closednodes[len(z.closednodes)-1].parent
-	endNode := z.costBoard[parent.getX()][parent.getY()]
+func (z *astarPathFinder) buildPath() *path {
+	parent := z.closedNodes[len(z.closedNodes)-1].parent
+	endNode := z.costBoard[parent.x][parent.y]
 	for endNode != nil {
-		worldX := z.worldStart.getX() + z.depth - endNode.position.getX()
-		worldY := z.worldStart.getY() - z.depth + endNode.position.getY()
+		worldX := z.worldStart.x + z.depth - endNode.position.x
+		worldY := z.worldStart.y - z.depth + endNode.position.y
 		if endNode.parent == nil {
 			endNode = nil
 		} else {
 			z.path.addDirect(worldX, worldY)
-			endNode = z.costBoard[endNode.parent.getX()][endNode.parent.getY()]
+			endNode = z.costBoard[endNode.parent.x][endNode.parent.y]
 		}
 	}
 	return z.path
 }
 
-func (z *aStarpathfinder) generateTraversalInfo(c *client, center *point, depth int) {
+func (z *astarPathFinder) generateTraversalInfo(c *client, center *point, depth int) {
 	if depth < 1 {
 		return
 	}
 	z.costBoard = make([][]*node, 2*depth+1)
 	z.initBoard(z.costBoard, 2*depth+1)
-	var curposx int
-	var curposy int
+	var curPosX int
+	var curPosY int
 	for x := -depth; x <= depth; x++ {
 		for y := -depth; y <= depth; y++ {
-			if z.longPath {
-				cdx, cdy := center.getX()-x, center.getY()+y
-				if !withinWorld(cdx, cdy) {
-					continue
+			cdx, cdy := center.x-x, center.y+y
+			if !withinWorld(cdx, cdy) {
+				continue
+			}
+			_, ok := c.world.pathWalkerMap[int32(cdx<<16)|int32(cdy)]
+			curPosX = x + depth
+			curPosY = y + depth
+			if ok {
+				if y < depth {
+					z.costBoard[curPosX][curPosY+1].northBlocked = true
 				}
-				_, ok := c.world.pathWalkerMap[int32(cdx<<16)|int32(cdy)]
-				curposx = x + depth
-				curposy = y + depth
-				if ok {
-					if y < depth {
-						z.costBoard[curposx][curposy+1].northBlocked = true
-					}
-					if x > -depth {
-						z.costBoard[curposx-1][curposy].eastBlocked = true
-					}
-					if y > -depth {
-						z.costBoard[curposx][curposy-1].southBlocked = true
-					}
-					if x < depth {
-						z.costBoard[curposx+1][curposy].westBlocked = true
-					}
+				if x > -depth {
+					z.costBoard[curPosX-1][curPosY].eastBlocked = true
 				}
-				tile := c.combinedTile(cdx, cdy)
-				if tile == math.MaxInt32 {
-					continue
+				if y > -depth {
+					z.costBoard[curPosX][curPosY-1].southBlocked = true
 				}
-				if tile&(fullBlockA|fullBlockB|fullBlockC) != 0 {
-					if y < depth {
-						z.costBoard[curposx][curposy+1].northBlocked = true
-					}
-					if x > -depth {
-						z.costBoard[curposx-1][curposy].eastBlocked = true
-					}
-					if y > -depth {
-						z.costBoard[curposx][curposy-1].southBlocked = true
-					}
-					if x < depth {
-						z.costBoard[curposx+1][curposy].westBlocked = true
-					}
-				} else {
-					if !z.costBoard[curposx][curposy].southBlocked {
-						z.costBoard[curposx][curposy].southBlocked = (tile & southBlocked) != 0
-					}
-					if !z.costBoard[curposx][curposy].westBlocked {
-						z.costBoard[curposx][curposy].westBlocked = (tile & westBlocked) != 0
-					}
-					if !z.costBoard[curposx][curposy].northBlocked {
-						z.costBoard[curposx][curposy].northBlocked = (tile & northBlocked) != 0
-					}
-					if !z.costBoard[curposx][curposy].eastBlocked {
-						z.costBoard[curposx][curposy].eastBlocked = (tile & eastBlocked) != 0
-					}
+				if x < depth {
+					z.costBoard[curPosX+1][curPosY].westBlocked = true
+				}
+			}
+			tile := c.combinedTile(cdx, cdy)
+			if tile == math.MaxInt32 {
+				continue
+			}
+			if tile&(fullBlockA|fullBlockB|fullBlockC) != 0 {
+				if y < depth {
+					z.costBoard[curPosX][curPosY+1].northBlocked = true
+				}
+				if x > -depth {
+					z.costBoard[curPosX-1][curPosY].eastBlocked = true
+				}
+				if y > -depth {
+					z.costBoard[curPosX][curPosY-1].southBlocked = true
+				}
+				if x < depth {
+					z.costBoard[curPosX+1][curPosY].westBlocked = true
 				}
 			} else {
-				tile := c.combinedTile(center.getX()-x, center.getY()+y)
-				if tile == math.MaxInt32 {
-					continue
+				if !z.costBoard[curPosX][curPosY].southBlocked {
+					z.costBoard[curPosX][curPosY].southBlocked = (tile & southBlocked) != 0
 				}
-				curposx = x + depth
-				curposy = y + depth
-				if curposx == z.pointEnd.x && curposy == z.pointEnd.y && z.entity {
-					continue
+				if !z.costBoard[curPosX][curPosY].westBlocked {
+					z.costBoard[curPosX][curPosY].westBlocked = (tile & westBlocked) != 0
 				}
-				if tile&(fullBlockA|fullBlockB|fullBlockC) != 0 {
-					if y < depth {
-						z.costBoard[curposx][curposy+1].northBlocked = true
-					}
-					if x > -depth {
-						z.costBoard[curposx-1][curposy].eastBlocked = true
-					}
-					if y > -depth {
-						z.costBoard[curposx][curposy-1].southBlocked = true
-					}
-					if x < depth {
-						z.costBoard[curposx+1][curposy].westBlocked = true
-					}
-				} else {
-					if !z.costBoard[curposx][curposy].southBlocked {
-						z.costBoard[curposx][curposy].southBlocked = (tile & southBlocked) != 0
-					}
-					if !z.costBoard[curposx][curposy].westBlocked {
-						z.costBoard[curposx][curposy].westBlocked = (tile & westBlocked) != 0
-					}
-					if !z.costBoard[curposx][curposy].northBlocked {
-						z.costBoard[curposx][curposy].northBlocked = (tile & northBlocked) != 0
-					}
-					if !z.costBoard[curposx][curposy].eastBlocked {
-						z.costBoard[curposx][curposy].eastBlocked = (tile & eastBlocked) != 0
-					}
+				if !z.costBoard[curPosX][curPosY].northBlocked {
+					z.costBoard[curPosX][curPosY].northBlocked = (tile & northBlocked) != 0
+				}
+				if !z.costBoard[curPosX][curPosY].eastBlocked {
+					z.costBoard[curPosX][curPosY].eastBlocked = (tile & eastBlocked) != 0
 				}
 			}
 		}
 	}
 }
 
-func (z *aStarpathfinder) findNextnode() *node {
+func (z *astarPathFinder) findNextNode() *node {
 	minimum := math.MaxInt
-	minnode := (*node)(nil)
-	for _, node := range z.opennodes {
+	minNode := (*node)(nil)
+	for _, node := range z.openNodes {
 		if node.hCost < minimum {
 			minimum = node.hCost
-			minnode = node
-		} else if node.hCost == minimum && node.fCost < minnode.fCost {
-			minnode = node
+			minNode = node
+		} else if node.hCost == minimum && node.fCost < minNode.fCost {
+			minNode = node
 		}
 	}
-	return minnode
+	return minNode
 }
 
-func (z *aStarpathfinder) findPath() *path {
+func (z *astarPathFinder) findPath() *path {
 	if z.depth < 1 {
 		return nil
 	}
-	if z.pointStart.getX() == z.pointEnd.getX() && z.pointStart.getY() == z.pointEnd.getY() {
+	if z.pointStart.x == z.pointEnd.x && z.pointStart.y == z.pointEnd.y {
 		return nil
 	}
 	z.costBoard[z.depth][z.depth].selectNode(z)
 	for {
-		next := z.findNextnode()
+		next := z.findNextNode()
 		if next == nil {
 			return nil
 		}
-		if next.position.getX() == z.pointEnd.getX() && next.position.getY() == z.pointEnd.getY() {
-			z.closednodes = append(z.closednodes, next)
+		if next.position.x == z.pointEnd.x && next.position.y == z.pointEnd.y {
+			z.closedNodes = append(z.closedNodes, next)
 			return z.buildPath()
 		}
 		next.selectNode(z)
 	}
 }
 
-func (z *aStarpathfinder) initBoard(board [][]*node, depth int) {
+func (z *astarPathFinder) initBoard(board [][]*node, depth int) {
 	if board == nil {
 		return
 	}
@@ -318,7 +266,7 @@ func (z *aStarpathfinder) initBoard(board [][]*node, depth int) {
 	}
 }
 
-func (z *node) calcGCost(a *aStarpathfinder) {
+func (z *node) calcGCost(a *astarPathFinder) {
 	z.gCost = calcDistance(z.position, a.pointEnd)
 }
 
@@ -326,68 +274,56 @@ func (z *node) calcHCost() {
 	z.hCost = z.fCost + z.gCost
 }
 
-func (z *node) getNeighbor(a *aStarpathfinder, dir adjacent_direction) (n *node) {
+func (z *node) getNeighbor(a *astarPathFinder, dir adjacentDirection) (n *node) {
 	switch dir {
 	case _south:
-		if z.position.getY() < 2*a.depth {
-			return a.costBoard[z.position.getX()][z.position.getY()+1]
+		if z.position.y < 2*a.depth {
+			return a.costBoard[z.position.x][z.position.y+1]
 		} else {
 			return nil
 		}
 	case _southWest:
-		if z.position.getY() < 2*a.depth && z.position.getX() > 0 {
-			n := a.costBoard[z.position.getX()-1][z.position.getY()+1]
-			if a.entity && n.position.x == a.pointEnd.x && n.position.y == a.pointEnd.y {
-				return nil
-			}
+		if z.position.y < 2*a.depth && z.position.x > 0 {
+			n := a.costBoard[z.position.x-1][z.position.y+1]
 			return n
 		} else {
 			return nil
 		}
 	case _west:
-		if z.position.getX() > 0 {
-			return a.costBoard[z.position.getX()-1][z.position.getY()]
+		if z.position.x > 0 {
+			return a.costBoard[z.position.x-1][z.position.y]
 		} else {
 			return nil
 		}
 	case _northWest:
-		if z.position.getY() > 0 && z.position.getX() > 0 {
-			n := a.costBoard[z.position.getX()-1][z.position.getY()-1]
-			if a.entity && n.position.x == a.pointEnd.x && n.position.y == a.pointEnd.y {
-				return nil
-			}
+		if z.position.y > 0 && z.position.x > 0 {
+			n := a.costBoard[z.position.x-1][z.position.y-1]
 			return n
 		} else {
 			return nil
 		}
 	case _north:
-		if z.position.getY() > 0 {
-			return a.costBoard[z.position.getX()][z.position.getY()-1]
+		if z.position.y > 0 {
+			return a.costBoard[z.position.x][z.position.y-1]
 		} else {
 			return nil
 		}
 	case _northEast:
-		if z.position.getY() > 0 && z.position.getX() < 2*a.depth {
-			n := a.costBoard[z.position.getX()+1][z.position.getY()-1]
-			if a.entity && n.position.x == a.pointEnd.x && n.position.y == a.pointEnd.y {
-				return nil
-			}
+		if z.position.y > 0 && z.position.x < 2*a.depth {
+			n := a.costBoard[z.position.x+1][z.position.y-1]
 			return n
 		} else {
 			return nil
 		}
 	case _east:
-		if z.position.getX() < 2*a.depth {
-			return a.costBoard[z.position.getX()+1][z.position.getY()]
+		if z.position.x < 2*a.depth {
+			return a.costBoard[z.position.x+1][z.position.y]
 		} else {
 			return nil
 		}
 	case _southEast:
-		if z.position.getY() < 2*a.depth && z.position.getX() < 2*a.depth {
-			n := a.costBoard[z.position.getX()+1][z.position.getY()+1]
-			if a.entity && n.position.x == a.pointEnd.x && n.position.y == a.pointEnd.y {
-				return nil
-			}
+		if z.position.y < 2*a.depth && z.position.x < 2*a.depth {
+			n := a.costBoard[z.position.x+1][z.position.y+1]
 			return n
 		} else {
 			return nil
@@ -405,13 +341,13 @@ func findIndex(node *node, ns []*node) int {
 	return -1
 }
 
-func (z *node) selectNode(a *aStarpathfinder) {
+func (z *node) selectNode(a *astarPathFinder) {
 	if z.state == openState {
-		idx := findIndex(z, a.opennodes)
-		a.opennodes = append(a.opennodes[:idx], a.opennodes[idx+1:]...)
+		idx := findIndex(z, a.openNodes)
+		a.openNodes = append(a.openNodes[:idx], a.openNodes[idx+1:]...)
 	}
 	z.setState(closedState)
-	a.closednodes = append(a.closednodes, z)
+	a.closedNodes = append(a.closedNodes, z)
 	neighbor := (*node)(nil)
 	neighbor = z.getNeighbor(a, _south)
 	if !z.southBlocked && neighbor != nil {
@@ -447,7 +383,7 @@ func (z *node) selectNode(a *aStarpathfinder) {
 	}
 }
 
-func diagBlocked(a *aStarpathfinder, n *node, dir adjacent_direction) bool {
+func diagBlocked(a *astarPathFinder, n *node, dir adjacentDirection) bool {
 	neighbor1 := (*node)(nil)
 	neighbor2 := (*node)(nil)
 	if dir == _southWest {
@@ -494,16 +430,16 @@ func diagBlocked(a *aStarpathfinder, n *node, dir adjacent_direction) bool {
 	return true
 }
 
-func (z *node) setState(state node_state) {
+func (z *node) setState(state nodeState) {
 	z.state = state
 }
 
-func (z *node) update(a *aStarpathfinder, node *node, cost int) {
+func (z *node) update(a *astarPathFinder, node *node, cost int) {
 	if z.state == initState {
 		z.setState(openState)
 		z.fCost = node.fCost + cost
 		z.calcGCost(a)
-		a.opennodes = append(a.opennodes, z)
+		a.openNodes = append(a.openNodes, z)
 	} else if z.state == closedState {
 		return
 	} else {
@@ -516,8 +452,6 @@ func (z *node) update(a *aStarpathfinder, node *node, cost int) {
 	z.calcHCost()
 	z.parent = node.position
 }
-
-//const MAXIMUM_SIZE = 50
 
 type path struct {
 	waypoints *list.List
@@ -535,8 +469,5 @@ func newPath(startX, startY int) (z *path) {
 }
 
 func (z *path) addDirect(x int, y int) {
-	/*if z.waypoints.Len() > MAXIMUM_SIZE {
-		return
-	}*/
 	z.waypoints.PushFront(&point{x, y})
 }

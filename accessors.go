@@ -96,10 +96,6 @@ func (c *client) isReachable(x, z int) bool {
 	if c.x == x && c.z == z {
 		return true
 	}
-	//pathFinder := newAStarpathfinder(c, &point{c.x, c.z}, &point{x, z}, false, entity, 20)
-	//path := pathFinder.findPath()
-
-	//return path != nil
 	l := c.findPath(c.x, c.z, x, x, z, z, false)
 	return l != -1
 }
@@ -133,16 +129,16 @@ func (c *client) isObjectReachable(o *object) bool {
 	)
 	def := objectDefs[o.id]
 	if o.dir != 0 && o.dir != 4 {
-		objWidth = def.height
-		objHeight = def.width
+		objWidth = def.Height
+		objHeight = def.Width
 	} else {
-		objHeight = def.height
-		objWidth = def.width
+		objHeight = def.Height
+		objWidth = def.Width
 	}
 	destX := o.x
 	destZ := o.z
 
-	if def.typ != 2 && def.typ != 3 {
+	if def.Typ != 2 && def.Typ != 3 {
 		l := c.findPath(c.x, c.z, o.x, objWidth-1+destX, o.z, destZ+objHeight-1, true)
 		return l != -1
 	} else {
@@ -177,6 +173,26 @@ func (c *client) inCombat() bool {
 	return c.sprite == 8 || c.sprite == 9
 }
 
+func (n *npc) isTalking() bool {
+	return time.Since(n.messageTime) < n.lastMessageTimeout
+}
+
+func (n *player) isTalking() bool {
+	return time.Since(n.messageTime) < n.lastMessageTimeout
+}
+
+func (p *player) inCombat() bool {
+	return p.sprite == 8 || p.sprite == 9
+}
+
+func (c *client) inRect(x, z, width, height int) bool {
+	return c.x <= x && c.z >= z && c.x >= x-width && c.z <= z+height
+}
+
+func inRect(x1, z1, x2, z2, width, height int) bool {
+	return x1 <= x2 && z1 >= z2 && x1 >= x2-width && z1 <= z2+height
+}
+
 func inIntArray(needle int, haystack []int) bool {
 	for _, n := range haystack {
 		if needle == n {
@@ -201,10 +217,10 @@ func (c *client) getNearestNPCByID(inCombat, talking, reachable bool, x, z int, 
 		if !talking && c.npcs[i].isTalking() {
 			continue
 		}
-		if reachable && !c.isReachable(c.npcs[i].x, c.npcs[i].z) {
+		if radius != -1 && distance(c.npcs[i].x, c.npcs[i].z, x, z) > radius {
 			continue
 		}
-		if radius != -1 && distance(c.npcs[i].x, c.npcs[i].z, x, z) > radius {
+		if reachable && !c.isReachable(c.npcs[i].x, c.npcs[i].z) {
 			continue
 		}
 		if dist := distance(c.x, c.z, c.npcs[i].x, c.npcs[i].z); dist < min {
@@ -213,14 +229,6 @@ func (c *client) getNearestNPCByID(inCombat, talking, reachable bool, x, z int, 
 		}
 	}
 	return minNPC
-}
-
-func (c *client) inRect(x, z, width, height int) bool {
-	return c.x <= x && c.z >= z && c.x >= x-width && c.z <= z+height
-}
-
-func inRect(x1, z1, x2, z2, width, height int) bool {
-	return x1 <= x2 && z1 >= z2 && x1 >= x2-width && z1 <= z2+height
 }
 
 func (c *client) getNearestNPCByIDInRect(inCombat bool, talking bool, reachable bool, x, z, width, height int, ids ...int) *npc {
@@ -238,10 +246,10 @@ func (c *client) getNearestNPCByIDInRect(inCombat bool, talking bool, reachable 
 		if !talking && c.npcs[i].isTalking() {
 			continue
 		}
-		if reachable && !c.isReachable(c.npcs[i].x, c.npcs[i].z) {
+		if !inRect(c.npcs[i].x, c.npcs[i].z, x, z, width, height) {
 			continue
 		}
-		if !inRect(c.npcs[i].x, c.npcs[i].z, x, z, width, height) {
+		if reachable && !c.isReachable(c.npcs[i].x, c.npcs[i].z) {
 			continue
 		}
 		if dist := distance(c.x, c.z, c.npcs[i].x, c.npcs[i].z); dist < min {
@@ -261,10 +269,10 @@ func (c *client) getNearestObjectByIDInRect(reachable bool, x, z, width, height 
 		if !inIntArray(c.objects[i].id, ids) {
 			continue
 		}
-		if reachable && !c.isObjectReachable(c.objects[i]) {
+		if !inRect(c.objects[i].x, c.objects[i].z, x, z, width, height) {
 			continue
 		}
-		if !inRect(c.objects[i].x, c.objects[i].z, x, z, width, height) {
+		if reachable && !c.isObjectReachable(c.objects[i]) {
 			continue
 		}
 		if dist := distance(c.x, c.z, c.objects[i].x, c.objects[i].z); dist < min {
@@ -319,45 +327,6 @@ func (c *client) getNearestGroundItemByIDInRect(reachable bool, x, z, width, hei
 		}
 	}
 	return minObj
-}
-
-func (c *client) bankCount(ids ...int) int {
-	if c.banking {
-		count := 0
-		for i := 0; i < c.bankItemCount; i++ {
-			if inIntArray(c.bankItems[i].id, ids) {
-				count += c.bankItems[i].amount
-			}
-		}
-		return count
-	}
-	return 0
-}
-
-func (c *client) hasBankItem(id int) bool {
-	return c.bankCount(id) > 0
-}
-
-func (c *client) getPlayerByName(name string) *player {
-	name = strings.ToLower(name)
-	for i := 0; i < c.playerCount; i++ {
-		if strings.ToLower(c.players[i].username) == name {
-			return c.players[i]
-		}
-	}
-	return nil
-}
-
-func (n *npc) isTalking() bool {
-	return time.Since(n.messageTime) < n.lastMessageTimeout
-}
-
-func (n *player) isTalking() bool {
-	return time.Since(n.messageTime) < n.lastMessageTimeout
-}
-
-func (p *player) inCombat() bool {
-	return p.sprite == 8 || p.sprite == 9
 }
 
 func (c *client) getNearestGroundItemByID(x, z int, radius float64, reachable bool, ids ...int) *groundItem {
@@ -427,6 +396,33 @@ func (c *client) getNearestWallObjectByID(x, z int, radius float64, reachable bo
 		}
 	}
 	return minObj
+}
+
+func (c *client) bankCount(ids ...int) int {
+	if c.banking {
+		count := 0
+		for i := 0; i < c.bankItemCount; i++ {
+			if inIntArray(c.bankItems[i].id, ids) {
+				count += c.bankItems[i].amount
+			}
+		}
+		return count
+	}
+	return 0
+}
+
+func (c *client) hasBankItem(id int) bool {
+	return c.bankCount(id) > 0
+}
+
+func (c *client) getPlayerByName(name string) *player {
+	name = strings.ToLower(name)
+	for i := 0; i < c.playerCount; i++ {
+		if strings.ToLower(c.players[i].username) == name {
+			return c.players[i]
+		}
+	}
+	return nil
 }
 
 func (c *client) isGroundItemAt(id, x, z int) bool {
@@ -518,4 +514,101 @@ func (c *client) isIgnored(name string) bool {
 		}
 	}
 	return false
+}
+
+func (c *client) getShopAmount(id int) int {
+	for i := 0; i < c.shopItemCount; i++ {
+		if c.shopItems[i].id == id {
+			return c.shopItems[i].amount
+		}
+	}
+	return 0
+}
+
+func (c *client) generateLongPathPoint(x, z, depth int) *point {
+	if depth == -1 {
+		depth = int(distance(c.x, c.z, x, z) * 4)
+	}
+
+	if depth > 800 {
+		return nil
+	}
+
+	p := newAstarPathFinder(c, &point{c.x, c.z}, &point{x, z}, depth)
+
+	path := p.findPath()
+
+	if path == nil {
+		return nil
+	}
+
+	path.waypoints.PushBack(&point{x, z})
+
+	count := 0
+	coordsAwayThreshold := 10
+	var pt *point
+	if path.waypoints.Len() < coordsAwayThreshold {
+		pt = path.waypoints.Back().Value.(*point)
+	} else {
+		for e := path.waypoints.Front(); e != nil; e = e.Next() {
+			if count == coordsAwayThreshold-1 {
+				pt = e.Value.(*point)
+				break
+			}
+			count++
+		}
+	}
+
+	return pt
+}
+
+func (c *client) generateLongPath(startX, startZ, x, z, depth int) *longPath {
+	var (
+		p    *astarPathFinder
+		path *path
+	)
+	if depth == -1 {
+		depth = int(math.Pow(2, math.Ceil(math.Log2(distance(startX, startZ, x, z)))))
+		for {
+			if depth > 512 {
+				return nil
+			}
+			p = newAstarPathFinder(c, &point{startX, startZ}, &point{x, z}, depth)
+			path = p.findPath()
+
+			if path != nil {
+				break
+			}
+			depth <<= 1
+		}
+	} else {
+		p = newAstarPathFinder(c, &point{startX, startZ}, &point{x, z}, depth)
+		path = p.findPath()
+
+		if path == nil {
+			return nil
+		}
+	}
+
+	path.waypoints.PushBack(&point{x, z})
+
+	count := 0
+	coordsAwayThreshold := 10
+	lp := &longPath{points: []*point{}, c: c}
+
+	if path.waypoints.Len() < coordsAwayThreshold {
+		lp.points = append(lp.points, path.waypoints.Back().Value.(*point))
+	} else {
+		for e := path.waypoints.Front(); e != nil; e = e.Next() {
+			if count%coordsAwayThreshold-1 == 0 {
+				lp.points = append(lp.points, e.Value.(*point))
+			}
+			count++
+		}
+		if count-1%coordsAwayThreshold-1 != 0 {
+			lp.points = append(lp.points, path.waypoints.Back().Value.(*point))
+		}
+	}
+
+	return lp
 }

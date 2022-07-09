@@ -23,16 +23,16 @@ func (c *client) walkToObject(o *object) {
 	)
 	def := objectDefs[o.id]
 	if o.dir != 0 && o.dir != 4 {
-		objWidth = def.height
-		objHeight = def.width
+		objWidth = def.Height
+		objHeight = def.Width
 	} else {
-		objHeight = def.height
-		objWidth = def.width
+		objHeight = def.Height
+		objWidth = def.Width
 	}
 	destX := o.x
 	destZ := o.z
 
-	if def.typ != 2 && def.typ != 3 {
+	if def.Typ != 2 && def.Typ != 3 {
 		c.walkTo(o.x, o.z, objWidth-1+destX, destZ+objHeight-1, true, true)
 	} else {
 		if o.dir == 0 {
@@ -54,6 +54,12 @@ func (c *client) walkToObject(o *object) {
 		}
 
 		c.walkTo(destX, destZ, objWidth+(destX-1), objHeight+destZ-1, true, false)
+	}
+}
+
+func (c *client) walkToGroundItem(xLow, zLow, xHigh, zHigh int) {
+	if !c.walkToGroundItem1(xLow, zLow, xHigh, zHigh, false) {
+		c.walkToEntity(xLow, zLow, xHigh, zHigh, true)
 	}
 }
 
@@ -85,6 +91,7 @@ func (c *client) walkTo(xLow, zLow, xHigh, zHigh int, entity, border bool) {
 	startX := px[count]
 	startZ := pz[count]
 	count--
+
 	if entity {
 		c.createPacket(16)
 	} else {
@@ -106,21 +113,15 @@ func (c *client) walkTo(xLow, zLow, xHigh, zHigh int, entity, border bool) {
 	c.sendPacket()
 }
 
-func (c *client) walkToGroundItem(xLow, zLow, xHigh, zHigh int) {
-	if c.account.debug {
-		fmt.Printf("[%s] WALKTOGROUNDITEM (%d,%d,%d,%d)\n", c.user, xLow, zLow, xHigh, zHigh)
-	}
-
-	if !c.walkToGroundItem1(xLow, zLow, xHigh, zHigh, true, false) {
-		c.walkToEntity(xLow, zLow, xHigh, zHigh, true)
-	}
-}
-
-func (c *client) walkToGroundItem1(xLow, zLow, xHigh, zHigh int, entity, border bool) bool {
+func (c *client) walkToGroundItem1(xLow, zLow, xHigh, zHigh int, border bool) bool {
 	l := c.findPath(c.x, c.z, xLow, xHigh, zLow, zHigh, border)
 
 	if l == -1 {
 		return false
+	}
+
+	if c.account.debug {
+		fmt.Printf("[%s] WALKTOGROUNDITEM (%d,%d,%d,%d)\n", c.user, xLow, zLow, xHigh, zHigh)
 	}
 
 	px := c.pathX
@@ -130,16 +131,12 @@ func (c *client) walkToGroundItem1(xLow, zLow, xHigh, zHigh int, entity, border 
 	startX := px[count]
 	startZ := pz[count]
 	count--
-	if entity {
-		c.createPacket(16)
-	} else {
-		c.createPacket(187)
-	}
 
+	c.createPacket(16)
 	c.writeShort(c.regionX + startX)
 	c.writeShort(c.regionZ + startZ)
 
-	if entity && count == -1 && (startX+c.regionX)%5 == 0 {
+	if count == -1 && (startX+c.regionX)%5 == 0 {
 		count = 0
 	}
 
@@ -154,10 +151,10 @@ func (c *client) walkToGroundItem1(xLow, zLow, xHigh, zHigh int, entity, border 
 }
 
 func (c *client) atObject(obj *object) {
+	c.walkToObject(obj)
 	if c.account.debug {
 		fmt.Printf("[%s] ATOBJECT (%d,%d,%d,%d)\n", c.user, obj.id, obj.x, obj.z, obj.dir)
 	}
-	c.walkToObject(obj)
 	c.createPacket(136)
 	c.writeShort(obj.x)
 	c.writeShort(obj.z)
@@ -165,10 +162,10 @@ func (c *client) atObject(obj *object) {
 }
 
 func (c *client) atObject2(obj *object) {
+	c.walkToObject(obj)
 	if c.account.debug {
 		fmt.Printf("[%s] ATOBJECT2 (%d,%d,%d,%d)\n", c.user, obj.id, obj.x, obj.z, obj.dir)
 	}
-	c.walkToObject(obj)
 	c.createPacket(79)
 	c.writeShort(obj.x)
 	c.writeShort(obj.z)
@@ -176,10 +173,10 @@ func (c *client) atObject2(obj *object) {
 }
 
 func (c *client) atWallObject(obj *wallObject) {
+	c.walkToWallObject(obj)
 	if c.account.debug {
 		fmt.Printf("[%s] ATWALLOBJECT (%d,%d,%d,%d)\n", c.user, obj.id, obj.x, obj.z, obj.dir)
 	}
-	c.walkToWallObject(obj)
 	c.createPacket(14)
 	c.writeShort(obj.x)
 	c.writeShort(obj.z)
@@ -188,10 +185,10 @@ func (c *client) atWallObject(obj *wallObject) {
 }
 
 func (c *client) atWallObject2(obj *wallObject) {
+	c.walkToWallObject(obj)
 	if c.account.debug {
 		fmt.Printf("[%s] ATWALLOBJECT2 (%d,%d,%d,%d)\n", c.user, obj.id, obj.x, obj.z, obj.dir)
 	}
-	c.walkToWallObject(obj)
 	c.createPacket(127)
 	c.writeShort(obj.x)
 	c.writeShort(obj.z)
@@ -210,20 +207,20 @@ func (c *client) answer(index int) {
 }
 
 func (c *client) attackNPC(n *npc) {
+	c.walkToEntity(n.x, n.z, n.x, n.z, false)
 	if c.account.debug {
 		fmt.Printf("[%s] ATTACKNPC (%d,%d,%d)\n", c.user, n.id, n.x, n.z)
 	}
-	c.walkToEntity(n.x, n.z, n.x, n.z, false)
 	c.createPacket(190)
 	c.writeShort(n.serverIndex)
 	c.sendPacket()
 }
 
 func (c *client) talkToNPC(n *npc) {
+	c.walkToEntity(n.x, n.z, n.x, n.z, false)
 	if c.account.debug {
 		fmt.Printf("[%s] TALKTONPC (%d,%d,%d)\n", c.user, n.id, n.x, n.z)
 	}
-	c.walkToEntity(n.x, n.z, n.x, n.z, false)
 	c.createPacket(153)
 	c.writeShort(n.serverIndex)
 	c.sendPacket()
@@ -250,10 +247,10 @@ func (c *client) castOnInventoryItem(spell int, item *item) {
 }
 
 func (c *client) castOnGroundItem(spell int, g *groundItem) {
+	c.walkToGroundItem(g.x, g.z, g.x, g.z)
 	if c.account.debug {
 		fmt.Printf("[%s] CASTONGROUNDITEM (%d,%d,%d,%d)\n", c.user, spell, g.id, g.x, g.z)
 	}
-	c.walkToGroundItem(g.x, g.z, g.x, g.z)
 	c.createPacket(249)
 	c.writeShort(spell)
 	c.writeShort(g.x)
@@ -263,10 +260,10 @@ func (c *client) castOnGroundItem(spell int, g *groundItem) {
 }
 
 func (c *client) castOnPlayer(spell int, p *player) {
+	c.walkToEntity(p.x, p.z, p.x, p.z, false)
 	if c.account.debug {
 		fmt.Printf("[%s] CASTONPLAYER (%d,%d,%d,%d)\n", c.user, spell, p.serverIndex, p.x, p.z)
 	}
-	c.walkToEntity(p.x, p.z, p.x, p.z, false)
 	c.createPacket(229)
 	c.writeShort(spell)
 	c.writeShort(p.serverIndex)
@@ -293,10 +290,10 @@ func (c *client) sendSleepWord(word string) {
 }
 
 func (c *client) pickupGroundItem(item *groundItem) {
+	c.walkToGroundItem(item.x, item.z, item.x, item.z)
 	if c.account.debug {
 		fmt.Printf("[%s] PICKUPGROUNDITEM (%d,%d,%d)\n", c.user, item.id, item.x, item.z)
 	}
-	c.walkToGroundItem(item.x, item.z, item.x, item.z)
 	c.createPacket(247)
 	c.writeShort(item.x)
 	c.writeShort(item.z)
@@ -305,10 +302,10 @@ func (c *client) pickupGroundItem(item *groundItem) {
 }
 
 func (c *client) useInventoryItemOnNPC(item *item, n *npc) {
+	c.walkToEntity(n.x, n.z, n.x, n.z, false)
 	if c.account.debug {
 		fmt.Printf("[%s] USEITEMONNPC (%d,%d,%d,%d,%d)\n", c.user, item.id, item.slot, n.id, n.x, n.z)
 	}
-	c.walkToEntity(n.x, n.z, n.x, n.z, false)
 	c.createPacket(135)
 	c.writeShort(n.serverIndex)
 	c.writeShort(item.slot)
@@ -316,10 +313,10 @@ func (c *client) useInventoryItemOnNPC(item *item, n *npc) {
 }
 
 func (c *client) useInventoryItemOnPlayer(item *item, p *player) {
+	c.walkToEntity(p.x, p.z, p.x, p.z, false)
 	if c.account.debug {
 		fmt.Printf("[%s] USEITEMONPLAYER (%d,%d,%d,%d,%d)\n", c.user, item.id, item.slot, p.serverIndex, p.x, p.z)
 	}
-	c.walkToEntity(p.x, p.z, p.x, p.z, false)
 	c.createPacket(113)
 	c.writeShort(p.serverIndex)
 	c.writeShort(item.slot)
@@ -337,10 +334,10 @@ func (c *client) useInventoryItemOnInventoryItem(item1, item2 *item) {
 }
 
 func (c *client) useInventoryItemOnObject(item *item, obj *object) {
+	c.walkToObject(obj)
 	if c.account.debug {
 		fmt.Printf("[%s] USEITEMONOBJECT (%d,%d,%d,%d,%d,%d)\n", c.user, item.id, item.slot, obj.id, obj.x, obj.z, obj.dir)
 	}
-	c.walkToObject(obj)
 	c.createPacket(115)
 	c.writeShort(obj.x)
 	c.writeShort(obj.z)
@@ -349,10 +346,10 @@ func (c *client) useInventoryItemOnObject(item *item, obj *object) {
 }
 
 func (c *client) useInventoryItemOnWallObject(item *item, obj *wallObject) {
+	c.walkToWallObject(obj)
 	if c.account.debug {
 		fmt.Printf("[%s] USEITEMONWALLOBJECT (%d,%d,%d,%d,%d,%d)\n", c.user, item.id, item.slot, obj.id, obj.x, obj.z, obj.dir)
 	}
-	c.walkToWallObject(obj)
 	c.createPacket(161)
 	c.writeShort(obj.x)
 	c.writeShort(obj.z)
@@ -362,10 +359,10 @@ func (c *client) useInventoryItemOnWallObject(item *item, obj *wallObject) {
 }
 
 func (c *client) castOnObject(spell int, obj *object) {
+	c.walkToObject(obj)
 	if c.account.debug {
 		fmt.Printf("[%s] CASTONOBJECT (%d,%d,%d,%d,%d)\n", c.user, spell, obj.id, obj.x, obj.z, obj.dir)
 	}
-	c.walkToObject(obj)
 	c.createPacket(99)
 	c.writeShort(spell)
 	c.writeShort(obj.x)
@@ -374,10 +371,10 @@ func (c *client) castOnObject(spell int, obj *object) {
 }
 
 func (c *client) castOnWallObject(spell int, obj *wallObject) {
+	c.walkToWallObject(obj)
 	if c.account.debug {
 		fmt.Printf("[%s] CASTONOWALLBJECT (%d,%d,%d,%d,%d)\n", c.user, spell, obj.id, obj.x, obj.z, obj.dir)
 	}
-	c.walkToWallObject(obj)
 	c.createPacket(180)
 	c.writeShort(spell)
 	c.writeShort(obj.x)
@@ -436,8 +433,8 @@ func (c *client) sendChatMessage(text string) {
 		fmt.Printf("[%s] SENDCHATMESSAGE (%s)\n", c.user, text)
 	}
 	c.createPacket(216)
-	c.writeByteInt(len(text))
-	c.writeEncryptedString(text)
+	c.writeSmart08_16(len(text))
+	c.writeHuffman(text)
 	c.sendPacket()
 }
 
@@ -448,8 +445,8 @@ func (c *client) sendPrivateMessage(playerName, text string) {
 	c.createPacket(218)
 	c.writeBytes([]byte(playerName))
 	c.writeByte(10)
-	c.writeByteInt(len(text))
-	c.writeEncryptedString(text)
+	c.writeSmart08_16(len(text))
+	c.writeHuffman(text)
 	c.sendPacket()
 }
 
@@ -518,14 +515,6 @@ func (c *client) deposit(id, amount int) {
 	c.createPacket(23)
 	c.writeShort(id)
 	c.writeInt(amount)
-	c.sendPacket()
-}
-
-func (c *client) depositAll() {
-	if c.account.debug {
-		fmt.Printf("[%s] DEPOSITALL\n", c.user)
-	}
-	c.createPacket(24)
 	c.sendPacket()
 }
 
@@ -670,10 +659,10 @@ func (c *client) declineTrade() {
 }
 
 func (c *client) useInventoryItemOnGroundItem(item1 *item, item2 *groundItem) {
+	c.walkToGroundItem(item2.x, item2.z, item2.x, item2.z)
 	if c.account.debug {
 		fmt.Printf("[%s] USEITEMONGROUNDITEM (%d,%d,%d,%d,%d)\n", c.user, item1.id, item1.slot, item2.id, item2.x, item2.z)
 	}
-	c.walkToGroundItem(item2.x, item2.z, item2.x, item2.z)
 	c.createPacket(53)
 	c.writeShort(item2.x)
 	c.writeShort(item2.z)
@@ -694,20 +683,20 @@ func (c *client) useInventoryItem(item *item) {
 }
 
 func (c *client) thieveNPC(n *npc) {
+	c.walkToEntity(n.x, n.z, n.x, n.z, false)
 	if c.account.debug {
 		fmt.Printf("[%s] THIEVENPC (%d,%d,%d)\n", c.user, n.serverIndex, n.x, n.z)
 	}
-	c.walkToEntity(n.x, n.z, n.x, n.z, false)
 	c.createPacket(202)
 	c.writeShort(n.serverIndex)
 	c.sendPacket()
 }
 
 func (c *client) attackPlayer(n *player) {
+	c.walkToEntity(n.x, n.z, n.x, n.z, false)
 	if c.account.debug {
 		fmt.Printf("[%s] ATTACKPLAYER (%d,%d,%d)\n", c.user, n.serverIndex, n.x, n.z)
 	}
-	c.walkToEntity(n.x, n.z, n.x, n.z, false)
 	c.createPacket(171)
 	c.writeShort(n.serverIndex)
 	c.sendPacket()
@@ -719,15 +708,6 @@ func (c *client) closeShop() {
 	}
 	c.createPacket(166)
 	c.sendPacket()
-}
-
-func (c *client) getShopAmount(id int) int {
-	for i := 0; i < c.shopItemCount; i++ {
-		if c.shopItems[i].id == id {
-			return c.shopItems[i].amount
-		}
-	}
-	return -1
 }
 
 func (c *client) buyItem(id, amount int) {

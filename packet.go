@@ -83,7 +83,7 @@ func (p *RSCPacket) writeLong(s int64) {
 	p.buf[p.inc()] = byte(s)
 }
 
-func (p *RSCPacket) writeByteInt(val int) {
+func (p *RSCPacket) writeSmart08_16(val int) {
 	if val >= 0 && val < 128 {
 		p.writeByte(byte(val))
 	} else {
@@ -91,7 +91,7 @@ func (p *RSCPacket) writeByteInt(val int) {
 	}
 }
 
-func (p *client) writeEncryptedString(s string) {
+func (p *client) writeHuffman(s string) {
 	p.encipher(s)
 	p.writeBytes(p.encipheredChatBuffer[:p.encipheredLength])
 }
@@ -159,18 +159,10 @@ func readBits(buffer []byte, start, length int) int {
 	return bits
 }
 
-func (p *RSCPacket) readEncryptedString() string {
+func (p *RSCPacket) readHuffmanString() string {
 	count := p.readSmart08_16()
-	srct := p.buf[p.i:len(p.buf)]
+	src := p.buf[p.i:len(p.buf)]
 	dest := make([]byte, count)
-	decryptString(srct, dest, 0, 0, -1, count)
+	decodeHuffman(src, dest, 0, 0, -1, count)
 	return string(dest)
 }
-
-/*func (p *RSCPacket) printPacket() {
-	for _, b := range p.buf[:p.i] {
-		fmt.Printf(" %d ", b)
-	}
-	fmt.Println()
-}
-*/

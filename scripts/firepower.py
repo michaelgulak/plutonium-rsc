@@ -18,7 +18,7 @@ def loop():
             use_item_on_ground_item(box, logs)
             return 700
     
-    tree = get_nearest_object_by_id(ids=TREES, reachable=True)
+    tree = get_nearest_object_by_id(ids=TREES)
     if tree != None:
         at_object(tree)
         return 700

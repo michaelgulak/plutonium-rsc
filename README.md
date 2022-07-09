@@ -4,69 +4,15 @@ Plutonium is a shell bot written by RLN for the [Open RSC](https://rsc.vet/) Ura
 
 ## Download
 
-You can download the bot for linux_amd64 or windows_amd64 from the [releases page](https://gitlab.com/RLN_/plutonium/-/releases). Otherwise you'll need to build it yourself. 
-
-## Building
-
-Make sure you have a newish version of [Go](https://go.dev/) installed, along with git. Then clone this repo with 
-
-```
-git clone https://gitlab.com/RLN_/plutonium
-```
-
-Enter the directory it creates and type `go build`. 
-
-## Run bot
-
-Just make sure your working directory is the bot directory and run `./bot` on Linux or `./bot.exe` on Windows. If you want to run just one instance of a bot for any reason, for example to skip the tutorial you can do: 
-
-```bash
-./bot -u myuser -p mypass -s scripts/skip_tutorial.py
-```
-
-Note that you can't specify script settings with this method.
-
-## Change OCR to local
-
-By default the bot uses a sleep server. If you wish to change the OCR to local you'll also need to build FOCR.
-
-For Linux or Mac OS ensure you have g++ installed, clone FOCR via
-
-```
-git clone https://gitlab.com/RLN_/focr-resurrection
-```
-
-followed by running `make` in the directory it creates. Then copy the `focr` binary to the plutonium root direcory.
-
-For windows, you'll need to create a solution in Visual Studio and then build focr.exe.
-
-Then you'll need to edit `settings.toml` to specify the local path of focr. Change the settings to be:
-
-On Linux/Mac: 
-
-```toml
-[ocr]
-ocr_type = "local"
-local_directory = "sleepwords"
-ocr_path = "./focr"
-```
-
-On Windows:
-
-```toml
-[ocr]
-ocr_type = "local"
-local_directory = "sleepwords"
-ocr_path = "./focr.exe"
-```
-
-## Bot Configuration
+You can download the bot for linux_amd64 or windows_amd64 from the [releases page](https://gitlab.com/RLN_/plutonium/-/releases). Otherwise you'll need to build the bot and FOCR yourself. 
 
 ## Account Configuration
 
-To get started quickly rename the example file in the `accounts` directory to be `myaccount.toml`, and then input your username and password and change the script and settings.
+To run Plutonium, you need account files. Each account file specifies the username and password of an account, and the script to run for that account. An account is created by creating a file in the `accounts` directory. The file is a [toml](https://toml.io/en/) file with the exception that it cannot contain key/value pairs, multidimensional arrays, or dates. 
 
-An account is created by creating a file in the `accounts` directory. The file is a [toml](https://toml.io/en/) file with the exception that it cannot contain key/value pairs, multidimensional arrays, or dates. The file should look something like this:
+To get started quickly rename the example file in the `accounts` directory to be `myaccount.toml`, and then input your username and password and change the script and settings. Windows users should note that [file name extensions](https://support.microsoft.com/en-us/windows/common-file-name-extensions-in-windows-da4a4430-8e76-89c5-59f7-1cdbbc75cb01) must be enabled to rename the file properly.
+
+Example file:
 
 ```toml
 [account]
@@ -80,18 +26,74 @@ debug = true
 name            = "varrock_east_miner.py"
 progress_report = "20m"
 
-  [script.settings]
-  ore_type = "iron"
-  powermine = false
+[script.settings]
+ore_type = "iron"
+powermine = false
 ```
 
+Feel free to change `debug = true` to `debug = false` if you're running several accounts and it's spamming the console.
+
 Note that the progress report field can contain values that `time.ParseDuration` in Go can parse. Check [here](https://pkg.go.dev/time#ParseDuration) for the list of possible suffixes.
+
+## Run bot
+
+On Linux make sure your working directory is the bot directory and run:
+
+```bash
+./bot
+``` 
+
+On Windows, open a command prompt window in the root Plutonium directory, then type `bot.exe` and hit enter. If you want to run just one instance of a bot for any reason, for example to skip the tutorial you can do:
+
+```bash
+./bot -u myuser -p mypass -s scripts/skip_tutorial.py
+```
+
+Note that you can't specify script settings with this method.
+
+Alternatively, you can run a single account file like this:
+
+```bash
+./bot -f /path/to/account_file.toml
+```
+
+## Building bot
+
+Make sure you have a new version of [Go](https://go.dev/) installed, along with git. Then clone this repo with 
+
+```bash
+git clone https://gitlab.com/RLN_/plutonium
+```
+
+Enter the directory it creates and type `go build`.
+
+To check your Go version run:
+
+```bash
+go version
+```
+
+And ensure that it is at least version 1.18.
+
+## Building FOCR
+
+Note: Ensure you drop the built binary in the root Plutonium directory after building it.
+
+For Linux or Mac OS ensure you have `git`, `g++`, and `make` installed, clone FOCR via
+
+```bash
+git clone https://gitlab.com/RLN_/focr-resurrection
+```
+
+followed by running `make` in the directory it creates.
+
+For windows, you'll need to create a solution in Visual Studio, import the code, and then build focr.exe.
 
 ## Create accounts
 
 Plutonium can automatically create accounts for you based on a text file. Run the bot with this command:
 
-```
+```bash
 ./bot -r /path/to/registration_file.txt
 ```
 

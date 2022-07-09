@@ -7,9 +7,9 @@ import time
 # name            = "catherby_fish_cook.py"
 # progress_report = "20m"
 
-#   [script.settings]
-#   fish_type = "shrimp/anchovies"
-#   powerfish = false
+# [script.settings]
+# fish_type = "shrimp/anchovies"
+# powerfish = false
 #
 # Possible values for fish_type are: shrimp/anchovies, sardines/herring,
 # tuna/swordfish, lobsters, mackarel/cod/bass, shark.

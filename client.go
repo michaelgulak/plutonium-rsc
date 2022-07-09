@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"bytes"
 	"encoding/hex"
+	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -26,6 +27,13 @@ const (
 	supportBankNotes = false
 	skillCount       = 18
 	readWriteTimeout = 10
+)
+
+var (
+	tileDefs   []*tileDef
+	doorDefs   []*doorDef
+	objectDefs []*objectDef
+	itemDefs   []*itemDef
 )
 
 type client struct {
@@ -232,14 +240,72 @@ type quest struct {
 	stage int
 }
 
+type tileDef struct {
+	Colour     int
+	TileValue  int
+	ObjectType int
+}
+
+type doorDef struct {
+	Name             string
+	Description      string
+	Command1         string
+	Command2         string
+	DoorType         int
+	Unknown          int
+	WallObjectHeight int
+	ModelVar2        int
+	ModelVar3        int
+	ID               int
+}
+
+type objectDef struct {
+	Name          string
+	Description   string
+	Command1      string
+	Command2      string
+	Typ           int
+	Width         int
+	Height        int
+	GroundItemVar int
+	ObjectModel   string
+	ID            int
+}
+
+type itemDef struct {
+	ID               int
+	Name             string
+	Description      string
+	Command          string
+	IsFemaleOnly     int
+	IsMembersOnly    int
+	IsStackable      int
+	IsUntradable     int
+	IsWearable       int
+	AppearanceID     int
+	WearableID       int
+	WearSlot         int
+	RequiredLevel    int
+	RequiredSkillID  int
+	ArmourBonus      int
+	WeaponAimBonus   int
+	WeaponPowerBonus int
+	MagicBonus       int
+	PrayerBonus      int
+	BasePrice        int
+	IsNoteable       int
+}
+
 func main() {
 	rand.Seed(time.Now().UnixNano())
+
 	var (
 		user       string
 		pass       string
 		scriptPath string
 		regFile    string
 		configPath string
+		acctFile   string
 		autologin  bool
 		closing    = make(chan struct{})
 		sigs       = make(chan os.Signal, 1)
@@ -253,7 +319,7 @@ func main() {
 		close(closing)
 	}()
 
-	/*f, err := os.Create("cpu.pb.gz")
+	/*f, err := os.Create("cpu.pprof")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -266,6 +332,7 @@ func main() {
 	flag.StringVar(&pass, "p", "", "OpenRSC password")
 	flag.StringVar(&regFile, "r", "", "Register accounts file")
 	flag.StringVar(&scriptPath, "s", "", "Python script file")
+	flag.StringVar(&acctFile, "f", "", "Account file")
 	flag.StringVar(&configPath, "c", "settings.toml", "Config file path")
 	flag.BoolVar(&autologin, "l", false, "Autologin true/false")
 	flag.Parse()
@@ -288,11 +355,11 @@ func main() {
 		return
 	}
 
-	fmt.Printf("Loading definitions...")
+	fmt.Printf("[BOT] Loading definitions...")
 	loadDefs()
 	fmt.Println("complete")
 
-	fmt.Printf("Loading landscape...")
+	fmt.Printf("[BOT] Loading landscape...")
 	world := newWorld()
 	world.loadWorld()
 	fmt.Println("complete")
@@ -301,20 +368,31 @@ func main() {
 		accounts []*account
 		err      error
 	)
+
 	if user == "" && pass == "" {
-		accounts, err = loadAccounts()
-		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+		if acctFile == "" {
+			accounts, err = loadAccounts()
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+		} else {
+			acct, err := loadAccount(acctFile)
+			if err != nil {
+				fmt.Println(err)
+				os.Exit(1)
+			}
+
+			accounts = append(accounts, acct)
 		}
 	} else {
 		acct := &account{
-			username:          user,
-			password:          pass,
-			autologin:         autologin,
-			enabled:           true,
-			debug:             true,
-			progressReportDur: time.Duration(math.MaxInt),
+			username:    user,
+			password:    pass,
+			autologin:   autologin,
+			enabled:     true,
+			debug:       true,
+			progressDur: time.Duration(math.MaxInt),
 		}
 		if scriptPath != "" {
 			acct.script = &script{
@@ -332,12 +410,12 @@ func main() {
 			continue
 		}
 		var err error
-		acc.progressReportFile, err = os.Create(settings.LogSettings.Directory + string(os.PathSeparator) + settings.LogSettings.ProgressReports + string(os.PathSeparator) + acc.username + ".log")
+		acc.progressFile, err = os.Create(settings.LogSettings.Directory + string(os.PathSeparator) + settings.LogSettings.ProgressReports + string(os.PathSeparator) + acc.username + ".log")
 		if err != nil {
 			fmt.Printf("[%s] Error creating progress report file: %s\n", acc.username, err)
 			os.Exit(1)
 		}
-		defer acc.progressReportFile.Close()
+		defer acc.progressFile.Close()
 		acc.lastProgressReport = time.Now()
 
 		wg.Add(1)
@@ -372,7 +450,7 @@ func main() {
 				if acc.script != nil {
 					c.script = acc.script
 					if err := c.script.load(loadScriptLock, c); err != nil {
-						fmt.Printf("[%s] Script load error [%s]: %s\n", c.user, acc.script.name, err)
+						fmt.Printf("[%s] Script load error [%s]: %s\n", c.user, c.script.name, err)
 						break clientLoop
 					}
 				}
@@ -429,7 +507,7 @@ func main() {
 						time.Sleep(10 * time.Second)
 						continue clientLoop
 					case 11:
-						fmt.Printf("[%s] Account temporariy disabled, waiting 5-7 minutes\n", c.user)
+						fmt.Printf("[%s] Account temporarily disabled, waiting 5-7 minutes\n", c.user)
 						select {
 						case <-time.After((5 * time.Minute) + time.Duration(rand.Int63n(int64(2*time.Minute)))):
 							continue clientLoop
@@ -494,7 +572,7 @@ func main() {
 					t.Stop()
 					var buf []byte
 
-					drainTimer := func() {
+					drainTicker := func() {
 						t.Stop()
 						select {
 						case <-t.C:
@@ -505,23 +583,23 @@ func main() {
 					for {
 						select {
 						case <-c.closed:
-							drainTimer()
+							drainTicker()
 							break loop
 						case <-c.cancelSleep:
-							drainTimer()
+							drainTicker()
 							if c.account.debug {
 								fmt.Printf("[%s] Cancelled sleep\n", c.user)
 							}
 						case buf = <-c.sleepChan:
-							drainTimer()
+							drainTicker()
 							t = time.NewTicker(500 * time.Millisecond)
 						case <-t.C:
 							sleepFatigue := atomic.LoadInt64(&c.sleepingFatigue)
-							if c.script != nil && c.script.fatigueTricking && sleepFatigue <= 92 {
-								drainTimer()
+							if c.script != nil && c.script.fatigueTricking && sleepFatigue < 100 {
+								drainTicker()
 								c.captchaChan <- buf
 							} else if sleepFatigue == 0 {
-								drainTimer()
+								drainTicker()
 								c.captchaChan <- buf
 							} else {
 								if c.account.debug {
@@ -558,16 +636,16 @@ func main() {
 				}()
 
 				var (
-					progressReportTimer = time.NewTimer(acc.progressReportDur - time.Since(acc.lastProgressReport))
-					scriptTimer         = time.NewTimer(500 * time.Millisecond)
-					localClosing        = closing
+					progressTimer = time.NewTimer(acc.progressDur - time.Since(acc.lastProgressReport))
+					scriptTimer   = time.NewTimer(500 * time.Millisecond)
+					localClosing  = closing
 				)
 
-				if c.account.progressReportDur == time.Duration(math.MaxInt) {
+				if c.account.progressDur == time.Duration(math.MaxInt) {
 					c.writeProgressReportf("You have not configured progress reports")
 				} else {
 					if c.script.onProgressReport != nil {
-						c.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(acc.progressReportDur-time.Since(acc.lastProgressReport)).Format(time.RFC1123))
+						c.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(acc.progressDur-time.Since(acc.lastProgressReport)).Format(time.RFC1123))
 					} else {
 						c.writeProgressReportf("Your script is not designed to output progress reports")
 					}
@@ -577,8 +655,8 @@ func main() {
 				for {
 					select {
 					case <-c.closed:
-						if !progressReportTimer.Stop() {
-							<-progressReportTimer.C
+						if !progressTimer.Stop() {
+							<-progressTimer.C
 						}
 						if !scriptTimer.Stop() {
 							<-scriptTimer.C
@@ -587,13 +665,13 @@ func main() {
 					case packet := <-c.packetChan:
 						opcode := packet.readByteAsInt()
 						c.handlePacket(packet, opcode, len(packet.buf)-1)
-					case <-progressReportTimer.C:
+					case <-progressTimer.C:
 						acc.lastProgressReport = time.Now()
-						if c.script != nil && c.script.running && c.account.progressReportDur != time.Duration(math.MaxInt) {
+						if c.script != nil && c.script.running && c.account.progressDur != time.Duration(math.MaxInt) {
 							c.script.callOnProgressReport()
-							c.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(acc.progressReportDur).Format(time.RFC1123))
+							c.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(acc.progressDur).Format(time.RFC1123))
 						}
-						progressReportTimer.Reset(acc.progressReportDur)
+						progressTimer.Reset(acc.progressDur)
 					case buf := <-c.captchaChan:
 						c.doCaptcha(buf)
 					case <-c.scriptKillSignal:
@@ -642,7 +720,7 @@ func main() {
 		}(acc)
 	}
 	wg.Wait()
-	fmt.Println("All accounts are finished, killing bot")
+	fmt.Println("[BOT] All accounts are finished, exiting")
 }
 
 func (c *client) close() {
@@ -653,6 +731,64 @@ func (c *client) close() {
 	case <-c.closed:
 	default:
 		close(c.closed)
+	}
+}
+
+func loadDefs() {
+	// tile defs
+	f, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.TileDefs)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer f.Close()
+
+	err = json.NewDecoder(f).Decode(&tileDefs)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	// door defs
+	f2, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.DoorDefs)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer f2.Close()
+
+	err = json.NewDecoder(f2).Decode(&doorDefs)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	// object defs
+	f3, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.ObjectDefs)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer f3.Close()
+
+	err = json.NewDecoder(f3).Decode(&objectDefs)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	// item defs
+	f1, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.ItemDefs)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer f1.Close()
+
+	err = json.NewDecoder(f1).Decode(&itemDefs)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
 	}
 }
 
@@ -756,15 +892,15 @@ func doAccountCreations(fileStr string) {
 }
 
 func (c *client) writeProgressReportf(s0 string, args ...interface{}) error {
-	_, err := c.account.progressReportFile.Write([]byte(fmt.Sprintf(s0, args...)))
+	_, err := c.account.progressFile.Write([]byte(fmt.Sprintf(s0, args...)))
 	if err != nil {
 		fmt.Printf("[%s] Unable to save progress report: %s\n", c.user, err)
 		return err
 	}
 	if runtime.GOOS == "windows" {
-		_, err = c.account.progressReportFile.Write([]byte("\r\n"))
+		_, err = c.account.progressFile.Write([]byte("\r\n"))
 	} else {
-		_, err = c.account.progressReportFile.Write([]byte{'\n'})
+		_, err = c.account.progressFile.Write([]byte{'\n'})
 	}
 	return err
 }
@@ -836,6 +972,9 @@ func (c *client) doCaptcha(buf []byte) {
 
 		if scanner.Scan() {
 			sleepWord = scanner.Text()
+		} else {
+			fmt.Printf("[%s] Sleep server did not return a scannable line\n", c.user)
+			return
 		}
 	default:
 		fmt.Printf("[%s] Unknown ocr setting\n", c.user)
@@ -1055,6 +1194,33 @@ func (c *client) createNPC(serverIndex, id, x, z, sprite int) *npc {
 	return nil
 }
 
+func calculatePrice(basePrice, shopItemPrice, shopBuyPriceMod, shopPriceMultiplier, count, var5 int, var4 bool) int {
+	cost := 0
+
+	for k := 0; var5 > k; k++ {
+		k0 := k
+		if var4 {
+			k0 = -k
+		}
+		var10 := shopPriceMultiplier * (shopItemPrice + (k0 - count))
+		if var10 >= -100 {
+			if var10 > 100 {
+				var10 = 100
+			}
+		} else {
+			var10 = -100
+		}
+		scaling := shopBuyPriceMod + var10
+		if scaling < 10 {
+			scaling = 10
+		}
+
+		cost += basePrice * scaling / 100
+	}
+
+	return cost
+}
+
 func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 	switch opcode {
 	case 191: // Player coords
@@ -1062,8 +1228,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		for i := 0; i < c.playerCacheCount; i++ {
 			c.playerCache[i] = c.players[i]
 		}
-		buf := append(p.readBytes(length), 0)
-		remainingBits := length * 8
+		buf := p.readBytes(length)
 		ofs := 0
 		x := readBits(buf, ofs, 11)
 		ofs += 11
@@ -1142,7 +1307,6 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			c.playerCount++
 		}
 
-		remainingBits -= ofs
 		for ofs+24 < length*8 {
 			serverIndex := readBits(buf, ofs, 11)
 			ofs += 11
@@ -1163,27 +1327,8 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 
 			c.createPlayer(serverIndex, c.x+offsetX, c.z+offsetZ, sprite)
 		}
-
-	case 5: // quest stage info
-		updateQuestType := p.readByte()
-		if updateQuestType == 0 {
-			c.questCount = p.readByteAsInt()
-			for i := 0; i < c.questCount; i++ {
-				questID := p.readInt()
-				questStage := p.readInt()
-				questName := p.readString()
-
-				c.quests[questID] = &quest{
-					id:    questID,
-					name:  questName,
-					stage: int(int32(questStage)),
-				}
-			}
-		} else if updateQuestType == 1 {
-			c.quests[p.readInt()].stage = int(int32(p.readInt()))
-		}
 	case 79: // npc coords
-		buf := append(p.readBytes(length), 0)
+		buf := p.readBytes(length)
 		ofs := 0
 		count := readBits(buf, ofs, 8)
 		ofs += 8
@@ -1283,7 +1428,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		c.planeIndex = p.readShort()
 		c.planeMultiplier = p.readShort()
 		if c.account.debug {
-			fmt.Printf("[%s] serverIndex: %d\n", c.user, c.serverIndex)
+			fmt.Printf("[%s] Server Index: %d\n", c.user, c.serverIndex)
 		}
 	case 211: // remove world entities
 		count := length / 4
@@ -1385,12 +1530,11 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			c.objectCount = count
 
 			if id != 60000 {
-				c.objects[c.objectCount] = &object{
-					id:  id,
-					x:   x,
-					z:   z,
-					dir: dir,
-				}
+				c.objects[c.objectCount].id = id
+				c.objects[c.objectCount].x = x
+				c.objects[c.objectCount].z = z
+				c.objects[c.objectCount].dir = dir
+
 				c.registerGameObject(c.objects[c.objectCount])
 				if c.script != nil && c.script.onObjectSpawned != nil {
 					c.script.callOnObjectSpawned(c.objects[c.objectCount])
@@ -1428,12 +1572,11 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			c.wallObjectCount = count
 
 			if id != 60000 {
-				c.wallObjects[c.wallObjectCount] = &wallObject{
-					id:  id,
-					x:   x,
-					z:   z,
-					dir: dir,
-				}
+				c.wallObjects[c.wallObjectCount].id = id
+				c.wallObjects[c.wallObjectCount].x = x
+				c.wallObjects[c.wallObjectCount].z = z
+				c.wallObjects[c.wallObjectCount].dir = dir
+
 				c.registerWallObject(c.wallObjects[c.wallObjectCount])
 				if c.script != nil && c.script.onWallObjectSpawned != nil {
 					c.script.callOnWallObjectSpawned(c.wallObjects[c.wallObjectCount])
@@ -1677,7 +1820,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			} else {
 				amount = 1
 			}
-			c.inventory[i] = &item{id, amount, equipped, i}
+			c.inventory[i].id = id
+			c.inventory[i].amount = amount
+			c.inventory[i].equipped = equipped
+			c.inventory[i].slot = i
 		}
 
 	case 117: // sleep image
@@ -1788,22 +1934,21 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		slot := p.readByteAsInt()
 		c.inventoryCount -= 1
 		for i := slot; i < c.inventoryCount; i++ {
-			c.inventory[i] = c.inventory[i+1]
-			c.inventory[i].slot--
-		}
-		if c.inventoryCount < len(c.inventory) { // is this ok?
-			c.inventory[c.inventoryCount] = &item{}
+			c.inventory[i].id = c.inventory[i+1].id
+			c.inventory[i].amount = c.inventory[i+1].amount
+			c.inventory[i].equipped = c.inventory[i+1].equipped
+			c.inventory[i].slot = i
 		}
 	case 84: // wake up
+		if c.account.debug && !c.firstWakeupReceived {
+			fmt.Printf("[%s] Woke up\n", c.user)
+		}
 		if c.firstWakeupReceived {
 			c.cancelSleep <- struct{}{}
 		} else {
 			c.firstWakeupReceived = true
 		}
 		c.sleeping = false
-		if c.account.debug {
-			fmt.Printf("[%s] Woke up\n", c.user)
-		}
 	case 129: // combat style changed
 		c.combatStyle = p.readByteAsInt()
 		if c.account.debug {
@@ -1821,7 +1966,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		playerName := p.readString()
 		p.readString()
 		p.readInt()
-		message := p.readEncryptedString()
+		message := p.readHuffmanString()
 		if c.account.debug {
 			fmt.Printf("[%s] Private message [%s]: %s\n", c.user, playerName, message)
 		}
@@ -1830,7 +1975,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		}
 	case 87: // private message sent
 		playerName := p.readString()
-		message := p.readEncryptedString()
+		message := p.readHuffmanString()
 		if c.account.debug {
 			fmt.Printf("[%s] You private message [%s]: %s\n", c.user, playerName, message)
 		}
@@ -1942,21 +2087,24 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		}
 	case 101: // shop open
 		c.shopItemCount = p.readByteAsInt()
-		p.readByte() // shop type
-		p.readByte() // sell mod
-		p.readByte() // buy mod
-		p.readByte() // price multiplier
+		p.readByte()           // shop type
+		p.readByte()           // sell mod
+		buyMod := p.readByte() // buy mod
+		pmult := p.readByte()  // price multiplier
 
 		for i := 0; i < c.shopItemCount; i++ {
 			id := p.readShort()
+			basePrice := itemDefs[id].BasePrice
+			amount := p.readShort()
+			shopPrice := p.readShort()
 			if c.shopItems[i] != nil && c.shopItems[i].id == id {
-				c.shopItems[i].amount = p.readShort()
-				c.shopItems[i].price = p.readShort()
+				c.shopItems[i].amount = amount
+				c.shopItems[i].price = calculatePrice(basePrice, shopPrice, int(buyMod), int(pmult), amount, 1, true)
 			} else {
 				c.shopItems[i] = &shopItem{
 					id:     id,
-					amount: p.readShort(),
-					price:  p.readShort(),
+					amount: amount,
+					price:  calculatePrice(basePrice, shopPrice, int(buyMod), int(pmult), amount, 1, true),
 				}
 			}
 		}
@@ -2059,6 +2207,24 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			c.ignoreList[i].arg1 = p.readString()
 			c.ignoreList[i].old = p.readString()
 		}
+	case 5: // quest stage info
+		updateQuestType := p.readByte()
+		if updateQuestType == 0 {
+			c.questCount = p.readByteAsInt()
+			for i := 0; i < c.questCount; i++ {
+				questID := p.readInt()
+				questStage := p.readInt()
+				questName := p.readString()
+
+				c.quests[questID] = &quest{
+					id:    questID,
+					name:  questName,
+					stage: int(int32(questStage)),
+				}
+			}
+		} else if updateQuestType == 1 {
+			c.quests[p.readInt()].stage = int(int32(p.readInt()))
+		}
 	case 237: // update ignore name change
 		arg0 := p.readString()
 		replace := p.readString()
@@ -2119,11 +2285,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 	case 147: // send kills
 	case 113: // send ironman
 	case 204: // play sound
+	case 250: // unlocked appearances?
 	default:
-		//printPacket(p.buf)
 		if c.account.debug {
 			fmt.Printf("[%s] Unhandled packet [OPCODE=%d, LENGTH=%d]\n", c.user, opcode, length)
 		}
 	}
-
 }

@@ -131,7 +131,7 @@ func (z *region) getTileValue(regionX int, regionY int) int32 {
 func (z *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, height int, bigX int, bigY int) bool {
 	s := (*sector)(nil)
 
-	filename := fmt.Sprintf("%v%v%v%v%v%v", "h", height, "x", sectionX, "y", sectionY)
+	filename := fmt.Sprintf("h%vx%vy%v", height, sectionX, sectionY)
 	e, err := reader.Open(filename)
 	if err != nil {
 		panic(err)
@@ -154,24 +154,24 @@ func (z *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, 
 				sectorTile.groundOverlay = 2
 			}
 			groundOverlay := sectorTile.groundOverlay
-			if groundOverlay > 0 && tileDefs[groundOverlay-1].objectType != 0 {
+			if groundOverlay > 0 && tileDefs[groundOverlay-1].ObjectType != 0 {
 				z.getRegion(bx, by).tiles[bx%48][by%48] |= 0x40
 			}
 			verticalWall := int(sectorTile.verticalWall)
-			if verticalWall > 0 && doorDefs[verticalWall-1].unknown == 0 && doorDefs[verticalWall-1].doorType != 0 {
+			if verticalWall > 0 && doorDefs[verticalWall-1].Unknown == 0 && doorDefs[verticalWall-1].DoorType != 0 {
 				z.getRegion(bx, by).tiles[bx%48][by%48] |= 1       // 1
 				z.getRegion(bx, by-1).tiles[bx%48][(by-1)%48] |= 4 // 4
 			}
 			horizontalWall := int(sectorTile.horizontalWall)
-			if horizontalWall > 0 && doorDefs[horizontalWall-1].unknown == 0 && doorDefs[horizontalWall-1].doorType != 0 {
+			if horizontalWall > 0 && doorDefs[horizontalWall-1].Unknown == 0 && doorDefs[horizontalWall-1].DoorType != 0 {
 				z.getRegion(bx, by).tiles[bx%48][by%48] |= 2
 				z.getRegion(bx-1, by).tiles[(bx-1)%48][by%48] |= 8 // 8
 			}
 			diagonalWalls := int(sectorTile.diagonalWalls)
-			if diagonalWalls > 0 && diagonalWalls < 12000 && doorDefs[diagonalWalls-1].unknown == 0 && doorDefs[diagonalWalls-1].doorType != 0 {
+			if diagonalWalls > 0 && diagonalWalls < 12000 && doorDefs[diagonalWalls-1].Unknown == 0 && doorDefs[diagonalWalls-1].DoorType != 0 {
 				z.getRegion(bx, by).tiles[bx%48][by%48] |= 0x20
 			}
-			if diagonalWalls > 12000 && diagonalWalls < 24000 && doorDefs[diagonalWalls-12001].unknown == 0 && doorDefs[diagonalWalls-12001].doorType != 0 {
+			if diagonalWalls > 12000 && diagonalWalls < 24000 && doorDefs[diagonalWalls-12001].Unknown == 0 && doorDefs[diagonalWalls-12001].DoorType != 0 {
 				z.getRegion(bx, by).tiles[bx%48][by%48] |= 0x10
 			}
 		}
@@ -240,6 +240,7 @@ func (z *world) loadWorld() {
 		fmt.Printf("Error decoding object locs: %s\n", err)
 		os.Exit(1)
 	}
+
 	for i := 0; i < len(sceneries.Sceneries); i++ {
 		obj := sceneries.Sceneries[i]
 		z.setUnwalkableTiles(obj)
@@ -253,16 +254,16 @@ func (w *world) setUnwalkableTiles(o *objectLoc) {
 	)
 	def := objectDefs[o.ID]
 	if o.Direction != 0 && o.Direction != 4 {
-		objWidth = def.height
-		objHeight = def.width
+		objWidth = def.Height
+		objHeight = def.Width
 	} else {
-		objHeight = def.height
-		objWidth = def.width
+		objHeight = def.Height
+		objWidth = def.Width
 	}
 	destX := o.Pos.X
 	destZ := o.Pos.Y
 
-	if def.typ != 2 && def.typ != 3 && def.typ != 0 {
+	if def.Typ != 2 && def.Typ != 3 && def.Typ != 0 {
 		for x := destX; x <= objWidth-1+destX; x++ {
 			for y := destZ; y <= destZ+objHeight-1; y++ {
 				w.pathWalkerMap[int32(x<<16)|int32(y)] = struct{}{}
@@ -365,21 +366,21 @@ func (c *client) registerGameObject(o *object) {
 		return
 	}
 	def := objectDefs[o.id]
-	if def.typ != 1 && def.typ != 2 {
+	if def.Typ != 1 && def.Typ != 2 {
 		return
 	}
 	var width int
 	var height int
 	if dir == 0 || dir == 4 {
-		width = def.width
-		height = def.height
+		width = def.Width
+		height = def.Height
 	} else {
-		height = def.width
-		width = def.height
+		height = def.Width
+		width = def.Height
 	}
 	for x := o.x; x < o.x+width; x++ {
 		for y := o.z; y < o.z+height; y++ {
-			if def.typ == 1 {
+			if def.Typ == 1 {
 				c.localWorld.setTileOr(x, y, fullBlockC)
 			} else if dir == 0 {
 				c.localWorld.setTileOr(x, y, wallEast)
@@ -408,7 +409,7 @@ func (c *client) registerGameObject(o *object) {
 
 func (c *client) registerWallObject(o *wallObject) {
 	def := doorDefs[o.id]
-	if def.doorType != 1 {
+	if def.DoorType != 1 {
 		return
 	}
 	dir := o.dir
@@ -433,21 +434,21 @@ func (c *client) registerWallObject(o *wallObject) {
 func (c *client) unregisterGameObject(o *object) {
 	dir := o.dir
 	def := objectDefs[o.id]
-	if def.typ != 1 && def.typ != 2 {
+	if def.Typ != 1 && def.Typ != 2 {
 		return
 	}
 	var width int
 	var height int
 	if dir == 0 || dir == 4 {
-		width = def.width
-		height = def.height
+		width = def.Width
+		height = def.Height
 	} else {
-		height = def.width
-		width = def.height
+		height = def.Width
+		width = def.Height
 	}
 	for x := o.x; x < o.x+width; x++ {
 		for y := o.z; y < o.z+height; y++ {
-			if def.typ == 1 {
+			if def.Typ == 1 {
 				c.localWorld.setTileAnd(x, y, 0xffbf)
 			} else if dir == 0 {
 				c.localWorld.setTileAnd(x, y, 0xfffd)
@@ -468,7 +469,7 @@ func (c *client) unregisterGameObject(o *object) {
 
 func (c *client) unregisterWallObject(o *wallObject) {
 	def := doorDefs[o.id]
-	if def.doorType != 1 {
+	if def.DoorType != 1 {
 		return
 	}
 	dir := o.dir

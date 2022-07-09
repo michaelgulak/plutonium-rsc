@@ -51,13 +51,19 @@ Prints to the console with user prefix.
 ###### walk_to(x, z)
 ###### walk_path_to(x, z)
 
-*DEPRECATED*: Use calculate_path.
+Calculates a path to the specified coordinates and walks to the first point.
 
-Will fail to path in certain circumstances where the euclidean distance is a lot shorter than the path distance.
+Will fail to path in certain circumstances where the Euclidean distance is a lot shorter than the path distance.
+
+This method will fail if distance > 200. Use `calculate_path` instead or try supplying your own depth with `walk_path_depth_to`.
+
+It's preferable to use `calculate_path` for long distances as this method will calculate the path on every call which can be expensive. Also the depth for the A* algorithm will probably be calculated more efficiently with `calculate_path`.
 
 ###### walk_path_depth_to(x, z, depth)
 
-*DEPRECATED*: Use calculate_path.
+Same as `walk_path_to` except you must specify a depth for the internal A* algorithm. This will be more efficient than calling `walk_path_to` if you choose something less than `Euclidean distance * 4`.
+
+This method will fail to path if depth > 800.
 
 ###### open_bank()
 
@@ -78,6 +84,10 @@ Proper use is like this:
 ###### get_z()
 ###### in_combat()
 ###### is_skilling()
+###### is_sleeping()
+
+Can only be used in event handlers.
+
 ###### get_combat_style()
 ###### set_combat_style(idx)
 ###### get_max_stat(idx)
@@ -107,7 +117,7 @@ Contains the following fields: `id`, `x`, `z`.
 
 ###### get_ground_items()
 ###### get_ground_item_count()
-###### get_nearest_ground_item_by_id(id OR ids=[....], reachable=True, x=216, z=636, radius=10)
+###### get_nearest_ground_item_by_id(id OR ids=[...], reachable=True, x=216, z=636, radius=10)
 
 `x` and `z` are used as the start point for the radius. Otherwise they're unused.
 
@@ -116,7 +126,7 @@ Contains the following fields: `id`, `x`, `z`.
 Reachable is optional.
 
 ###### is_ground_item_at(id, x, z)
-###### pickup_item(item)
+###### pickup_item(ground_item)
 ###### use_item_on_ground_item(item, ground_item)
 ###### cast_on_ground_item(spellid, ground_item)
 
@@ -127,7 +137,7 @@ Reachable is optional.
 Contains the following fields: `id`, `amount`, `equipped`, `slot`. 
 
 ###### get_inventory_items()
-###### get_inventory_item_by_id(id OR ids=[....])
+###### get_inventory_item_by_id(id OR ids=[...])
 ###### get_inventory_count_by_id(id OR ids=[...])
 ###### has_inventory_item(id)
 ###### get_total_inventory_count()
@@ -158,7 +168,7 @@ The `process` method must be called before calling `walk`. This is to make handl
 
 Calculates a path from the client's current coordinates to the specified coordinates. Returns a path object or `None` if a path was not found.
 
-The `depth` argument is optional. Use a depth for the A* algorithm for optimal use of this method. Otherwise it will test depths sequentially, wasting CPU. Euclidean distance or a multiple of it is usually sufficient. However in some cases it will not be.
+The `depth` argument is optional. Use a depth for the A* algorithm for optimal use of this method. Otherwise it will test depths sequentially, wasting CPU.
 
 Correct usage is something like this:
 

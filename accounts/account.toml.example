@@ -9,6 +9,6 @@ debug = true
 name            = "varrock_east_miner.py"
 progress_report = "20m"
 
-  [script.settings]
-  ore_type = "iron"
-  powermine = false
+[script.settings]
+ore_type = "iron"
+powermine = false

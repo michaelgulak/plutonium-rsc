@@ -36,9 +36,9 @@ debug = true
 [script]
 name = "autofighter.py"
 
-  [script.settings]
-  fight_mode = 0
-  npc_ids = [29, 34]
+[script.settings]
+fight_mode = 0
+npc_ids = [29, 34]
 ```
 
 The settings object would contain both `fight_mode` and `npc_ids`. They can be accessed like this inside a script:

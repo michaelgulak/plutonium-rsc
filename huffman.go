@@ -145,7 +145,7 @@ func (c *client) encipher(message string) {
 	c.encipheredLength = int(uint32(outputBitOffset+7) >> 3)
 }
 
-func decryptString(src []byte, dest []byte, destOffset int, srcOffset int, dummy int, count int) int {
+func decodeHuffman(src []byte, dest []byte, destOffset int, srcOffset int, dummy int, count int) int {
 	if count == 0 {
 		return 0
 	} else {

@@ -7,9 +7,9 @@ import time
 # name            = "varrock_east_miner.py"
 # progress_report = "20m"
 #
-#   [script.settings]
-#   ore_type  = "iron"
-#   powermine = false
+# [script.settings]
+# ore_type  = "iron"
+# powermine = false
 #
 # ore_type can be set to copper, tin, or iron.
 

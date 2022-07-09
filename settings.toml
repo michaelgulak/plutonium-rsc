@@ -2,14 +2,18 @@
 address = "game.openrsc.com:43235"
 
 [ocr]
-ocr_type     = "server"
-ocr_endpoint = "http://198.211.5.116:9999/captcha"
+ocr_type = "local"
+local_directory = "sleepwords"
+ocr_path = "./focr"
 
 [data]
 directory    = "data"
 landscape    = "Authentic_P2PLandscape.orsc"
 item_defs    = "ItemDefs.json"
 scenery_locs = "SceneryLocs.json"
+tile_defs    = "TileDefs.json"
+door_defs    = "DoorDefs.json"
+object_defs  = "ObjectDefs.json"
 
 [accounts]
 directory = "accounts"

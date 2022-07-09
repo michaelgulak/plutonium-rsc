@@ -163,6 +163,7 @@ def loop():
 
     if kill_wait != 0:
         if time.time() - kill_wait > 5:
+            stop_script()
             stop_account()
             return 5000
         
@@ -198,5 +199,10 @@ def on_progress_report():
 
 def on_kill_signal():
     global kill_wait
+
+    if is_sleeping():
+        stop_script()
+        stop_account()
+        return
 
     kill_wait = time.time()
