@@ -2,8 +2,8 @@
 address = "game.openrsc.com:43235"
 
 [ocr]
+directory = "sleepwords"
 ocr_type = "local"
-local_directory = "sleepwords"
 ocr_path = "./focr"
 
 [data]

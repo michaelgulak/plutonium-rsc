@@ -8,9 +8,9 @@ You can download the bot for linux_amd64 or windows_amd64 from the [releases pag
 
 ## Account Configuration
 
-To run Plutonium, you need account files. Each account file specifies the username and password of an account, and the script to run for that account. An account is created by creating a file in the `accounts` directory. The file is a [toml](https://toml.io/en/) file with the exception that it cannot contain key/value pairs, multidimensional arrays, or dates. 
+To run Plutonium, you need account files. Each account file specifies the username and password of an account, and the script to run for that account. An account is created by creating a file in the `accounts` directory. These files must be in [toml](https://toml.io/en/) format with the exception that it cannot contain key/value pairs, multidimensional arrays, or dates.
 
-To get started quickly rename the example file in the `accounts` directory to be `myaccount.toml`, and then input your username and password and change the script and settings. Windows users should note that [file name extensions](https://support.microsoft.com/en-us/windows/common-file-name-extensions-in-windows-da4a4430-8e76-89c5-59f7-1cdbbc75cb01) must be enabled to rename the file properly.
+To get started quickly, rename the example file in the `accounts` directory to be `myaccount.toml`. Then input your username and password, and make sure to change the script and script settings. Windows users should note that [file name extensions](https://support.microsoft.com/en-us/windows/common-file-name-extensions-in-windows-da4a4430-8e76-89c5-59f7-1cdbbc75cb01) must be enabled to rename the file properly.
 
 Example file:
 
@@ -23,7 +23,7 @@ enabled = true
 debug = true
 
 [script]
-name            = "varrock_east_miner.py"
+name = "varrock_east_miner.py"
 progress_report = "20m"
 
 [script.settings]
@@ -31,7 +31,7 @@ ore_type = "iron"
 powermine = false
 ```
 
-Feel free to change `debug = true` to `debug = false` if you're running several accounts and it's spamming the console.
+Feel free to change the `debug` field to `false` if you're running several accounts and it's spamming the console.
 
 Note that the progress report field can contain values that `time.ParseDuration` in Go can parse. Check [here](https://pkg.go.dev/time#ParseDuration) for the list of possible suffixes.
 
@@ -43,7 +43,9 @@ On Linux make sure your working directory is the bot directory and run:
 ./bot
 ``` 
 
-On Windows, open a command prompt window in the root Plutonium directory, then type `bot.exe` and hit enter. If you want to run just one instance of a bot for any reason, for example to skip the tutorial you can do:
+On Windows, open a command prompt window in the root Plutonium directory. Then type `bot.exe` and hit enter.
+
+If you want to run just one instance of a bot for any reason, for example to skip the tutorial you can do:
 
 ```bash
 ./bot -u myuser -p mypass -s scripts/skip_tutorial.py
@@ -79,7 +81,7 @@ And ensure that it is at least version 1.18.
 
 Note: Ensure you drop the built binary in the root Plutonium directory after building it.
 
-For Linux or Mac OS ensure you have `git`, `g++`, and `make` installed, clone FOCR via
+For Linux or Mac OS ensure you have `git`, `g++`, and `make` installed. Clone FOCR via:
 
 ```bash
 git clone https://gitlab.com/RLN_/focr-resurrection
@@ -107,11 +109,11 @@ myuser4:mypass:email@example.com
 myuser5:mypass:email@example.com
 ```
 
-After creation you may want to run the skip_tutorial.py script on the accounts, followed by get_bag.py to get a sleeping bag.
+After creation you may want to run the `skip_tutorial.py` script on the accounts, followed by `get_bag.py` to get a sleeping bag.
 
 ## Memory
 
-If you see your memory going up a lot you're probably using walk_path_to from too large of a distance.
+If you see your memory going you're probably using walk_path_to from too large of a distance.
 
 If you happen to notice that the VIRT memory allocated is high, it is due to [Go reserving a lot of virtual memory for allocations](https://go.dev/doc/faq#Why_does_my_Go_process_use_so_much_virtual_memory). Check the RES memory of htop to see the real memory footprint.
 

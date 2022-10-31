@@ -72,7 +72,7 @@ Within the `[script]` block of the `account.toml` file you are allowed to define
 
 ```toml
 [script]
-name            = "seers_yews.py"
+name = "seers_yews.py"
 progress_report = "20m"
 ```
 

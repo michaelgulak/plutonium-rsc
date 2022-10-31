@@ -6,7 +6,7 @@ enabled = true
 debug = true
 
 [script]
-name            = "varrock_east_miner.py"
+name = "varrock_east_miner.py"
 progress_report = "20m"
 
 [script.settings]

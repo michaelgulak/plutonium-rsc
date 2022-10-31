@@ -7,11 +7,18 @@ import time
 SPOT_X = 406
 SPOT_Z = 505
 MENU_OPTIONS = ["I have some fish to trade in", "Raw shark", "Twentyfive"]
+KEPT_ITEMS = [1263, 379, 631, 545]
 
 move_timer = False
 fish_timeout = 0
 
 def cert():
+    if in_radius_of(427, 485, 10):
+        door = get_wall_object_from_coords(427, 485)
+        if door != None and door.id == 2:
+            at_wall_object(door)
+            return 700
+            
     if not in_rect(430, 481, 4, 5):
         walk_path_to(427, 485)
         return 3000
@@ -41,11 +48,26 @@ def fish():
             move_timer = False
 
     if get_x() != SPOT_X or get_z() != SPOT_Z - 1:
+        if in_radius_of(427, 485, 10):
+            door = get_wall_object_from_coords(427, 485)
+            if door != None and door.id == 2:
+                at_wall_object(door)
+                return 700
+
         walk_path_to(SPOT_X, SPOT_Z - 1)
         return 5000
 
+    if get_fatigue() > 95:
+        use_sleeping_bag()
+        return 1000
+
     if fish_timeout != 0 and time.time() <= fish_timeout:
         return 250
+    
+    item_to_drop = get_inventory_item_except(KEPT_ITEMS)
+    if item_to_drop != None:
+        drop_item(item_to_drop)
+        return 1200
     
     fish = get_object_from_coords(SPOT_X, SPOT_Z)
 
@@ -57,10 +79,6 @@ def fish():
     return 5000  
 
 def loop():
-    if get_fatigue() > 95:
-        use_sleeping_bag()
-        return 1000
-
     if get_inventory_count_by_id(545) >= 25:
         return cert()
     

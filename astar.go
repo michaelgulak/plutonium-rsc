@@ -51,7 +51,6 @@ const diagCost = 14
 type astarPathFinder struct {
 	depth       int
 	costBoard   [][]*node
-	bestpath    *path
 	worldStart  *point
 	pointStart  *point
 	pointEnd    *point
@@ -97,7 +96,6 @@ func calcDistance(one, two *point) int {
 func newAstarPathFinder(c *client, start *point, end *point, depth int) (z *astarPathFinder) {
 	z = &astarPathFinder{}
 	z.costBoard = nil
-	z.bestpath = nil
 	z.openNodes = []*node{}
 	z.closedNodes = []*node{}
 	z.worldStart = start

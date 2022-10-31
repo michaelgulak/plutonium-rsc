@@ -3,7 +3,6 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
 	"path/filepath"
@@ -34,7 +33,7 @@ var (
 type ocrSettings struct {
 	OcrType     string `toml:"ocr_type"`
 	OcrEndpoint string `toml:"ocr_endpoint"`
-	LocalDir    string `toml:"local_directory"`
+	Directory   string `toml:"directory"`
 	OcrPath     string `toml:"ocr_path"`
 }
 
@@ -199,7 +198,7 @@ func loadAccount(path string) (*account, error) {
 }
 
 func loadAccounts() ([]*account, error) {
-	files, err := ioutil.ReadDir(settings.AccountSettings.Directory)
+	files, err := os.ReadDir(settings.AccountSettings.Directory)
 	if err != nil {
 		return nil, err
 	}

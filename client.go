@@ -131,10 +131,10 @@ type client struct {
 	ignoreListCount           int
 	questCount                int
 	quests                    [100]*quest
-	encipheredChatBuffer      [4997]byte
+	encodedChatBuffer         [4997]byte
 	chatBuffer                [5096]byte
-	decipheredLength          int
-	encipheredLength          int
+	decodedChatLength         int
+	encodedChatLength         int
 	appearanceChange          bool
 	pathX                     [8000]int
 	pathZ                     [8000]int
@@ -334,10 +334,15 @@ func main() {
 	flag.StringVar(&scriptPath, "s", "", "Python script file")
 	flag.StringVar(&acctFile, "f", "", "Account file")
 	flag.StringVar(&configPath, "c", "settings.toml", "Config file path")
-	flag.BoolVar(&autologin, "l", false, "Autologin true/false")
+	flag.BoolVar(&autologin, "l", false, "Autologin flag")
 	flag.Parse()
 
 	parseConfig(configPath)
+
+	if regFile != "" {
+		doAccountCreations(closing, regFile)
+		return
+	}
 
 	if settings.OcrSettings.OcrType == "local" {
 		_, err := os.Stat(settings.OcrSettings.OcrPath)
@@ -348,11 +353,6 @@ func main() {
 			fmt.Printf("OCR Error: %s\n", err)
 			os.Exit(1)
 		}
-	}
-
-	if regFile != "" {
-		doAccountCreations(regFile)
-		return
 	}
 
 	fmt.Printf("[BOT] Loading definitions...")
@@ -405,6 +405,19 @@ func main() {
 	wg := &sync.WaitGroup{}
 	loadScriptLock := &sync.Mutex{}
 
+	loginWait := make(chan struct{})
+
+	go func() {
+		for {
+			<-loginWait
+			time.Sleep(6 * time.Second)
+		}
+	}()
+
+	if len(accounts) > 1 {
+		fmt.Println("[BOT] NOTE: Plutonium has to stagger logins by 6 seconds so as to not spam the server.")
+	}
+
 	for _, acc := range accounts {
 		if !acc.enabled {
 			continue
@@ -453,6 +466,12 @@ func main() {
 						fmt.Printf("[%s] Script load error [%s]: %s\n", c.user, c.script.name, err)
 						break clientLoop
 					}
+				}
+
+				select {
+				case loginWait <- struct{}{}:
+				case <-closing:
+					break clientLoop
 				}
 
 				loginResponse, err := c.login()
@@ -792,7 +811,7 @@ func loadDefs() {
 	}
 }
 
-func doAccountCreations(fileStr string) {
+func doAccountCreations(closing chan struct{}, fileStr string) {
 	f, err := os.Open(fileStr)
 	if err != nil {
 		fmt.Printf("Error opening register account file: %s\n", err)
@@ -808,6 +827,11 @@ func doAccountCreations(fileStr string) {
 	buf := make([]byte, 5000)
 	p := &RSCPacket{buf: buf}
 	for scanner.Scan() {
+		select {
+		case <-closing:
+			return
+		default:
+		}
 		time.Sleep(2 * time.Second)
 
 		line := scanner.Text()
@@ -835,7 +859,7 @@ func doAccountCreations(fileStr string) {
 		p.createPacket0(2)
 		p.writeBytes([]byte(username))
 		p.writeByte(10)
-		p.writeBytes([]byte(password))
+		p.writeBytes([]byte(encodeCredential(password)))
 		p.writeByte(10)
 		p.writeBytes([]byte(email))
 		p.writeByte(10)
@@ -875,9 +899,12 @@ func doAccountCreations(fileStr string) {
 			fmt.Printf("[%s] Registration disabled\n", username)
 			return
 		case 5:
-			fmt.Printf("[%s] You have registered too recently\n", username)
-			fmt.Println("Waiting 5 min")
-			time.Sleep(5 * time.Minute)
+			fmt.Printf("[%s] You have registered too recently, waiting 5 minutes\n", username)
+			select {
+			case <-time.After(5 * time.Minute):
+			case <-closing:
+				return
+			}
 			goto retry
 		case 6:
 			fmt.Printf("[%s] Invalid email address\n", username)
@@ -886,7 +913,7 @@ func doAccountCreations(fileStr string) {
 		case 8:
 			fmt.Printf("[%s] Invalid username\n", username)
 		default:
-			fmt.Printf("[%s] Unkown registration response: %d\n", username, registerResponse[0])
+			fmt.Printf("[%s] Unknown registration response: %d\n", username, registerResponse[0])
 		}
 	}
 }
@@ -937,8 +964,8 @@ func (c *client) doCaptcha(buf []byte) {
 	switch settings.OcrSettings.OcrType {
 	case "local":
 		num := rand.Intn(math.MaxInt)
-		randName := hex.EncodeToString([]byte{byte(num >> 56), byte(num >> 48), byte(num >> 40), byte(num >> 32), byte(num >> 24), byte(num >> 16), byte(num >> 8), byte(num)}) + ".bmp"
-		path := settings.OcrSettings.LocalDir + string(os.PathSeparator) + randName
+		randName := hex.EncodeToString([]byte{byte(num >> 24), byte(num >> 16), byte(num >> 8), byte(num)}) + ".bmp"
+		path := settings.OcrSettings.Directory + string(os.PathSeparator) + randName
 		f, err := os.Create(path)
 		if err != nil {
 			fmt.Printf("[%s] Error creating sleep bmp file: %s\n", c.user, err)
@@ -998,6 +1025,24 @@ func readBytesRaw(conn net.Conn, length int) ([]byte, error) {
 	return buf, nil
 }
 
+func encodeCredential(s string) string {
+	s1 := make([]byte, len(s))
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		if c >= 'a' && c <= 'z' {
+			s1[i] = c
+		} else if c >= 'A' && c <= 'Z' {
+			s1[i] = c
+		} else if c >= '0' && c <= '9' {
+			s1[i] = c
+		} else {
+			s1[i] = '_'
+		}
+	}
+
+	return string(s1)
+}
+
 func (client *client) login() (int, error) {
 	conn, err := net.Dial("tcp4", settings.ServerSettings.Address)
 	if err != nil {
@@ -1007,16 +1052,16 @@ func (client *client) login() (int, error) {
 
 	sessionPacket, err := readBytesRaw(conn, 4)
 	if err != nil {
-		return -1, fmt.Errorf("[%s] Read session id error: %s", client.user, err)
+		return -1, fmt.Errorf("read session id error: %s", err)
 	}
 	_ = sessionPacket
 
 	client.createPacket(0)
 	client.writeByte(0)
 	client.writeInt(settings.ClientSettings.ClientVersion)
-	client.writeBytes([]byte(client.user))
+	client.writeBytes([]byte(encodeCredential(client.user)))
 	client.writeByte(10)
-	client.writeBytes([]byte(client.pass))
+	client.writeBytes([]byte(encodeCredential(client.pass)))
 	client.writeByte(10)
 	client.writeLong(0)
 
@@ -1341,7 +1386,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			c.npcCache[i] = c.npcs[i]
 		}
 
-		removedNPCs := map[*npc]struct{}{}
+		var removedNPCs map[*npc]struct{}
+		if c.script != nil && c.script.onNPCDespawned != nil {
+			removedNPCs = make(map[*npc]struct{})
+		}
 
 		for i := 0; i < count; i++ {
 			npc := c.npcCache[i]
@@ -1355,7 +1403,9 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 					nextSpriteOffset := readBits(buf, ofs, 2)
 					ofs += 2
 					if nextSpriteOffset == 3 { // npc remove / incombat
-						removedNPCs[npc] = struct{}{}
+						if removedNPCs != nil {
+							removedNPCs[npc] = struct{}{}
+						}
 						continue
 					}
 					npc.sprite = (nextSpriteOffset << 2) + readBits(buf, ofs, 2)
@@ -1412,14 +1462,14 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			ofs += 10
 
 			if n := c.createNPC(serverIndex, id, c.x+x, c.z+z, sprite); n != nil {
-				delete(removedNPCs, n)
+				if removedNPCs != nil {
+					delete(removedNPCs, n)
+				}
 			}
 		}
 
-		if c.script != nil && c.script.onNPCDespawned != nil {
-			for k := range removedNPCs {
-				c.script.callOnNPCDespawned(k)
-			}
+		for k := range removedNPCs {
+			c.script.callOnNPCDespawned(k)
 		}
 	case 25: // load area
 		c.serverIndex = p.readShort()
@@ -1589,10 +1639,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		itemID := p.readShort()
 		noted := p.readByte() == 1
 		amount := 1
-		if itemDefs[itemID&32767].IsStackable != 0 || noted {
+		if itemDefs[itemID&0x7FFF].IsStackable != 0 || noted {
 			amount = p.readInt()
 		}
-		c.inventory[slot].id = itemID & 32767
+		c.inventory[slot].id = itemID & 0x7FFF
 		c.inventory[slot].equipped = itemID/0x8000 == 1
 		c.inventory[slot].amount = amount
 		c.inventory[slot].slot = slot
@@ -1634,8 +1684,8 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 				if supportBankNotes {
 					p.readByte()
 				}
-				if (id & 32768) != 0 {
-					id &= 32767
+				if (id & 0x8000) != 0 {
+					id &= 0x7FFF
 
 					count := 0
 					for i := 0; i < c.groundItemCount; i++ {
@@ -1966,7 +2016,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		playerName := p.readString()
 		p.readString()
 		p.readInt()
-		message := p.readHuffmanString()
+		message := p.readHuffman()
 		if c.account.debug {
 			fmt.Printf("[%s] Private message [%s]: %s\n", c.user, playerName, message)
 		}
@@ -1975,7 +2025,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		}
 	case 87: // private message sent
 		playerName := p.readString()
-		message := p.readHuffmanString()
+		message := p.readHuffman()
 		if c.account.debug {
 			fmt.Printf("[%s] You private message [%s]: %s\n", c.user, playerName, message)
 		}

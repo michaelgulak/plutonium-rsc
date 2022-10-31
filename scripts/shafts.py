@@ -2,11 +2,7 @@ TREES = [0, 1]
 LOGS  = 14
 KNIFE = 13
 
-shaft_num = 0
-
 def loop():
-    global shaft_num
-
     if get_fatigue() > 95:
         use_sleeping_bag()
         return 5000
@@ -14,8 +10,6 @@ def loop():
     if is_option_menu():
         answer(0)
         return 700
-
-    shaft_num = get_inventory_count_by_id(280)
 
     logs = get_inventory_item_by_id(LOGS)
     if logs != None:
@@ -35,4 +29,4 @@ def loop():
 def on_progress_report():
     return {"Woodcutting Level": get_max_stat(8), \
             "Fletching Level":   get_max_stat(9), \
-            "Shafts":            shaft_num}
+            "Shafts":            get_inventory_count_by_id(280)}

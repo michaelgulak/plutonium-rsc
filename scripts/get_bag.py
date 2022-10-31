@@ -17,14 +17,14 @@ def loop():
         return 1300
 
     if has_inventory_item(SLEEPING_BAG):
-        print("finished objective")
+        log("finished objective")
         stop_script()
         set_autologin(False)
         logout()
         return 10000
     
     coin_count = get_inventory_count_by_id(10)
-    print("# Coins = %d" % coin_count)
+    log("# Coins = %d" % coin_count)
     if coin_count >= 39:
         if not in_radius_of(SHOP_PT[0],SHOP_PT[1],8):
             walk_path_to(SHOP_PT[0],SHOP_PT[1])

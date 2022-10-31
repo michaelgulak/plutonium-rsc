@@ -1,6 +1,6 @@
 module bot
 
-go 1.17
+go 1.18
 
 require github.com/go-python/gpython v0.0.3-0.20191118123038-4c28217f7422
 

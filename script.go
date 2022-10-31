@@ -3,7 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"io"
 	"log"
 	"math/rand"
 	"os"
@@ -25,13 +25,14 @@ import (
 )
 
 type script struct {
-	name                  string
-	running               bool
-	c                     *client
-	settings              py.StringDict
-	fatigueTricking       bool
-	loaded                bool
-	module                *py.Module
+	name            string
+	running         bool
+	c               *client
+	settings        py.StringDict
+	fatigueTricking bool
+	loaded          bool
+	module          *py.Module
+
 	loopFn                *py.Function
 	onProgressReport      *py.Function
 	onServerMessage       *py.Function
@@ -78,8 +79,9 @@ func (s *script) load(loadScriptLock *sync.Mutex, c *client) error {
 		if err != nil {
 			return err
 		}
+		defer f.Close()
 		var obj py.Object
-		str, err := ioutil.ReadAll(f)
+		str, err := io.ReadAll(f)
 		if err != nil {
 			return err
 		}
@@ -529,21 +531,21 @@ func (n *longPath) Type() *py.Type {
 			}, py.METH_CLASS, ""),
 			"process": py.MustNewMethod("process", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 				if n.currentPt >= len(n.points) {
-					return nil, nil
+					return py.None, nil
 				}
 				pt := n.points[n.currentPt]
 				if pt.x == n.c.x && pt.y == n.c.z {
 					n.currentPt++
 				}
-				return nil, nil
+				return py.None, nil
 			}, py.METH_CLASS, ""),
 			"walk": py.MustNewMethod("walk", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 				if n.currentPt >= len(n.points) {
-					return nil, nil
+					return py.None, nil
 				}
 				pt := n.points[n.currentPt]
 				n.c.walkTo(pt.x, pt.y, pt.x, pt.y, false, false)
-				return nil, nil
+				return py.None, nil
 			}, py.METH_CLASS, ""),
 		},
 	}
@@ -634,7 +636,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		Dict:       s.settings,
 	}
 	module.Globals["stop_account"] = py.MustNewMethod("stop_account", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-		s.c.scriptKillSignal <- struct{}{}
+		c.scriptKillSignal <- struct{}{}
 		return py.None, nil
 	}, py.METH_STATIC, "")
 	module.Globals["SLEEPING_BAG"] = py.Int(1263)
@@ -864,6 +866,25 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 
 		return py.Int(c.getInventoryCountByID(ids...)), nil
+	}, py.METH_STATIC, "")
+	module.Globals["get_inventory_item_except"] = py.MustNewMethod("get_inventory_item_except", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		ids := args[0].(*py.List)
+		var selectedItem *item
+	next:
+		for i := 0; i < c.inventoryCount; i++ {
+			it := c.inventory[i]
+			for _, id := range ids.Items {
+				if int(id.(py.Int)) == it.id {
+					continue next
+				}
+			}
+			selectedItem = it
+			break
+		}
+		if selectedItem == nil {
+			return py.None, nil
+		}
+		return selectedItem, nil
 	}, py.METH_STATIC, "")
 	module.Globals["has_inventory_item"] = py.MustNewMethod("has_inventory_item", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.getInventoryCountByID(int(args[0].(py.Int))) > 0), nil

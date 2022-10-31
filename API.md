@@ -4,7 +4,7 @@
 
 `BANKERS` list of ids of bankers
 
-`SLEEPING_BAG` id of sleeping bag.
+`SLEEPING_BAG` id of sleeping bag
 
 ## Events
 
@@ -33,7 +33,6 @@ After this is called, the script has 15 seconds to clean up (ie. get out of comb
 ###### on_object_despawned(object)
 ###### on_wall_object_spawned(wall_object)
 ###### on_wall_object_despawned(wall_object)
-
 
 ## Base
 
@@ -109,53 +108,6 @@ Can only be used in event handlers.
 
 Returns a random integer between min and max, inclusive. Min and max must be >= 0.
 
-## Ground items
-
-#### Ground Item Object
-
-Contains the following fields: `id`, `x`, `z`.
-
-###### get_ground_items()
-###### get_ground_item_count()
-###### get_nearest_ground_item_by_id(id OR ids=[...], reachable=True, x=216, z=636, radius=10)
-
-`x` and `z` are used as the start point for the radius. Otherwise they're unused.
-
-###### get_nearest_ground_item_by_id_in_rect(id OR ids=[...], x=218, z=636, width=10, height=10, reachable=True)
-
-Reachable is optional.
-
-###### is_ground_item_at(id, x, z)
-###### pickup_item(ground_item)
-###### use_item_on_ground_item(item, ground_item)
-###### cast_on_ground_item(spellid, ground_item)
-
-## Inventory items
-
-#### Inventory Item Object
-
-Contains the following fields: `id`, `amount`, `equipped`, `slot`. 
-
-###### get_inventory_items()
-###### get_inventory_item_by_id(id OR ids=[...])
-###### get_inventory_count_by_id(id OR ids=[...])
-###### has_inventory_item(id)
-###### get_total_inventory_count()
-###### get_empty_slots()
-###### is_inventory_item_equipped(id)
-###### use_item(item)
-###### drop_item(item)
-###### equip_item(item)
-###### unequip_item(item)
-###### use_item_with_item(item, item)
-###### cast_on_item(spellid, item)
-###### use_item_on_object(item, object)
-###### use_item_on_wall_object(item, wall_object)
-###### use_item_on_player(item, player)
-###### use_item_on_npc(item, npc)
-###### use_sleeping_bag()
-
-
 ## Paths
 
 #### Path Object
@@ -189,7 +141,7 @@ def loop():
     if get_x() != 128 or get_z() != 640:
         path = calculate_path_to(128, 640)
         if path == None:
-            print("failed to path")
+            log("failed to path")
             stop_script()
             return 1000
 
@@ -201,6 +153,56 @@ def loop():
 ###### calculate_path(start_x, start_z, x, z, depth)
 
 The same as `calculate_path_to` except it takes starting coordinates.
+
+## Ground items
+
+#### Ground Item Object
+
+Contains the following fields: `id`, `x`, `z`.
+
+###### get_ground_items()
+###### get_ground_item_count()
+###### get_nearest_ground_item_by_id(id OR ids=[...], reachable=True, x=216, z=636, radius=10)
+
+`x` and `z` are used as the start point for the radius. Otherwise they're unused.
+
+###### get_nearest_ground_item_by_id_in_rect(id OR ids=[...], x=218, z=636, width=10, height=10, reachable=True)
+
+Reachable is optional.
+
+###### is_ground_item_at(id, x, z)
+###### pickup_item(ground_item)
+###### use_item_on_ground_item(item, ground_item)
+###### cast_on_ground_item(spell_id, ground_item)
+
+## Inventory items
+
+#### Inventory Item Object
+
+Contains the following fields: `id`, `amount`, `equipped`, `slot`. 
+
+###### get_inventory_items()
+###### get_inventory_item_by_id(id OR ids=[...])
+###### get_inventory_count_by_id(id OR ids=[...])
+###### get_inventory_item_except([545, 631, ...])
+
+Returns the first item that doesn't match the supplied array of ids.
+
+###### has_inventory_item(id)
+###### get_total_inventory_count()
+###### get_empty_slots()
+###### is_inventory_item_equipped(id)
+###### use_item(item)
+###### drop_item(item)
+###### equip_item(item)
+###### unequip_item(item)
+###### use_item_with_item(item, item)
+###### cast_on_item(spell_id, item)
+###### use_item_on_object(item, object)
+###### use_item_on_wall_object(item, wall_object)
+###### use_item_on_player(item, player)
+###### use_item_on_npc(item, npc)
+###### use_sleeping_bag()
 
 ## NPCs
 
@@ -243,10 +245,10 @@ Contains the following methods: `in_combat()`, `is_talking()`.
 ###### get_player_count()
 ###### get_player_by_name(str)
 ###### attack_player(player)
-###### cast_on_player(spellid, player)
+###### cast_on_player(spell_id, player)
 ###### trade_player(player)
 ###### follow_player(player)
-###### cast_on_self(spellid)
+###### cast_on_self(spell_id)
 
 ## Chat
 
@@ -314,7 +316,7 @@ Reachable is optional.
 ###### is_object_at(x, z)
 ###### at_object(object)
 ###### at_object2(object)
-###### cast_on_object(spellid, object)
+###### cast_on_object(spell_id, object)
 
 ## Wall Objects
 
@@ -335,7 +337,7 @@ Reachable is optional.
 ###### get_wall_object_from_coords(x, z)
 ###### at_wall_object(wall_object)
 ###### at_wall_object2(wall_object)
-###### cast_on_wall_object(spellid, wall_object)
+###### cast_on_wall_object(spell_id, wall_object)
 
 ## Bank Items
 

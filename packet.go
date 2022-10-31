@@ -48,7 +48,7 @@ func (p *RSCPacket) readSmart08_16() int {
 	if b1 < 128 {
 		return p.readByteAsInt()
 	} else {
-		return p.readShort() - 32768
+		return p.readShort() - 0x8000
 	}
 }
 
@@ -92,14 +92,13 @@ func (p *RSCPacket) writeSmart08_16(val int) {
 }
 
 func (p *client) writeHuffman(s string) {
-	p.encipher(s)
-	p.writeBytes(p.encipheredChatBuffer[:p.encipheredLength])
+	p.encodeHuffman(s)
+	p.writeBytes(p.encodedChatBuffer[:p.encodedChatLength])
 }
 
 func (p *RSCPacket) writeBytes(bs []byte) {
-	for _, b := range bs {
-		p.buf[p.inc()] = b
-	}
+	copy(p.buf[p.i:], bs)
+	p.i += len(bs)
 }
 
 func (c *client) createPacket(opcode byte) {
@@ -159,7 +158,7 @@ func readBits(buffer []byte, start, length int) int {
 	return bits
 }
 
-func (p *RSCPacket) readHuffmanString() string {
+func (p *RSCPacket) readHuffman() string {
 	count := p.readSmart08_16()
 	src := p.buf[p.i:len(p.buf)]
 	dest := make([]byte, count)

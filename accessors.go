@@ -186,11 +186,11 @@ func (p *player) inCombat() bool {
 }
 
 func (c *client) inRect(x, z, width, height int) bool {
-	return c.x <= x && c.z >= z && c.x >= x-width && c.z <= z+height
+	return inRect(c.x, c.z, x, z, width, height)
 }
 
 func inRect(x1, z1, x2, z2, width, height int) bool {
-	return x1 <= x2 && z1 >= z2 && x1 >= x2-width && z1 <= z2+height
+	return x1 <= x2 && z1 >= z2 && x1 > x2-width && z1 < z2+height
 }
 
 func inIntArray(needle int, haystack []int) bool {
@@ -544,14 +544,14 @@ func (c *client) generateLongPathPoint(x, z, depth int) *point {
 
 	path.waypoints.PushBack(&point{x, z})
 
-	count := 0
 	coordsAwayThreshold := 10
 	var pt *point
-	if path.waypoints.Len() < coordsAwayThreshold {
+	if path.waypoints.Len() <= coordsAwayThreshold {
 		pt = path.waypoints.Back().Value.(*point)
 	} else {
+		count := 1
 		for e := path.waypoints.Front(); e != nil; e = e.Next() {
-			if count == coordsAwayThreshold-1 {
+			if count == coordsAwayThreshold {
 				pt = e.Value.(*point)
 				break
 			}
@@ -563,17 +563,14 @@ func (c *client) generateLongPathPoint(x, z, depth int) *point {
 }
 
 func (c *client) generateLongPath(startX, startZ, x, z, depth int) *longPath {
-	var (
-		p    *astarPathFinder
-		path *path
-	)
+	var path *path
 	if depth == -1 {
 		depth = int(math.Pow(2, math.Ceil(math.Log2(distance(startX, startZ, x, z)))))
 		for {
 			if depth > 512 {
 				return nil
 			}
-			p = newAstarPathFinder(c, &point{startX, startZ}, &point{x, z}, depth)
+			p := newAstarPathFinder(c, &point{startX, startZ}, &point{x, z}, depth)
 			path = p.findPath()
 
 			if path != nil {
@@ -582,7 +579,7 @@ func (c *client) generateLongPath(startX, startZ, x, z, depth int) *longPath {
 			depth <<= 1
 		}
 	} else {
-		p = newAstarPathFinder(c, &point{startX, startZ}, &point{x, z}, depth)
+		p := newAstarPathFinder(c, &point{startX, startZ}, &point{x, z}, depth)
 		path = p.findPath()
 
 		if path == nil {
@@ -592,20 +589,20 @@ func (c *client) generateLongPath(startX, startZ, x, z, depth int) *longPath {
 
 	path.waypoints.PushBack(&point{x, z})
 
-	count := 0
 	coordsAwayThreshold := 10
 	lp := &longPath{points: []*point{}, c: c}
 
-	if path.waypoints.Len() < coordsAwayThreshold {
+	if path.waypoints.Len() <= coordsAwayThreshold {
 		lp.points = append(lp.points, path.waypoints.Back().Value.(*point))
 	} else {
+		count := 1
 		for e := path.waypoints.Front(); e != nil; e = e.Next() {
-			if count%coordsAwayThreshold-1 == 0 {
+			if count%coordsAwayThreshold == 0 {
 				lp.points = append(lp.points, e.Value.(*point))
 			}
 			count++
 		}
-		if count-1%coordsAwayThreshold-1 != 0 {
+		if (count-1)%coordsAwayThreshold != 0 {
 			lp.points = append(lp.points, path.waypoints.Back().Value.(*point))
 		}
 	}

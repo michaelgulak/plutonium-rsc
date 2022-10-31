@@ -9,12 +9,12 @@ def loop():
         set_combat_style(3)
         return 1000
     
+    if in_combat():
+        return 650
+    
     if get_fatigue() > 95:
         use_sleeping_bag()
         return 2000
-    
-    if in_combat():
-        return 650
 
     if not is_inventory_item_equipped(87):
         axe = get_inventory_item_by_id(87)

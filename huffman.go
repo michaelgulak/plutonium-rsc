@@ -1,6 +1,6 @@
 package main
 
-// This code was taken from the OpenRSC server.
+// This code was taken from the OpenRSC server, which was refactored from the RSC client.
 
 var (
 	specialCharacters = []rune{'\u20ac', '?', '\u201a', '\u0192', '\u201e', '\u2026', '\u2020', '\u2021', '\u02c6',
@@ -100,7 +100,7 @@ func (p *client) convertMessageToBytes(s string) {
 	}
 }
 
-func (c *client) encipher(message string) {
+func (c *client) encodeHuffman(message string) {
 	c.convertMessageToBytes(message)
 	encipheredByte := 0
 	outputBitOffset := 0
@@ -115,34 +115,34 @@ func (c *client) encipher(message string) {
 		outputBitOffset += int(initValue)
 		cipherBlockShifter += 24
 		encipheredByte |= int(uint32(cipherBlockValue) >> cipherBlockShifter)
-		c.encipheredChatBuffer[outputByteOffset] = byte(encipheredByte)
+		c.encodedChatBuffer[outputByteOffset] = byte(encipheredByte)
 		if outputByteOffset2 > outputByteOffset {
 			outputByteOffset++
 			cipherBlockShifter -= 8
 			encipheredByte = int(uint32(cipherBlockValue) >> cipherBlockShifter)
-			c.encipheredChatBuffer[outputByteOffset] = byte(encipheredByte)
+			c.encodedChatBuffer[outputByteOffset] = byte(encipheredByte)
 			if outputByteOffset < outputByteOffset2 {
 				outputByteOffset++
 				cipherBlockShifter -= 8
 				encipheredByte = int(uint32(cipherBlockValue) >> cipherBlockShifter)
-				c.encipheredChatBuffer[outputByteOffset] = byte(encipheredByte)
+				c.encodedChatBuffer[outputByteOffset] = byte(encipheredByte)
 				if outputByteOffset2 > outputByteOffset {
 					outputByteOffset++
 					cipherBlockShifter -= 8
 					encipheredByte = int(uint32(cipherBlockValue) >> cipherBlockShifter)
-					c.encipheredChatBuffer[outputByteOffset] = byte(encipheredByte)
+					c.encodedChatBuffer[outputByteOffset] = byte(encipheredByte)
 					if outputByteOffset2 > outputByteOffset {
 						cipherBlockShifter -= 8
 						outputByteOffset++
 						encipheredByte = int(cipherBlockValue << -cipherBlockShifter)
-						c.encipheredChatBuffer[outputByteOffset] = byte(encipheredByte)
+						c.encodedChatBuffer[outputByteOffset] = byte(encipheredByte)
 					}
 				}
 			}
 		}
 	}
-	c.decipheredLength = len(message)
-	c.encipheredLength = int(uint32(outputBitOffset+7) >> 3)
+	c.decodedChatLength = len(message)
+	c.encodedChatLength = int(uint32(outputBitOffset+7) >> 3)
 }
 
 func decodeHuffman(src []byte, dest []byte, destOffset int, srcOffset int, dummy int, count int) int {
