@@ -8,7 +8,7 @@ You can download the bot for linux_amd64 or windows_amd64 from the [releases pag
 
 ## Account Configuration
 
-To run Plutonium, you need account files. Each account file specifies the username and password of an account, and the script to run for that account. An account is created by creating a file in the `accounts` directory. These files must be in [toml](https://toml.io/en/) format with the exception that it cannot contain key/value pairs, multidimensional arrays, or dates.
+To run Plutonium, you need account files. Each account file specifies the username and password of an account, and the script to run for that account. An account config is created by creating a file in the `accounts` directory. These files must be in [toml](https://toml.io/en/) format with the exception that it cannot contain key/value pairs, multidimensional arrays, or dates.
 
 To get started quickly, rename the example file in the `accounts` directory to be `myaccount.toml`. Then input your username and password, and make sure to change the script and script settings. Windows users should note that [file name extensions](https://support.microsoft.com/en-us/windows/common-file-name-extensions-in-windows-da4a4430-8e76-89c5-59f7-1cdbbc75cb01) must be enabled to rename the file properly.
 
@@ -113,7 +113,7 @@ After creation you may want to run the `skip_tutorial.py` script on the accounts
 
 ## Memory
 
-If you see your memory going you're probably using walk_path_to from too large of a distance.
+If you see your memory going up you're probably using walk_path_to from too large of a distance.
 
 If you happen to notice that the VIRT memory allocated is high, it is due to [Go reserving a lot of virtual memory for allocations](https://go.dev/doc/faq#Why_does_my_Go_process_use_so_much_virtual_memory). Check the RES memory of htop to see the real memory footprint.
 
