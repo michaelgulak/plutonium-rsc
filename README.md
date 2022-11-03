@@ -43,7 +43,7 @@ On Linux make sure your working directory is the bot directory and run:
 ./bot
 ``` 
 
-On Windows, open a command prompt window in the root Plutonium directory. Then type `bot.exe` and hit enter.
+On Windows, run `run.bat`.
 
 If you want to run just one instance of a bot for any reason, for example to skip the tutorial you can do:
 
@@ -58,6 +58,26 @@ Alternatively, you can run a single account file like this:
 ```bash
 ./bot -f /path/to/account_file.toml
 ```
+
+## Create accounts
+
+Plutonium can automatically create accounts for you based on a text file. Run the bot with this command:
+
+```bash
+./bot -r /path/to/registration_file.txt
+```
+
+Where the registration file should have a new account for every line. For example:
+
+```
+myuser1:mypass:email@example.com
+myuser2:mypass:email@example.com
+myuser3:mypass:email@example.com
+myuser4:mypass:email@example.com
+myuser5:mypass:email@example.com
+```
+
+After creation you may want to run the `skip_tutorial.py` script on the accounts, followed by `get_bag.py` to get a sleeping bag.
 
 ## Building bot
 
@@ -91,29 +111,9 @@ followed by running `make` in the directory it creates.
 
 For windows, you'll need to create a solution in Visual Studio, import the code, and then build focr.exe.
 
-## Create accounts
-
-Plutonium can automatically create accounts for you based on a text file. Run the bot with this command:
-
-```bash
-./bot -r /path/to/registration_file.txt
-```
-
-Where the registration file should have a new account for every line. For example:
-
-```
-myuser1:mypass:email@example.com
-myuser2:mypass:email@example.com
-myuser3:mypass:email@example.com
-myuser4:mypass:email@example.com
-myuser5:mypass:email@example.com
-```
-
-After creation you may want to run the `skip_tutorial.py` script on the accounts, followed by `get_bag.py` to get a sleeping bag.
-
 ## Memory
 
-If you see your memory going up you're probably using walk_path_to from too large of a distance.
+If you see your memory going up, you're probably using walk_path_to from too large of a distance.
 
 If you happen to notice that the VIRT memory allocated is high, it is due to [Go reserving a lot of virtual memory for allocations](https://go.dev/doc/faq#Why_does_my_Go_process_use_so_much_virtual_memory). Check the RES memory of htop to see the real memory footprint.
 

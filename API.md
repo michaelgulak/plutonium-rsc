@@ -52,7 +52,7 @@ Prints to the console with user prefix.
 
 Calculates a path to the specified coordinates and walks to the first point.
 
-Will fail to path in certain circumstances where the Euclidean distance is a lot shorter than the path distance.
+Will fail to path in certain circumstances where the distance is a lot shorter than the path distance.
 
 This method will fail if distance > 200. Use `calculate_path` instead or try supplying your own depth with `walk_path_depth_to`.
 
@@ -60,7 +60,7 @@ It's preferable to use `calculate_path` for long distances as this method will c
 
 ###### walk_path_depth_to(x, z, depth)
 
-Same as `walk_path_to` except you must specify a depth for the internal A* algorithm. This will be more efficient than calling `walk_path_to` if you choose something less than `Euclidean distance * 4`.
+Same as `walk_path_to` except you must specify a depth for the internal A* algorithm. This will be more efficient than calling `walk_path_to` if you choose something less than `distance * 4`.
 
 This method will fail to path if depth > 800.
 

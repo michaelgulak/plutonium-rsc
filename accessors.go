@@ -58,17 +58,24 @@ func (c *client) getHPPercent() int {
 	return int((float64(c.currentStats[3]) / float64(c.baseStats[3])) * 100)
 }
 
-func distance(x1, z1, x2, z2 int) float64 {
-	dx := float64(x1 - x2)
-	dy := float64(z1 - z2)
-	return math.Sqrt(dx*dx + dy*dy)
+func max(a, b int) int {
+	if a > b {
+		return a
+	}
+	return b
 }
 
-func (c *client) distanceTo(x, z int) float64 {
+func distance(x1, z1, x2, z2 int) int {
+	dx := abs(x1 - x2)
+	dy := abs(z1 - z2)
+	return max(dx, dy)
+}
+
+func (c *client) distanceTo(x, z int) int {
 	return distance(x, z, c.x, c.z)
 }
 
-func (c *client) inRadiusOf(x, z int, radius float64) bool {
+func (c *client) inRadiusOf(x, z int, radius int) bool {
 	return c.distanceTo(x, z) <= radius
 }
 
@@ -202,9 +209,9 @@ func inIntArray(needle int, haystack []int) bool {
 	return false
 }
 
-func (c *client) getNearestNPCByID(inCombat, talking, reachable bool, x, z int, radius float64, ids ...int) *npc {
+func (c *client) getNearestNPCByID(inCombat, talking, reachable bool, x, z int, radius int, ids ...int) *npc {
 	var (
-		min    = float64(0xfffffff)
+		min    = math.MaxInt32
 		minNPC *npc
 	)
 	for i := 0; i < c.npcCount; i++ {
@@ -233,7 +240,7 @@ func (c *client) getNearestNPCByID(inCombat, talking, reachable bool, x, z int, 
 
 func (c *client) getNearestNPCByIDInRect(inCombat bool, talking bool, reachable bool, x, z, width, height int, ids ...int) *npc {
 	var (
-		min    = float64(0xfffffff)
+		min    = math.MaxInt32
 		minNPC *npc
 	)
 	for i := 0; i < c.npcCount; i++ {
@@ -262,7 +269,7 @@ func (c *client) getNearestNPCByIDInRect(inCombat bool, talking bool, reachable 
 
 func (c *client) getNearestObjectByIDInRect(reachable bool, x, z, width, height int, ids ...int) *object {
 	var (
-		min    = float64(0xfffffff)
+		min    = math.MaxInt32
 		minObj *object
 	)
 	for i := 0; i < c.objectCount; i++ {
@@ -285,7 +292,7 @@ func (c *client) getNearestObjectByIDInRect(reachable bool, x, z, width, height 
 
 func (c *client) getNearestWallObjectByIDInRect(reachable bool, x, z, width, height int, ids ...int) *wallObject {
 	var (
-		min    = float64(0xfffffff)
+		min    = math.MaxInt32
 		minObj *wallObject
 	)
 	for i := 0; i < c.wallObjectCount; i++ {
@@ -308,7 +315,7 @@ func (c *client) getNearestWallObjectByIDInRect(reachable bool, x, z, width, hei
 
 func (c *client) getNearestGroundItemByIDInRect(reachable bool, x, z, width, height int, ids ...int) *groundItem {
 	var (
-		min    = float64(0xfffffff)
+		min    = math.MaxInt32
 		minObj *groundItem
 	)
 	for i := 0; i < c.groundItemCount; i++ {
@@ -329,9 +336,9 @@ func (c *client) getNearestGroundItemByIDInRect(reachable bool, x, z, width, hei
 	return minObj
 }
 
-func (c *client) getNearestGroundItemByID(x, z int, radius float64, reachable bool, ids ...int) *groundItem {
+func (c *client) getNearestGroundItemByID(x, z int, radius int, reachable bool, ids ...int) *groundItem {
 	var (
-		min     = float64(0xfffffff)
+		min     = math.MaxInt32
 		minItem *groundItem
 	)
 	for i := 0; i < c.groundItemCount; i++ {
@@ -352,9 +359,9 @@ func (c *client) getNearestGroundItemByID(x, z int, radius float64, reachable bo
 	return minItem
 }
 
-func (c *client) getNearestObjectByID(x, z int, radius float64, reachable bool, ids ...int) *object {
+func (c *client) getNearestObjectByID(x, z int, radius int, reachable bool, ids ...int) *object {
 	var (
-		min    = float64(0xfffffff)
+		min    = math.MaxInt32
 		minObj *object
 	)
 	for i := 0; i < c.objectCount; i++ {
@@ -375,9 +382,9 @@ func (c *client) getNearestObjectByID(x, z int, radius float64, reachable bool, 
 	return minObj
 }
 
-func (c *client) getNearestWallObjectByID(x, z int, radius float64, reachable bool, ids ...int) *wallObject {
+func (c *client) getNearestWallObjectByID(x, z int, radius int, reachable bool, ids ...int) *wallObject {
 	var (
-		min    = float64(0xfffffff)
+		min    = math.MaxInt32
 		minObj *wallObject
 	)
 	for i := 0; i < c.wallObjectCount; i++ {
@@ -565,7 +572,7 @@ func (c *client) generateLongPathPoint(x, z, depth int) *point {
 func (c *client) generateLongPath(startX, startZ, x, z, depth int) *longPath {
 	var path *path
 	if depth == -1 {
-		depth = int(math.Pow(2, math.Ceil(math.Log2(distance(startX, startZ, x, z)))))
+		depth = int(math.Pow(2, math.Ceil(math.Log2(float64(distance(startX, startZ, x, z))))))
 		for {
 			if depth > 512 {
 				return nil

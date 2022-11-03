@@ -674,7 +674,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		return py.None, nil
 	}, py.METH_STATIC, "")
 	module.Globals["distance"] = py.MustNewMethod("distance", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-		return py.Float(distance(int(args[0].(py.Int)), int(args[1].(py.Int)), int(args[2].(py.Int)), int(args[3].(py.Int)))), nil
+		return py.Int(distance(int(args[0].(py.Int)), int(args[1].(py.Int)), int(args[2].(py.Int)), int(args[3].(py.Int)))), nil
 	}, py.METH_STATIC, "")
 	module.Globals["in_rect"] = py.MustNewMethod("in_rect", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x := int(args[0].(py.Int))
@@ -934,13 +934,13 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["distance_to"] = py.MustNewMethod("distance_to", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x := int(args[0].(py.Int))
 		z := int(args[1].(py.Int))
-		return py.Float(c.distanceTo(x, z)), nil
+		return py.Int(c.distanceTo(x, z)), nil
 	}, py.METH_STATIC, "")
 	module.Globals["in_radius_of"] = py.MustNewMethod("in_radius_of", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var (
 			x      = -1
 			z      = -1
-			radius = float64(-1)
+			radius = -1
 		)
 		if len(args) > 0 {
 			x = int(args[0].(py.Int))
@@ -949,9 +949,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 				if len(args) > 2 {
 					switch v := args[2].(type) {
 					case py.Int:
-						radius = float64(int(v))
+						radius = int(v)
 					case py.Float:
-						radius = float64(v)
+						radius = int(v)
 					}
 				}
 			}
@@ -966,9 +966,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		if radius0, ok := kwargs["radius"]; ok {
 			switch v := radius0.(type) {
 			case py.Int:
-				radius = float64(int(v))
+				radius = int(v)
 			case py.Float:
-				radius = float64(v)
+				radius = int(v)
 			}
 		}
 
@@ -996,7 +996,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 			reachable = false
 			x         int
 			z         int
-			radius    = float64(-1)
+			radius    = -1
 		)
 
 		if len(args) > 0 {
@@ -1010,9 +1010,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 						if len(args) > 4 {
 							switch x := args[4].(type) {
 							case py.Int:
-								radius = float64(int(x))
+								radius = int(x)
 							case py.Float:
-								radius = float64(x)
+								radius = int(x)
 							}
 						}
 					}
@@ -1042,9 +1042,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		if radius0, ok := kwargs["radius"]; ok {
 			switch x := radius0.(type) {
 			case py.Int:
-				radius = float64(int(x))
+				radius = int(x)
 			case py.Float:
-				radius = float64(x)
+				radius = int(x)
 			}
 		}
 
@@ -1230,7 +1230,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 			reachable = false
 			x         int
 			z         int
-			radius    = float64(-1)
+			radius    = -1
 		)
 
 		if len(args) > 0 {
@@ -1248,9 +1248,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 								if len(args) > 6 {
 									switch x := args[6].(type) {
 									case py.Int:
-										radius = float64(int(x))
+										radius = int(x)
 									case py.Float:
-										radius = float64(x)
+										radius = int(x)
 									}
 								}
 							}
@@ -1289,9 +1289,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		if radius0, ok := kwargs["radius"]; ok {
 			switch x := radius0.(type) {
 			case py.Int:
-				radius = float64(int(x))
+				radius = int(x)
 			case py.Float:
-				radius = float64(x)
+				radius = int(x)
 			}
 		}
 
@@ -1619,7 +1619,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 			reachable = false
 			x         int
 			z         int
-			radius    = float64(-1)
+			radius    = -1
 		)
 
 		if len(args) > 0 {
@@ -1633,9 +1633,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 						if len(args) > 4 {
 							switch x := args[4].(type) {
 							case py.Int:
-								radius = float64(int(x))
+								radius = int(x)
 							case py.Float:
-								radius = float64(x)
+								radius = int(x)
 							}
 						}
 					}
@@ -1665,9 +1665,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		if radius0, ok := kwargs["radius"]; ok {
 			switch x := radius0.(type) {
 			case py.Int:
-				radius = float64(int(x))
+				radius = int(x)
 			case py.Float:
-				radius = float64(x)
+				radius = int(x)
 			}
 		}
 
@@ -1791,7 +1791,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 			reachable = false
 			x         int
 			z         int
-			radius    = float64(-1)
+			radius    = -1
 		)
 
 		if len(args) > 0 {
@@ -1805,9 +1805,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 						if len(args) > 4 {
 							switch x := args[4].(type) {
 							case py.Int:
-								radius = float64(int(x))
+								radius = int(x)
 							case py.Float:
-								radius = float64(x)
+								radius = int(x)
 							}
 						}
 					}
@@ -1825,9 +1825,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		if radius0, ok := kwargs["radius"]; ok {
 			switch x := radius0.(type) {
 			case py.Int:
-				radius = float64(int(x))
+				radius = int(x)
 			case py.Float:
-				radius = float64(x)
+				radius = int(x)
 			}
 		}
 
