@@ -1,7 +1,12 @@
+# Get pick by RLN
+
+# Walks to Barbarian Village to grab a bronze pickaxe.
+
 HATCHET   = 87
 TINDERBOX = 166
 COINS     = 10
 PICK      = 156
+MEAT      = 132
 
 def loop():
     hatchet = get_inventory_item_by_id(HATCHET)
@@ -18,8 +23,19 @@ def loop():
     if coins != None:
         drop_item(coins)
         return 1000
+
+    meat = get_inventory_item_by_id(MEAT)
+    if meat != None:
+        use_item(meat)
+        return 1300
     
     if not has_inventory_item(PICK):
+        if in_radius_of(230, 511, 15):
+            door = get_wall_object_from_coords(230, 511)
+            if door != None and door.id == 2:
+                at_wall_object(door)
+                return 1300
+
         if not in_radius_of(230, 510, 5):
             walk_path_to(230, 510)
             return 5000
@@ -29,8 +45,8 @@ def loop():
                 pickup_item(pick)
                 return 2000
     else:
+        log("objective complete")
         stop_script()
         set_autologin(False)
         logout()
-        print("objective complete")
         return 10000

@@ -1,3 +1,8 @@
+# Goblin Suicide by RLN
+
+# Kills goblins in Lumbridge and walks back if it dies.
+# This script only trains defense and stops at 40 defense.
+
 def loop():
     if get_max_stat(1) >= 40:
         set_autologin(False)

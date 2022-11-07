@@ -1850,11 +1850,6 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		c.fatigue = p.readShort()
 		c.accurateFatigue = (float64(p.readShort()) / 750) * 100
 	case 53: // Update inventory
-		for i := 0; i < 30; i++ {
-			c.inventory[i].amount = 0
-			c.inventory[i].equipped = false
-			c.inventory[i].id = 0
-		}
 		c.inventoryCount = p.readByteAsInt()
 
 		for i := 0; i < c.inventoryCount; i++ {

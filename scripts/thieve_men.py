@@ -1,3 +1,7 @@
+# Man thieving script by RLN
+
+# Thieves men until 5 thieving then stops.
+
 def loop():
     if get_combat_style() != 3:
         set_combat_style(3)

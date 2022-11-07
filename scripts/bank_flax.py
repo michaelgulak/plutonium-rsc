@@ -1,5 +1,5 @@
-# Picks flax and banks.
-#
+# Flax picker & banker by RLN
+
 # Start under the gnome stronghold bank.
 
 flax_banked = 0

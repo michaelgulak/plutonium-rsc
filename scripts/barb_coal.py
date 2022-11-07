@@ -1,11 +1,11 @@
-import time
-
-# Barbarian Village Coal Miner by RLN
+# Barbarian Village coal miner by RLN
 #
 # No settings needed
 
-PICKAXES = [1262, 1261, 1260, 1259, 1258, 156]
-COAL     = 155
+import time
+
+KEPT_ITEMS = [1263, 1262, 1261, 1260, 1259, 1258, 156]
+COAL       = 155
 
 click_timeout = 0
 coal_banked   = 0
@@ -13,13 +13,7 @@ coal_banked   = 0
 def bank_next_item():
     global coal_banked
 
-    items = get_inventory_items()
-    item_to_bank = None
-    for item in items:
-        if item.id == SLEEPING_BAG or item.id in PICKAXES:
-            continue
-        item_to_bank = item
-        break
+    item_to_bank = get_inventory_item_except(KEPT_ITEMS)
 
     if item_to_bank != None:
         inv_count = get_inventory_count_by_id(item_to_bank.id)
@@ -31,7 +25,7 @@ def bank_next_item():
     return 2000
 
 def bank():
-    if in_rect(220, 448, 8, 5): # in bank
+    if in_rect(220, 448, 9, 6): # in bank
         if not is_bank_open():
             return open_bank()
         else:
@@ -41,6 +35,12 @@ def bank():
                 close_bank()
                 return 1000
     else:
+        if in_radius_of(217, 447, 15):
+            door = get_object_from_coords(217, 447)
+            if door != None and door.id == 64:
+                at_object(door)
+                return 1300
+        
         walk_path_to(218, 448)
         return 5000
 
@@ -52,6 +52,12 @@ def mine():
         return 3000
     
     if not in_rect(230, 503, 8, 5):
+        if in_radius_of(217, 447, 15):
+            door = get_object_from_coords(217, 447)
+            if door != None and door.id == 64:
+                at_object(door)
+                return 1300
+
         walk_path_to(226, 504)
         return 5000
     
@@ -85,4 +91,4 @@ def on_server_message(msg):
 
 def on_progress_report():
     return {"Mining Level": get_max_stat(14), \
-            "Coal Banked": coal_banked}
+            "Coal Banked":  coal_banked}

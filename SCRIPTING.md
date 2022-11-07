@@ -4,7 +4,7 @@ Scripts are written in python. Many accessor methods are provided to scripts in 
 
 ## Windows
 
-On windows you'll have to make sure that your line endings are LF and not CRLF. You can do this with [Visual Studio Code](https://code.visualstudio.com/) by going to the bar at the bottom and switching CRLF to LF. Example:
+On Windows you'll have to make sure that your line endings are LF and not CRLF. You can do this with [Visual Studio Code](https://code.visualstudio.com/) by going to the bar at the bottom and switching CRLF to LF. Example:
 
 ![Line Endings](images/lf.png "Line endings")
 

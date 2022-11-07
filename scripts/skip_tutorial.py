@@ -1,3 +1,7 @@
+# Skip tutorial script by RLN
+
+# Chooses a random look for your character then skips the tutorial.
+
 HEAD_SPRITES = [0,3,5,6,7]
 BODY_SPRITES = [1,4]
 
@@ -9,7 +13,7 @@ def loop():
     if not wait_for_appearance_packet:
         wait_for_appearance_packet = True
         log("waiting for appearance packet")
-        return 3000
+        return 2000
     
     if is_appearance_screen():
         head_gender = random(0, 1)
@@ -40,8 +44,11 @@ def loop():
 
     if in_rect(244, 719, 55, 49):
         skip_tutorial()
+        return 2000
     else:
         log("skip tutorial complete")
+        stop_script()
+        set_autologin(False)
         logout()
         return 10000
   

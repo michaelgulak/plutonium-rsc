@@ -1,6 +1,4 @@
-import time
-
-# Simplified version of AA_VarrockEastMiner that only mines 2 rocks written by RLN
+# Simplified version of AA_VarrockEastMiner that only mines 2 rocks by RLN
 #
 # Script block should look like this:
 # [script]
@@ -13,11 +11,10 @@ import time
 #
 # ore_type can be set to copper, tin, or iron.
 
-PICKAXES     = [1262, 1261, 1260, 1259, 1258, 156]
-ORES         = [202, 151, 150]
+import time
 
-ONE_SECOND   = 1
-FIVE_SECONDS = 5
+KEPT_ITEMS = [1263, 1262, 1261, 1260, 1259, 1258, 156]
+ORES       = [202, 151, 150]
 
 rocks = None
 coord = None
@@ -59,13 +56,7 @@ if rocks == None:
 def bank_next_item():
     global ore_banked
 
-    items = get_inventory_items()
-    item_to_bank = None
-    for item in items:
-        if item.id == SLEEPING_BAG or item.id in PICKAXES:
-            continue
-        item_to_bank = item
-        break
+    item_to_bank = get_inventory_item_except(KEPT_ITEMS)
 
     if item_to_bank != None:
         inv_count = get_inventory_count_by_id(item_to_bank.id)
@@ -79,11 +70,17 @@ def bank_next_item():
 def mine():
     global click_timeout
 
-    if get_fatigue() >= 95:
+    if get_fatigue() > 95:
         use_sleeping_bag()
         return 3000
 
     if get_x() != coord.x or get_z() != coord.z:
+        if in_radius_of(102, 509, 15):
+            door = get_object_from_coords(102, 509)
+            if door != None and door.id == 64:
+                at_object(door)
+                return 1300
+
         walk_path_to(coord.x, coord.z)
         return 5000
     
@@ -101,13 +98,13 @@ def mine():
         
         current_rock = rock
         at_object(obj)
-        click_timeout = time.time() + FIVE_SECONDS
+        click_timeout = time.time() + 5
         return 700
     
     return 700
 
 def bank():
-    if in_rect(106, 510, 8, 5): # in bank
+    if in_rect(106, 510, 9, 6): # in bank
         if not is_bank_open():
             return open_bank()
         else:
@@ -117,6 +114,12 @@ def bank():
                 close_bank()
                 return 1000
     else:
+        if in_radius_of(102, 509, 15):
+            door = get_object_from_coords(102, 509)
+            if door != None and door.id == 64:
+                at_object(door)
+                return 1300
+            
         walk_path_to(102, 512)
         return 5000
 
@@ -137,7 +140,7 @@ def on_server_message(msg):
     elif msg.startswith("You manage") or msg.startswith("You just"):
         click_timeout = 0
         previous_rock = current_rock
-        previous_rock_timeout = time.time() + ONE_SECOND
+        previous_rock_timeout = time.time() + 1
 
 def on_progress_report():
     return {"Mining Level": get_max_stat(14), \

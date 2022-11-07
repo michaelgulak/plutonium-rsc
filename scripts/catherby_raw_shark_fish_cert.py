@@ -1,8 +1,8 @@
-import time
-
 # Catherby raw shark fisher & certer by RLN
 
 # No script settings required.
+
+import time
 
 SPOT_X = 406
 SPOT_Z = 505

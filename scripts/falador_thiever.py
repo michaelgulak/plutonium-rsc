@@ -1,3 +1,19 @@
+# Falador Thiever by RLN
+
+# Pickpockets guards in Falador at different spots. Only uses cakes.
+
+# Script block should look like this:
+
+# [script]
+# name = "falador_thiever.py"
+#
+# [script.settings]
+# spot = "spot 1"
+#
+# Where spot can be "spot 1", "spot 2", or "spot 3".
+
+import time
+
 class Spot:
     def __init__(self, minx, minz, width, height, walkx, walkz):
         self.minx = minx
@@ -6,6 +22,8 @@ class Spot:
         self.height = height
         self.walkx = walkx
         self.walkz = walkz
+
+CAKE_IDS = [335,333,330]
 
 spot = None
 
@@ -18,8 +36,16 @@ elif settings.spot == "spot 3":
 else:
     raise RuntimeError('Incorrect spot chosen')
 
+kill_combat_wait = 0
+
 def bank():
-    if not in_rect(334, 549, 6, 8):
+    if not in_rect(334, 549, 7, 9):
+        if in_radius_of(327, 552, 15):
+            door = get_object_from_coords(327, 552)
+            if door != None and door.id == 64:
+                at_object(door)
+                return 1300
+
         walk_path_to(328, 552)
         return 5000
     
@@ -44,17 +70,7 @@ def bank():
     return 5000
 
 def eat_cake():
-    cake = get_inventory_item_by_id(335)
-    if cake != None:
-        use_item(cake)
-        return 1350
-    
-    cake = get_inventory_item_by_id(333)
-    if cake != None:
-        use_item(cake)
-        return 1350
-
-    cake = get_inventory_item_by_id(330)
+    cake = get_inventory_item_by_id(ids=CAKE_IDS)
     if cake != None:
         use_item(cake)
         return 1350
@@ -62,11 +78,7 @@ def eat_cake():
     return 2000
 
 def thieve():
-    if in_combat():
-        walk_to(get_x(), get_z())
-        return 650
-    
-    if get_current_stat(3) <= 20:
+    if get_current_stat(3) <= 9:
         return eat_cake()
 
     if get_fatigue() > 95:
@@ -74,6 +86,12 @@ def thieve():
         return 2000
     
     if not in_rect(spot.minx, spot.minz, spot.width, spot.height):
+        if in_radius_of(327, 552, 15):
+            door = get_object_from_coords(327, 552)
+            if door != None and door.id == 64:
+                at_object(door)
+                return 1300
+
         walk_path_to(spot.walkx, spot.walkz)
         return 5000
     
@@ -85,12 +103,24 @@ def thieve():
     return 1200
 
 def loop():
+    if in_combat():
+        walk_to(get_x(), get_z())
+        return 650
+    
+    if kill_combat_wait != 0:
+        if time.time() - kill_combat_wait > 5:
+            stop_script()
+            stop_account()
+            return 5000
+        
+        return 650
+
     if get_combat_style() != 3:
         set_combat_style(3)
         return 2000
     
     if is_bank_open() \
-        or get_inventory_count_by_id(ids=[330,333,335]) == 0:
+        or get_inventory_count_by_id(ids=CAKE_IDS) == 0:
 
         return bank()
     
@@ -98,4 +128,14 @@ def loop():
 
 def on_progress_report():
     return {"Thieving Level": get_max_stat(17), \
-            "Coins": get_inventory_count_by_id(10)}
+            "Coins":          get_inventory_count_by_id(10)}
+
+def on_kill_signal():
+    global kill_combat_wait
+    
+    if is_sleeping():
+        stop_script()
+        stop_account()
+        return
+
+    kill_combat_wait = time.time()

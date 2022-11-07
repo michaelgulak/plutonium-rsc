@@ -1,5 +1,3 @@
-import time
-
 # Catherby fish/cook by RLN
 #
 # Script block should look like this:
@@ -13,6 +11,8 @@ import time
 #
 # Possible values for fish_type are: shrimp/anchovies, sardines/herring,
 # tuna/swordfish, lobsters, mackarel/cod/bass, shark.
+
+import time
 
 EQUIPMENT       = [[376], [377, 380], [379], [375], [548],[379]]
 RAW_FISH_IDS    = [[349,351], [354,361], [366,369], [372], [552,550,554], [545]]
@@ -65,6 +65,12 @@ def fish():
             move_timer = False
 
     if get_x() != fishing_spot.coord[0] or get_z() != fishing_spot.coord[1] - 1:
+        if in_radius_of(439, 497, 15):
+            door = get_object_from_coords(439, 497)
+            if door != None and door.id == 64:
+                at_object(door)
+                return 1300
+            
         walk_path_to(fishing_spot.coord[0], fishing_spot.coord[1] - 1)
         return 5000
 
@@ -109,7 +115,13 @@ def cook():
     global cook_timeout
 
     if get_inventory_count_by_id(ids=fishing_spot.raw_fish_ids) > 0:
-        if not in_radius_of(433,482,5):
+        if not in_rect(436,480,5,6):
+            if in_radius_of(435,486,15):
+                door = get_wall_object_from_coords(435,486)
+                if door != None and door.id == 2:
+                    at_wall_object(door)
+                    return 1300
+
             walk_path_to(433,483)
             return 5000
         if cook_timeout != 0 and time.time() <= cook_timeout:
@@ -121,9 +133,20 @@ def cook():
             cook_timeout = time.time() + 5
             return 1300
     else:
-        if not in_radius_of(439,496,5):
+        if not in_rect(443,491,7,6):
+            if in_radius_of(435,486,15) and get_z() <= 485:
+                door = get_wall_object_from_coords(435,486)
+                if door != None and door.id == 2:
+                    at_wall_object(door)
+                    return 1300
+            if in_radius_of(439,497,15):
+                door = get_object_from_coords(439, 497)
+                if door != None and door.id == 64:
+                    at_object(door)
+                    return 1300
+            
             walk_to(439,496)
-            return 5000
+            return 1200
         if not is_bank_open():
             return open_bank()
         else:
@@ -164,4 +187,4 @@ def on_progress_report():
         count += fish_banked[k]
     return {"Fishing Level": get_max_stat(10), \
             "Cooking Level": get_max_stat(7), \
-            "Fish Banked": count}
+            "Fish Banked":   count}

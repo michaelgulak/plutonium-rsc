@@ -1,3 +1,14 @@
+# Generic autofighter by RLN
+
+# Script block should look like this:
+
+# [script]
+# name = "autofighter.py"
+
+# [script.settings]
+# fight_mode = 0
+# npc_ids = [29, 34]
+
 def loop():
     if get_combat_style() != settings.fight_mode:
         set_combat_style(settings.fight_mode)
@@ -6,7 +17,7 @@ def loop():
     if in_combat():
         return 500
 
-    if get_fatigue() >= 95:
+    if get_fatigue() > 95:
         use_sleeping_bag()
         return 1000
 

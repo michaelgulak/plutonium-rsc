@@ -1,4 +1,8 @@
+# Ardougne cake thieving script by RLN
+
 # Make sure you start this script with at least one cake in your inventory.
+
+CAKE_IDS = [335,333,330]
 
 click_timeout = 0
 cake_stolen   = 0
@@ -6,7 +10,13 @@ cake_stolen   = 0
 def bank():
     global cake_stolen
 
-    if not in_rect(554, 609, 3, 7):
+    if not in_rect(554, 609, 4, 8):
+        if in_radius_of(550, 612, 15):
+            door = get_object_from_coords(550, 612)
+            if door != None and door.id == 64:
+                at_object(door)
+                return 1300
+
         walk_path_to(551, 612)
         return 5000
     
@@ -29,17 +39,7 @@ def bank():
     return 5000
     
 def eat_cake():
-    cake = get_inventory_item_by_id(335)
-    if cake != None:
-        use_item(cake)
-        return 1350
-    
-    cake = get_inventory_item_by_id(333)
-    if cake != None:
-        use_item(cake)
-        return 1350
-
-    cake = get_inventory_item_by_id(330)
+    cake = get_inventory_item_by_id(ids=CAKE_IDS)
     if cake != None:
         use_item(cake)
         return 1350
@@ -59,10 +59,16 @@ def thieve():
         use_sleeping_bag()
         return 2000
     
-    if get_current_stat(3) <= 15:
+    if get_current_stat(3) <= 9:
         return eat_cake()
     
     if get_x() != 543 or get_z() != 600:
+        if in_radius_of(550, 612, 15):
+            door = get_object_from_coords(550, 612)
+            if door != None and door.id == 64:
+                at_object(door)
+                return 1300
+
         walk_path_to(543, 600)
         return 5000
 
@@ -76,7 +82,7 @@ def thieve():
 def loop():
     if is_bank_open() \
         or get_total_inventory_count() == 30 \
-        or get_inventory_count_by_id(ids=[330,333,335]) == 0:
+        or get_inventory_count_by_id(ids=CAKE_IDS) == 0:
 
         return bank()
     
@@ -84,4 +90,4 @@ def loop():
 
 def on_progress_report():
     return {"Thieving Level": get_max_stat(17), \
-            "Cakes Stolen": cake_stolen}
+            "Cake Stolen":    cake_stolen}

@@ -1,3 +1,7 @@
+# Shafts by RLN
+
+# This script cuts trees and fletches the logs into arrow shafts.
+
 TREES = [0, 1]
 LOGS  = 14
 KNIFE = 13

@@ -1,6 +1,6 @@
 # Plutonium
 
-Plutonium is a shell bot written by RLN for the [Open RSC](https://rsc.vet/) Uranium server. It's built from the ground up using Go. Scripts for it are written in python via [gpython](https://github.com/go-python/gpython). It was written for fun and may contain bugs. Please file any issues you may encounter. Some code is taken from the Open RSC server (in particular, the pathfinding and chat message code). If you write a script for it, please send a PR so people can use it!
+Plutonium is a shell bot written by RLN for the [Open RSC](https://rsc.vet/) Uranium server. It was written for fun and built from the ground up using Go. Scripts for it are written in python via [gpython](https://github.com/go-python/gpython). Some code is taken from the Open RSC server (in particular, the pathfinding and chat message code). If you write a script for it, please send a PR so people can use it!
 
 ## Download
 
@@ -37,13 +37,13 @@ Note that the progress report field can contain values that `time.ParseDuration`
 
 ## Run bot
 
-On Linux make sure your working directory is the bot directory and run:
+On Windows, run `run.bat`. Note that for the rest of the README if a command for the bot is shown as `./bot`, then on Windows you would replace that with `.\bot.exe`.
+
+On Linux, make sure your working directory is the bot directory and run:
 
 ```bash
 ./bot
 ``` 
-
-On Windows, run `run.bat`.
 
 If you want to run just one instance of a bot for any reason, for example to skip the tutorial you can do:
 
@@ -51,7 +51,7 @@ If you want to run just one instance of a bot for any reason, for example to ski
 ./bot -u myuser -p mypass -s scripts/skip_tutorial.py
 ```
 
-Note that you can't specify script settings with this method.
+You can't specify script settings with this method.
 
 Alternatively, you can run a single account file like this:
 
@@ -109,11 +109,13 @@ git clone https://gitlab.com/RLN_/focr-resurrection
 
 followed by running `make` in the directory it creates.
 
-For windows, you'll need to create a solution in Visual Studio, import the code, and then build focr.exe.
+For Windows, you'll need to create a solution in Visual Studio, import the code, and then build focr.exe.
 
 ## Memory
 
-If you see your memory going up, you're probably using walk_path_to from too large of a distance.
+Each bot instance should use 10-20x less memory than an APOS client.
+
+If you see your memory going up, you're probably using walk_path_to from too large of a distance. Consider using calculate_path.
 
 If you happen to notice that the VIRT memory allocated is high, it is due to [Go reserving a lot of virtual memory for allocations](https://go.dev/doc/faq#Why_does_my_Go_process_use_so_much_virtual_memory). Check the RES memory of htop to see the real memory footprint.
 

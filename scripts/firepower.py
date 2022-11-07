@@ -1,3 +1,7 @@
+# Firepower by RLN
+
+# This script cuts trees and lights the logs with a tinderbox.
+
 LOGS      = 14
 TINDERBOX = 166
 TREES     = [0, 1]

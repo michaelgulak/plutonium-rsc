@@ -1,8 +1,13 @@
-# Start near or inside paladin room
-#
+# Paladin thieving script by RLN
+
+# Start near or inside paladin room.
+
 # This script only uses cakes.
+# Make sure you are at least 28 hp or you will die.
 
 import time
+
+CAKE_IDS = [335,333,330]
 
 kill_wait = 0
 coins_banked = 0
@@ -98,7 +103,7 @@ def thieve():
         return 4000
 
     if get_current_stat(3) <= 27:
-        food = get_inventory_item_by_id(ids=[335,333,330])
+        food = get_inventory_item_by_id(ids=CAKE_IDS)
         if food != None:
             use_item(food)
             return 1000
@@ -174,7 +179,7 @@ def loop():
         return 1000
     
     if is_bank_open() \
-        or get_inventory_count_by_id(ids=[330,333,335]) == 0:
+        or get_inventory_count_by_id(ids=CAKE_IDS) == 0:
 
         return bank()
     
@@ -192,10 +197,10 @@ def on_server_message(msg):
 
 def on_progress_report():
     return {"Thieving Level": get_max_stat(17), \
-            "Coins": get_inventory_count_by_id(10), \
-            "Chaos": get_inventory_count_by_id(41), \
-            "Coins banked": coins_banked, \
-            "Chaos banked": chaos_banked}
+            "Coins":          get_inventory_count_by_id(10), \
+            "Chaos":          get_inventory_count_by_id(41), \
+            "Coins banked":   coins_banked, \
+            "Chaos banked":   chaos_banked}
 
 def on_kill_signal():
     global kill_wait

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"math"
 	"strings"
 	"time"
@@ -22,9 +23,11 @@ func (c *client) getInventoryCountByID(ids ...int) int {
 }
 
 func (c *client) getInventoryItemByID(ids ...int) *item {
-	for i := 0; i < c.inventoryCount; i++ {
-		if inIntArray(c.inventory[i].id, ids) {
-			return c.inventory[i]
+	for _, id := range ids {
+		for i := 0; i < c.inventoryCount; i++ {
+			if c.inventory[i].id == id {
+				return c.inventory[i]
+			}
 		}
 	}
 	return nil
@@ -43,6 +46,8 @@ func (c *client) useSleepingBag() {
 	bag := c.getInventoryItemByID(sleepingBagID)
 	if bag != nil {
 		c.useInventoryItem(bag)
+	} else {
+		fmt.Printf("[%s] Attempted to use nonexistent sleeping bag\n", c.user)
 	}
 }
 
