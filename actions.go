@@ -2,21 +2,21 @@ package main
 
 import "fmt"
 
-func (c *client) walkToEntity(x1, z1, x2, z2 int, border bool) {
-	c.walkTo(x1, z1, x2, z2, true, border)
+func (c *client) walkToEntity(x1, z1, x2, z2 int, border bool) bool {
+	return c.walkTo(x1, z1, x2, z2, true, border)
 }
 
-func (c *client) walkToWallObject(w *wallObject) {
+func (c *client) walkToWallObject(w *wallObject) bool {
 	if w.dir == 0 {
-		c.walkToEntity(w.x, w.z-1, w.x, w.z, false)
+		return c.walkToEntity(w.x, w.z-1, w.x, w.z, false)
 	} else if w.dir != 1 {
-		c.walkToEntity(w.x, w.z, w.x, w.z, true)
+		return c.walkToEntity(w.x, w.z, w.x, w.z, true)
 	} else {
-		c.walkToEntity(w.x-1, w.z, w.x, w.z, false)
+		return c.walkToEntity(w.x-1, w.z, w.x, w.z, false)
 	}
 }
 
-func (c *client) walkToObject(o *object) {
+func (c *client) walkToObject(o *object) bool {
 	var (
 		objWidth  int
 		objHeight int
@@ -33,7 +33,7 @@ func (c *client) walkToObject(o *object) {
 	destZ := o.z
 
 	if def.Typ != 2 && def.Typ != 3 {
-		c.walkTo(o.x, o.z, objWidth-1+destX, destZ+objHeight-1, true, true)
+		return c.walkTo(o.x, o.z, objWidth-1+destX, destZ+objHeight-1, true, true)
 	} else {
 		if o.dir == 0 {
 			objWidth++
@@ -53,17 +53,18 @@ func (c *client) walkToObject(o *object) {
 			objWidth++
 		}
 
-		c.walkTo(destX, destZ, objWidth+(destX-1), objHeight+destZ-1, true, false)
+		return c.walkTo(destX, destZ, objWidth+(destX-1), objHeight+destZ-1, true, false)
 	}
 }
 
-func (c *client) walkToGroundItem(xLow, zLow, xHigh, zHigh int) {
+func (c *client) walkToGroundItem(xLow, zLow, xHigh, zHigh int) bool {
 	if !c.walkToGroundItem1(xLow, zLow, xHigh, zHigh, false) {
-		c.walkToEntity(xLow, zLow, xHigh, zHigh, true)
+		return c.walkToEntity(xLow, zLow, xHigh, zHigh, true)
 	}
+	return true
 }
 
-func (c *client) walkTo(xLow, zLow, xHigh, zHigh int, entity, border bool) {
+func (c *client) walkTo(xLow, zLow, xHigh, zHigh int, entity, border bool) bool {
 	if c.account.debug {
 		fmt.Printf("[%s] WALKTO (%d,%d,%d,%d,%v,%v)\n", c.user, xLow, zLow, xHigh, zHigh, entity, border)
 	}
@@ -77,7 +78,7 @@ func (c *client) walkTo(xLow, zLow, xHigh, zHigh int, entity, border bool) {
 			if c.account.debug {
 				fmt.Printf("[%s] No local path found to (%d,%d)\n", c.user, xLow, zLow)
 			}
-			return
+			return false
 		}
 		l = 1
 		px[0] = xLow
@@ -111,6 +112,7 @@ func (c *client) walkTo(xLow, zLow, xHigh, zHigh int, entity, border bool) {
 	}
 
 	c.sendPacket()
+	return true
 }
 
 func (c *client) walkToGroundItem1(xLow, zLow, xHigh, zHigh int, border bool) bool {
