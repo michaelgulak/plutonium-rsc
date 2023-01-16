@@ -643,6 +643,9 @@ func (c *client) findPath(startX int, startZ int, xLow int, xHigh int, zLow int,
 		source := prevSource
 		for x != startX || z != startZ {
 			if prevSource != source {
+				if openListRead >= openListSize {
+					return -1
+				}
 				prevSource = source
 				c.pathX[openListRead] = x
 				c.pathZ[openListRead] = z
