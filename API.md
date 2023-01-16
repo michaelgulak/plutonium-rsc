@@ -136,7 +136,8 @@ def loop():
     if path != None:
         path.process()
         if not path.complete():
-            path.walk()
+            if not path.walk():
+              path = None # We're lost, reset the path
             return 600
         else:
             path = None

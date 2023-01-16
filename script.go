@@ -544,8 +544,7 @@ func (n *longPath) Type() *py.Type {
 					return py.None, nil
 				}
 				pt := n.points[n.currentPt]
-				n.c.walkTo(pt.x, pt.y, pt.x, pt.y, false, false)
-				return py.None, nil
+				return py.Bool(n.c.walkTo(pt.x, pt.y, pt.x, pt.y, false, false)), nil
 			}, py.METH_CLASS, ""),
 		},
 	}
@@ -916,8 +915,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["walk_to"] = py.MustNewMethod("walk_to", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x := int(args[0].(py.Int))
 		z := int(args[1].(py.Int))
-		c.walkTo(x, z, x, z, false, false)
-		return py.None, nil
+		return py.Bool(c.walkTo(x, z, x, z, false, false)), nil
 	}, py.METH_STATIC, "")
 	module.Globals["is_reachable"] = py.MustNewMethod("is_reachable", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.isReachable(int(args[0].(py.Int)), int(args[1].(py.Int)))), nil
