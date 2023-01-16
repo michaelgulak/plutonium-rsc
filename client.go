@@ -2252,6 +2252,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			c.ignoreList[i].arg1 = p.readString()
 			c.ignoreList[i].old = p.readString()
 		}
+	case 183: // Can't logout response packet
+		if c.account.debug {
+			fmt.Printf("[%s] Got a CANT_LOGOUT server response\n", c.user)
+		}
 	case 5: // quest stage info
 		updateQuestType := p.readByte()
 		if updateQuestType == 0 {
