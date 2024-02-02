@@ -97,7 +97,7 @@ Which would generate a report like this:
 
 ## API
 
-Check out the API documentation [here](https://gitlab.com/RLN_/plutonium/-/blob/main/API.md).
+Check out the API documentation [here](https://gitlab.com/open-runescape-classic/plutonium/-/blob/main/API.md).
 
 ## Limitations of gpython
 

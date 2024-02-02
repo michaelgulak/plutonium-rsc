@@ -30,13 +30,6 @@ var (
 	settings config
 )
 
-type ocrSettings struct {
-	OcrType     string `toml:"ocr_type"`
-	OcrEndpoint string `toml:"ocr_endpoint"`
-	Directory   string `toml:"directory"`
-	OcrPath     string `toml:"ocr_path"`
-}
-
 type dataSettings struct {
 	Directory   string `toml:"directory"`
 	Landscape   string `toml:"landscape"`
@@ -45,6 +38,7 @@ type dataSettings struct {
 	TileDefs    string `toml:"tile_defs"`
 	DoorDefs    string `toml:"door_defs"`
 	ObjectDefs  string `toml:"object_defs"`
+	WordHashes  string `toml:"word_hashes"`
 }
 
 type accountSettings struct {
@@ -70,7 +64,6 @@ type logSettings struct {
 
 type config struct {
 	ServerSettings  *serverSettings  `toml:"server"`
-	OcrSettings     *ocrSettings     `toml:"ocr"`
 	DataSettings    *dataSettings    `toml:"data"`
 	AccountSettings *accountSettings `toml:"accounts"`
 	ClientSettings  *clientSettings  `toml:"client"`

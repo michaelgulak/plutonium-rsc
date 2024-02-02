@@ -2,18 +2,15 @@ package main
 
 import (
 	"bufio"
-	"bytes"
-	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"math"
 	"math/rand"
 	"net"
-	"net/http"
 	"os"
-	"os/exec"
 	"os/signal"
 	"runtime"
 	"strings"
@@ -34,6 +31,7 @@ var (
 	doorDefs   []*doorDef
 	objectDefs []*objectDef
 	itemDefs   []*itemDef
+	wordHashes = map[string]string{}
 )
 
 type client struct {
@@ -98,7 +96,7 @@ type client struct {
 	prayers                   [50]bool
 	fatigue                   int
 	accurateFatigue           float64
-	sleepingFatigue           int64
+	sleepingFatigue           int32
 	sleeping                  bool
 	combatStyle               int
 	optionMenuVisible         bool
@@ -136,9 +134,9 @@ type client struct {
 	decodedChatLength         int
 	encodedChatLength         int
 	appearanceChange          bool
-	pathX                     [8000]int
-	pathZ                     [8000]int
-	pathFindSource            [96][96]int
+	pathX                     [8000]int16
+	pathZ                     [8000]int16
+	pathFindSource            [96][96]int16
 
 	blackhole bool
 }
@@ -151,10 +149,10 @@ type npc struct {
 	sprite             int
 	currentHP          int
 	maxHP              int
-	waypointsX         [10]int
-	waypointsZ         [10]int
-	waypointCurrent    int
-	waypointNext       int
+	waypointsX         [10]int16
+	waypointsZ         [10]int16
+	waypointCurrent    int8
+	waypointNext       int8
 	messageTime        time.Time
 	lastMessageTimeout time.Duration
 }
@@ -167,10 +165,10 @@ type player struct {
 	currentHP          int
 	maxHP              int
 	combatLevel        int
-	waypointsX         [10]int
-	waypointsZ         [10]int
-	waypointCurrent    int
-	waypointNext       int
+	waypointsX         [10]int16
+	waypointsZ         [10]int16
+	waypointCurrent    int8
+	waypointNext       int8
 	username           string
 	messageTime        time.Time
 	lastMessageTimeout time.Duration
@@ -241,46 +239,47 @@ type quest struct {
 }
 
 type tileDef struct {
-	Colour     int
-	TileValue  int
+	/*Colour     int
+	TileValue  int*/
 	ObjectType int
 }
 
 type doorDef struct {
-	Name             string
+	/*Name             string
 	Description      string
 	Command1         string
-	Command2         string
-	DoorType         int
-	Unknown          int
-	WallObjectHeight int
+	Command2         string*/
+	DoorType int
+	Unknown  int
+	/*WallObjectHeight int
 	ModelVar2        int
 	ModelVar3        int
 	ID               int
+	*/
 }
 
 type objectDef struct {
-	Name          string
+	/*Name          string
 	Description   string
 	Command1      string
-	Command2      string
-	Typ           int
-	Width         int
-	Height        int
-	GroundItemVar int
+	Command2      string*/
+	Typ    int
+	Width  int
+	Height int
+	/*GroundItemVar int
 	ObjectModel   string
-	ID            int
+	ID int*/
 }
 
 type itemDef struct {
-	ID               int
+	/*ID int
 	Name             string
 	Description      string
-	Command          string
-	IsFemaleOnly     int
-	IsMembersOnly    int
-	IsStackable      int
-	IsUntradable     int
+	Command          string*/
+	/*IsFemaleOnly     int
+	IsMembersOnly    int*/
+	IsStackable int
+	/*IsUntradable     int
 	IsWearable       int
 	AppearanceID     int
 	WearableID       int
@@ -292,8 +291,9 @@ type itemDef struct {
 	WeaponPowerBonus int
 	MagicBonus       int
 	PrayerBonus      int
-	BasePrice        int
 	IsNoteable       int
+	*/
+	BasePrice int
 }
 
 func main() {
@@ -342,17 +342,6 @@ func main() {
 	if regFile != "" {
 		doAccountCreations(closing, regFile)
 		return
-	}
-
-	if settings.OcrSettings.OcrType == "local" {
-		_, err := os.Stat(settings.OcrSettings.OcrPath)
-		if os.IsNotExist(err) {
-			fmt.Printf("OCR not found: %s\n", err)
-			os.Exit(1)
-		} else if err != nil {
-			fmt.Printf("OCR Error: %s\n", err)
-			os.Exit(1)
-		}
 	}
 
 	fmt.Printf("[BOT] Loading definitions...")
@@ -611,9 +600,9 @@ func main() {
 							}
 						case buf = <-c.sleepChan:
 							drainTicker()
-							t = time.NewTicker(500 * time.Millisecond)
+							t = time.NewTicker(600 * time.Millisecond)
 						case <-t.C:
-							sleepFatigue := atomic.LoadInt64(&c.sleepingFatigue)
+							sleepFatigue := atomic.LoadInt32(&c.sleepingFatigue)
 							if c.script != nil && c.script.fatigueTricking && sleepFatigue < 100 {
 								drainTicker()
 								c.captchaChan <- buf
@@ -809,6 +798,20 @@ func loadDefs() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	// word hashes
+	f5, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.WordHashes)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer f5.Close()
+
+	err = json.NewDecoder(f5).Decode(&wordHashes)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
 }
 
 func doAccountCreations(closing chan struct{}, fileStr string) {
@@ -954,61 +957,15 @@ func (c *client) init() {
 }
 
 func (c *client) doCaptcha(buf []byte) {
-	bmpData := convertImage(buf)
-	if bmpData == nil {
-		return
+	hasher := fnv.New32()
+	hasher.Write(buf)
+	hash := hasher.Sum32()
+
+	if sleepWord, ok := wordHashes[fmt.Sprint(hash)]; ok {
+		c.sendSleepWord(sleepWord)
+	} else {
+		c.sendSleepWord("")
 	}
-
-	var sleepWord string
-
-	switch settings.OcrSettings.OcrType {
-	case "local":
-		num := rand.Intn(math.MaxInt)
-		randName := hex.EncodeToString([]byte{byte(num >> 24), byte(num >> 16), byte(num >> 8), byte(num)}) + ".bmp"
-		path := settings.OcrSettings.Directory + string(os.PathSeparator) + randName
-		f, err := os.Create(path)
-		if err != nil {
-			fmt.Printf("[%s] Error creating sleep bmp file: %s\n", c.user, err)
-			return
-		}
-		_, err = io.Copy(f, bytes.NewReader(bmpData))
-		f.Close()
-		if err != nil {
-			fmt.Printf("[%s] Error copying sleepword bytes to file: %s\n", c.user, err)
-			os.Remove(path)
-			return
-		}
-		cmd := exec.Command(settings.OcrSettings.OcrPath, path)
-		bs, err := cmd.CombinedOutput()
-		if err != nil {
-			fmt.Printf("[%s] Error getting sleepword from external ocr: %s\n", c.user, err)
-			os.Remove(path)
-			return
-		}
-		sleepWord = strings.Trim(string(bs), " \r\n\t")
-		os.Remove(path)
-	case "server":
-		body := bytes.NewReader(bmpData)
-		resp, err := http.Post(settings.OcrSettings.OcrEndpoint, "application/octet-stream", body)
-		if err != nil {
-			fmt.Printf("[%s] Sleep server error: %s\n", c.user, err)
-			return
-		}
-
-		scanner := bufio.NewScanner(resp.Body)
-
-		if scanner.Scan() {
-			sleepWord = scanner.Text()
-		} else {
-			fmt.Printf("[%s] Sleep server did not return a scannable line\n", c.user)
-			return
-		}
-	default:
-		fmt.Printf("[%s] Unknown ocr setting\n", c.user)
-		return
-	}
-
-	c.sendSleepWord(sleepWord)
 }
 
 func readBytesRaw(conn net.Conn, length int) ([]byte, error) {
@@ -1175,17 +1132,17 @@ func (c *client) createPlayer(serverIndex, x, z, sprite int) {
 	p.z = z
 
 	if found {
-		if x != p.waypointsX[p.waypointCurrent] || z != p.waypointsZ[p.waypointCurrent] {
+		if int16(x) != p.waypointsX[p.waypointCurrent] || int16(z) != p.waypointsZ[p.waypointCurrent] {
 			p.waypointCurrent = (p.waypointCurrent + 1) % 10
-			p.waypointsX[p.waypointCurrent] = x
-			p.waypointsZ[p.waypointCurrent] = z
+			p.waypointsX[p.waypointCurrent] = int16(x)
+			p.waypointsZ[p.waypointCurrent] = int16(z)
 		}
 	} else {
 		p.serverIndex = serverIndex
 		p.waypointCurrent = 0
 		p.waypointNext = 0
-		p.waypointsX[p.waypointCurrent] = x
-		p.waypointsZ[p.waypointCurrent] = z
+		p.waypointsX[p.waypointCurrent] = int16(x)
+		p.waypointsZ[p.waypointCurrent] = int16(z)
 	}
 	c.players[c.playerCount] = p
 	c.playerCount++
@@ -1214,17 +1171,17 @@ func (c *client) createNPC(serverIndex, id, x, z, sprite int) *npc {
 	n.z = z
 
 	if found {
-		if x != n.waypointsX[n.waypointCurrent] || z != n.waypointsZ[n.waypointCurrent] {
+		if int16(x) != n.waypointsX[n.waypointCurrent] || int16(z) != n.waypointsZ[n.waypointCurrent] {
 			n.waypointCurrent = (n.waypointCurrent + 1) % 10
-			n.waypointsX[n.waypointCurrent] = x
-			n.waypointsZ[n.waypointCurrent] = z
+			n.waypointsX[n.waypointCurrent] = int16(x)
+			n.waypointsZ[n.waypointCurrent] = int16(z)
 		}
 	} else {
 		n.serverIndex = serverIndex
 		n.waypointCurrent = 0
 		n.waypointNext = 0
-		n.waypointsX[n.waypointCurrent] = x
-		n.waypointsZ[n.waypointCurrent] = z
+		n.waypointsX[n.waypointCurrent] = int16(x)
+		n.waypointsZ[n.waypointCurrent] = int16(z)
 		if c.script != nil && c.script.onNPCSpawned != nil {
 			c.script.callOnNPCSpawned(n)
 		}
@@ -1341,8 +1298,8 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 					player.waypointCurrent = (player.waypointCurrent + 1) % 10
 					player.waypointsX[player.waypointCurrent] = waypointX
 					player.waypointsZ[player.waypointCurrent] = waypointZ
-					player.x = waypointX
-					player.z = waypointZ
+					player.x = int(waypointX)
+					player.z = int(waypointZ)
 					player.sprite = dir
 					ofs += 3
 				}
@@ -1429,8 +1386,8 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 					npc.waypointCurrent = (npc.waypointCurrent + 1) % 10
 					npc.waypointsX[npc.waypointCurrent] = waypointX
 					npc.waypointsZ[npc.waypointCurrent] = waypointZ
-					npc.x = waypointX
-					npc.z = waypointZ
+					npc.x = int(waypointX)
+					npc.z = int(waypointZ)
 					npc.sprite = dir
 					ofs += 3
 				}
@@ -1876,7 +1833,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			fmt.Printf("[%s] Got sleep image\n", c.user)
 		}
 		if !c.sleeping {
-			atomic.StoreInt64(&c.sleepingFatigue, int64(c.fatigue))
+			atomic.StoreInt32(&c.sleepingFatigue, int32(c.fatigue))
 		}
 		c.sleeping = true
 		bs := p.readBytes(length)
@@ -1972,7 +1929,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		skill := p.readByteAsInt()
 		c.experience[skill] = p.readInt() / 4
 	case 244: // sleeping menu fatigue
-		atomic.StoreInt64(&c.sleepingFatigue, int64(p.readShort()))
+		atomic.StoreInt32(&c.sleepingFatigue, int32(p.readShort()))
 	case 115: // black hole
 		c.blackhole = p.readByte() != 0
 	case 123: // remove inventory item

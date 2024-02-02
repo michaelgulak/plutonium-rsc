@@ -83,16 +83,16 @@ func (c *client) walkTo(xLow, zLow, xHigh, zHigh int, entity, border bool) bool 
 			return false
 		}
 		l = 1
-		px[0] = xLow
-		pz[0] = zLow
+		px[0] = int16(xLow)
+		pz[0] = int16(zLow)
 		if c.account.debug {
 			fmt.Printf("[%s] Path length was -1 in walk to entity (%d,%d)\n", c.user, xLow, zLow)
 		}
 	}
 
 	count := l - 1
-	startX := px[count]
-	startZ := pz[count]
+	startX := int(px[count])
+	startZ := int(pz[count])
 	count--
 
 	if entity {
@@ -109,8 +109,8 @@ func (c *client) walkTo(xLow, zLow, xHigh, zHigh int, entity, border bool) bool 
 	}
 
 	for i := count; i >= 0 && i > count-25; i-- {
-		c.writeByte(byte(px[i] - startX))
-		c.writeByte(byte(pz[i] - startZ))
+		c.writeByte(byte(int(px[i]) - startX))
+		c.writeByte(byte(int(pz[i]) - startZ))
 	}
 
 	c.sendPacket()
@@ -132,8 +132,8 @@ func (c *client) walkToGroundItem1(xLow, zLow, xHigh, zHigh int, border bool) bo
 	pz := c.pathZ
 
 	count := l - 1
-	startX := px[count]
-	startZ := pz[count]
+	startX := int(px[count])
+	startZ := int(pz[count])
 	count--
 
 	c.createPacket(16)
@@ -145,8 +145,8 @@ func (c *client) walkToGroundItem1(xLow, zLow, xHigh, zHigh int, border bool) bo
 	}
 
 	for i := count; i >= 0 && i > count-25; i-- {
-		c.writeByte(byte(px[i] - startX))
-		c.writeByte(byte(pz[i] - startZ))
+		c.writeByte(byte(int(px[i]) - startX))
+		c.writeByte(byte(int(pz[i]) - startZ))
 	}
 
 	c.sendPacket()
