@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func (c *client) walkToEntity(x1, z1, x2, z2 int, border bool) bool {
 	return c.walkTo(x1, z1, x2, z2, true, border)
@@ -409,6 +411,7 @@ func (c *client) dropInventoryItem(item *item) {
 	}
 	c.createPacket(246)
 	c.writeShort(item.slot)
+	c.writeShort(item.amount)
 	c.sendPacket()
 }
 
