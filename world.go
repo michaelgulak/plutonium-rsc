@@ -625,7 +625,7 @@ func (c *client) findPath(startX int, startZ int, xLow int, xHigh int, zLow int,
 			openListWrite = (1 + openListWrite) % openListSize
 			c.pathFindSource[x-1][z+1] = sourceNorthWest
 		}
-		if x < 95 && z < 95 && northBlocked&c.combinedTile(baseX+x, baseZ+1+z) == 0 && c.combinedTile(baseX+x+1, baseX+z)&eastBlocked == 0 && northEastBlocked&c.combinedTile(baseX+x+1, baseZ+1+z) == 0 && c.pathFindSource[x+1][1+z] == 0 {
+		if x < 95 && z < 95 && northBlocked&c.combinedTile(baseX+x, baseZ+1+z) == 0 && c.combinedTile(baseX+x+1, baseZ+z)&eastBlocked == 0 && northEastBlocked&c.combinedTile(baseX+x+1, baseZ+1+z) == 0 && c.pathFindSource[x+1][1+z] == 0 {
 			c.pathX[openListWrite] = 1 + x
 			c.pathZ[openListWrite] = 1 + z
 			c.pathFindSource[1+x][1+z] = sourceNorthEast

@@ -1,6 +1,6 @@
 # Plutonium
 
-Plutonium is a shell bot written by RLN for the [Open RSC](https://rsc.vet/) Uranium server. It was written for fun and built from the ground up using Go. Scripts for it are written in python via [gpython](https://github.com/go-python/gpython). Some code is taken from the Open RSC server (in particular, the pathfinding and chat message code). If you write a script for it, please send a PR so people can use it!
+Plutonium is a shell bot written for the [Open RSC](https://rsc.vet/) Uranium server. It was built from the ground up using Go. Scripts for it are written in python via [gpython](https://github.com/go-python/gpython). Some code is taken from the Open RSC server (in particular, the pathfinding and chat message code). If you write a script for it, please send a PR so people can use it!
 
 ## Download
 
