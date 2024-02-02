@@ -64,6 +64,25 @@ type point struct {
 	y int
 }
 
+type node struct {
+	fCost        int
+	gCost        int
+	hCost        int
+	state        nodeState
+	southBlocked bool
+	northBlocked bool
+	westBlocked  bool
+	eastBlocked  bool
+	position     *point
+	parent       *point
+}
+
+type path struct {
+	waypoints *list.List
+	startX    int
+	startY    int
+}
+
 func abs(a int) int {
 	if a < 0 {
 		return -a
@@ -93,46 +112,29 @@ func calcDistance(one, two *point) int {
 	return shortL*diagCost + (longL-shortL)*basicCost
 }
 
-func newAstarPathFinder(c *client, start *point, end *point, depth int) (z *astarPathFinder) {
-	z = &astarPathFinder{}
-	z.costBoard = nil
-	z.openNodes = []*node{}
-	z.closedNodes = []*node{}
-	z.worldStart = start
-	z.pointStart = &point{depth, depth}
-	z.pointEnd = &point{start.x + depth - end.x, end.y - (start.y - depth)}
-	z.depth = depth
-	z.path = newPath(start.x, start.y)
+func newAstarPathFinder(c *client, start *point, end *point, depth int) *astarPathFinder {
+	z := &astarPathFinder{
+		costBoard:   nil,
+		openNodes:   []*node{},
+		closedNodes: []*node{},
+		worldStart:  start,
+		pointStart:  &point{depth, depth},
+		pointEnd:    &point{start.x + depth - end.x, end.y - (start.y - depth)},
+		depth:       depth,
+		path:        newPath(start.x, start.y),
+	}
 	z.generateTraversalInfo(c, start, depth)
 
 	return z
 }
 
-type node struct {
-	fCost        int
-	gCost        int
-	hCost        int
-	state        nodeState
-	southBlocked bool
-	northBlocked bool
-	westBlocked  bool
-	eastBlocked  bool
-	position     *point
-	parent       *point
-}
+func newNode(x int, y int) *node {
+	z := &node{
+		position: &point{x, y},
+		state:    initState,
+	}
 
-func newNode(x int, y int) (z *node) {
-	z = &node{}
-	z.southBlocked = false
-	z.northBlocked = false
-	z.westBlocked = false
-	z.eastBlocked = false
-	z.position = &point{x, y}
-	z.fCost = 0
-	z.gCost = 0
-	z.hCost = 0
-	z.state = initState
-	return
+	return z
 }
 
 func (z *astarPathFinder) buildPath() *path {
@@ -449,12 +451,6 @@ func (z *node) update(a *astarPathFinder, node *node, cost int) {
 	}
 	z.calcHCost()
 	z.parent = node.position
-}
-
-type path struct {
-	waypoints *list.List
-	startX    int
-	startY    int
 }
 
 func newPath(startX, startY int) (z *path) {

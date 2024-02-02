@@ -168,7 +168,7 @@ Contains the following fields: `id`, `x`, `z`.
 ###### get_ground_item_count()
 ###### get_nearest_ground_item_by_id(id OR ids=[...], reachable=True, x=216, z=636, radius=10)
 
-`x` and `z` are used as the start point for the radius. Otherwise they're unused.
+`reachable`, `x`, `z`, and `radius` are optional. `x` and `z` are used as the start point for the radius. Otherwise they're unused.
 
 ###### get_nearest_ground_item_by_id_in_rect(id OR ids=[...], x=218, z=636, width=10, height=10, reachable=True)
 
@@ -219,7 +219,7 @@ Contains the following methods: `in_combat()`, `is_talking()`.
 ###### get_npcs()
 ###### get_nearest_npc_by_id(id OR ids=[...], in_combat=False, talking=False, reachable=True, x=218, z=636, radius=10)
 
-`x` and `z` are used as the start point for the radius. Otherwise they're unused.
+`in_combat`, `talking`, `reachable`, `radius`, `x`, and `z` are optional. `x` and `z` are used as the start point for the radius. Otherwise they're unused.
 
 ###### get_nearest_npc_by_id_in_rect(id OR ids=[...], in_combat=False, talking=False, reachable=True, x=218, z=636, width=10, height=10)
 ###### attack_npc(npc)
@@ -309,7 +309,7 @@ Contains the following fields: `id`, `x`, `z`, `dir`.
 ###### get_objects()
 ###### get_nearest_object_by_id(id OR ids=[...], reachable=True, x=218, z=636, radius=10)
 
-`x` and `z` are used as the start point for the radius. Otherwise they're unused.
+`reachable`, `x`, `z`, and `radius` are optional. `x` and `z` are used as the start point for the radius. Otherwise they're unused.
 
 ###### get_nearest_object_by_id_in_rect(id OR ids=[...], x=218, z=636, width=10, height=10, reachable=True)
 
@@ -331,7 +331,7 @@ Contains the following fields: `id`, `x`, `z`, `dir`.
 ###### get_wall_objects()
 ###### get_nearest_wall_object_by_id(id OR ids=[...], reachable=True, x=218, z=636, radius=10)
 
-`x` and `z` are used as the start point for the radius. Otherwise they're unused.
+`reachable`, `x`, `z`, and `radius` are optional. `x` and `z` are used as the start point for the radius. Otherwise they're unused.
 
 ###### get_nearest_wall_object_by_id_in_rect(id OR ids=[...], x=218, z=636, width=10, height=10, reachable=True)
 

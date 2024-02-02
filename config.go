@@ -14,6 +14,10 @@ import (
 	"github.com/pelletier/go-toml"
 )
 
+var (
+	settings config
+)
+
 type account struct {
 	username           string
 	password           string
@@ -25,10 +29,6 @@ type account struct {
 	progressDur        time.Duration
 	lastProgressReport time.Time
 }
-
-var (
-	settings config
-)
 
 type dataSettings struct {
 	Directory   string `toml:"directory"`

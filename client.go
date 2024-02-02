@@ -263,9 +263,9 @@ type objectDef struct {
 	Description   string
 	Command1      string
 	Command2      string*/
-	Typ    int
-	Width  int
-	Height int
+	Typ    int16
+	Width  int16
+	Height int16
 	/*GroundItemVar int
 	ObjectModel   string
 	ID int*/

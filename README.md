@@ -1,18 +1,18 @@
 # Plutonium
 
-Plutonium is a shell bot written for the [Open RSC](https://rsc.vet/) Uranium server than runs on Linux, Windows, and MacOS. Being a shell bot means that it runs without any graphics whatsoever, and thus has a much smaller memory and cpu utilization footprint. Plutonium also makes it easy to run several accounts at once. One thing to take note of is that Open RSC servers have a max players per ip limit that they change sometimes. So the most bots per ip you can run on Uranium is around 10-15 at any given time.
+Plutonium is a shell bot written for the [Open RSC](https://rsc.vet/) Uranium server than runs on Linux, Windows, MacOS, etc. Being a shell bot means that it runs without any graphics whatsoever, and thus has a much smaller memory and cpu footprint than other bots. Plutonium also makes it easy to run several accounts at once. One thing to take note of is that Open RSC servers have a max player per ip limit that they change sometimes. So the most bots per ip you can run on Uranium is around 10 at any given time.
 
-Plutonium was built from the ground up using Go. Scripts for it are written in python via [gpython](https://github.com/go-python/gpython). Some code is taken from the Open RSC server (in particular, the pathfinding and chat message code). If you write a script for it, please send a PR so people can use it!
+Plutonium was built from the ground up using Go. Scripts for it are written in python via [gpython](https://github.com/go-python/gpython). Some code is taken from the Open RSC server (in particular, the pathfinding and chat message code).
 
 ## Building Plutonium
 
-Make sure you have a new version of [Go](https://go.dev/) installed, along with git. On Linux, open a terminal, or on windows open a command prompt. Then clone this repo with 
+Make sure you have a new version of [Go](https://go.dev/) installed, along with git. On Linux, open a terminal, or on Windows open a command prompt. Then clone this repo with 
 
 ```bash
 git clone https://gitlab.com/open-runescape-classic/plutonium
 ```
 
-Enter the directory it creates (type `cd plutonium` to get in the directory) and type `go build`.
+Enter the directory it creates (type `cd plutonium` to get in the directory) and type `go build`. A binary named `bot` (or on Windows `bot.exe`) will now be in the directory.
 
 To check your Go version run:
 
