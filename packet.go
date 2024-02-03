@@ -101,14 +101,7 @@ func (p *RSCPacket) writeBytes(bs []byte) {
 	p.i += len(bs)
 }
 
-func (c *client) createPacket(opcode byte) {
-	c.sendLock.Lock()
-	c.i = 0
-	c.writeShort(0)
-	c.writeByte(opcode)
-}
-
-func (p *RSCPacket) createPacket0(opcode byte) {
+func (p *RSCPacket) createPacket(opcode byte) {
 	p.i = 0
 	p.writeShort(0)
 	p.writeByte(opcode)

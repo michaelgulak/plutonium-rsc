@@ -3,9 +3,6 @@
 /accounts/*.toml
 /logs/*.log
 /logs/progress_reports/*.log
-/sleepwords/*.bmp
 /releases
 /mem.pprof
 /cpu.pprof
-/focr
-/focr.exe

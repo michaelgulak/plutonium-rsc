@@ -31,7 +31,7 @@ var (
 	doorDefs   []*doorDef
 	objectDefs []*objectDef
 	itemDefs   []*itemDef
-	wordHashes = map[string]string{}
+	wordHashes = map[uint32]string{}
 )
 
 type client struct {
@@ -41,7 +41,6 @@ type client struct {
 	pass                string
 	packetChan          chan *RSCPacket
 	lastSentPacketTime  int64
-	sendLock            *sync.Mutex
 	closed              chan struct{}
 	closedLock          *sync.Mutex
 	sleepChan           chan []byte
@@ -434,7 +433,6 @@ func main() {
 					user:             acc.username,
 					pass:             acc.password,
 					world:            world,
-					sendLock:         &sync.Mutex{},
 					closed:           make(chan struct{}),
 					closedLock:       &sync.Mutex{},
 					packetChan:       make(chan *RSCPacket, 32),
@@ -618,6 +616,7 @@ func main() {
 					}
 				}()
 
+				idleChan := make(chan struct{}, 1)
 				go func() {
 					var diff int64
 					t := time.NewTimer(time.Second * 5)
@@ -632,8 +631,7 @@ func main() {
 							diff = time.Now().Unix() - atomic.LoadInt64(&c.lastSentPacketTime)
 
 							if diff >= 5 {
-								c.createPacket(67)
-								c.sendPacket()
+								idleChan <- struct{}{}
 
 								t.Reset(5 * time.Second)
 							} else {
@@ -670,6 +668,9 @@ func main() {
 							<-scriptTimer.C
 						}
 						break loop
+					case <-idleChan:
+						c.createPacket(67)
+						c.sendPacket()
 					case packet := <-c.packetChan:
 						opcode := packet.readByteAsInt()
 						c.handlePacket(packet, opcode, len(packet.buf)-1)
@@ -744,14 +745,14 @@ func (c *client) close() {
 
 func loadDefs() {
 	// tile defs
-	f, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.TileDefs)
+	f1, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.TileDefs)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	defer f.Close()
+	defer f1.Close()
 
-	err = json.NewDecoder(f).Decode(&tileDefs)
+	err = json.NewDecoder(f1).Decode(&tileDefs)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -786,14 +787,14 @@ func loadDefs() {
 	}
 
 	// item defs
-	f1, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.ItemDefs)
+	f4, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.ItemDefs)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	defer f1.Close()
+	defer f4.Close()
 
-	err = json.NewDecoder(f1).Decode(&itemDefs)
+	err = json.NewDecoder(f4).Decode(&itemDefs)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -859,7 +860,7 @@ func doAccountCreations(closing chan struct{}, fileStr string) {
 		}
 		_ = sessionPacket
 
-		p.createPacket0(2)
+		p.createPacket(2)
 		p.writeBytes([]byte(username))
 		p.writeByte(10)
 		p.writeBytes([]byte(encodeCredential(password)))
@@ -961,7 +962,7 @@ func (c *client) doCaptcha(buf []byte) {
 	hasher.Write(buf)
 	hash := hasher.Sum32()
 
-	if sleepWord, ok := wordHashes[fmt.Sprint(hash)]; ok {
+	if sleepWord, ok := wordHashes[hash]; ok {
 		c.sendSleepWord(sleepWord)
 	} else {
 		c.sendSleepWord("")
@@ -1060,8 +1061,6 @@ func (client *client) login() (int, error) {
 }
 
 func (c *client) sendPacket() error {
-	defer c.sendLock.Unlock()
-
 	c.finish()
 	wrote := 0
 	length := c.RSCPacket.i
