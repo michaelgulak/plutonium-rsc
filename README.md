@@ -6,6 +6,8 @@ Plutonium was built from the ground up using Go. Scripts for it are written in p
 
 ## Building Plutonium
 
+*Note: Plutonium no longer requires an OCR.*
+
 Make sure you have a new version of [Go](https://go.dev/) installed, along with git. On Linux, open a terminal, or on Windows open a command prompt. Then clone this repo with 
 
 ```bash

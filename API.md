@@ -185,6 +185,8 @@ Reachable is optional.
 
 Contains the following fields: `id`, `amount`, `equipped`, `slot`. 
 
+###### get_total_inventory_count()
+###### get_inventory_item_at_index(index)
 ###### get_inventory_items()
 ###### get_inventory_item_by_id(id OR ids=[...])
 ###### get_inventory_count_by_id(id OR ids=[...])
@@ -193,7 +195,6 @@ Contains the following fields: `id`, `amount`, `equipped`, `slot`.
 Returns the first item that doesn't match the supplied array of ids.
 
 ###### has_inventory_item(id)
-###### get_total_inventory_count()
 ###### get_empty_slots()
 ###### is_inventory_item_equipped(id)
 ###### use_item(item)
@@ -216,6 +217,8 @@ Contains the following fields: `id`, `x`, `z`, `sid`, `sprite`, `current_hp`, `m
 
 Contains the following methods: `in_combat()`, `is_talking()`.
 
+###### get_npc_count()
+###### get_npc_at_index(index)
 ###### get_npcs()
 ###### get_nearest_npc_by_id(id OR ids=[...], in_combat=False, talking=False, reachable=True, x=218, z=636, radius=10)
 
@@ -245,8 +248,9 @@ Contains the following fields: `x`, `z`, `pid`, `sprite`, `current_hp`, `max_hp`
 Contains the following methods: `in_combat()`, `is_talking()`.
 
 ###### get_my_player()
-###### get_players()
 ###### get_player_count()
+###### get_player_at_index(index)
+###### get_players()
 ###### get_player_by_name(str)
 ###### attack_player(player)
 ###### cast_on_player(spell_id, player)
@@ -306,6 +310,8 @@ Contains the following fields: `id`, `amount`.
 
 Contains the following fields: `id`, `x`, `z`, `dir`.
 
+###### get_object_count()
+###### get_object_at_index(index)
 ###### get_objects()
 ###### get_nearest_object_by_id(id OR ids=[...], reachable=True, x=218, z=636, radius=10)
 
@@ -315,7 +321,6 @@ Contains the following fields: `id`, `x`, `z`, `dir`.
 
 Reachable is optional.
 
-###### get_object_count()
 ###### get_object_from_coords(x, z)
 ###### is_object_at(x, z)
 ###### at_object(object)
@@ -328,6 +333,8 @@ Reachable is optional.
 
 Contains the following fields: `id`, `x`, `z`, `dir`.
 
+###### get_wall_object_count()
+###### get_wall_object_at_index(index)
 ###### get_wall_objects()
 ###### get_nearest_wall_object_by_id(id OR ids=[...], reachable=True, x=218, z=636, radius=10)
 
@@ -337,7 +344,6 @@ Contains the following fields: `id`, `x`, `z`, `dir`.
 
 Reachable is optional.
 
-###### get_wall_object_count()
 ###### get_wall_object_from_coords(x, z)
 ###### at_wall_object(wall_object)
 ###### at_wall_object2(wall_object)
@@ -349,11 +355,12 @@ Reachable is optional.
 
 Contains the following fields: `id`, `amount`.
 
+###### get_bank_size()
+###### get_bank_item_at_index(index)
 ###### get_bank_items()
 ###### deposit(id, amount)
 ###### withdraw(id, amount)
 ###### get_bank_count(id OR ids=[...])
-###### get_bank_size()
 ###### has_bank_item(id)
 ###### is_bank_open()
 ###### close_bank()
@@ -370,6 +377,8 @@ Contains the following fields: `id`, `amount`.
 
 Contains the following fields: `id`, `amount`, `price`.
 
+###### get_shop_item_count()
+###### get_shop_item_at_index(index)
 ###### get_shop_items()
 ###### is_shop_open()
 ###### get_shop_item_by_id(id)

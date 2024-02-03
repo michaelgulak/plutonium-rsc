@@ -483,10 +483,7 @@ func (c *localWorld) setTileOr(x, z int, traversalMask int32) {
 
 func (c *localWorld) getTileTraversalMask(x, z int) int32 {
 	xz := (int32(x) << 16) | int32(z)
-	if tile, ok := c.tiles[xz]; ok {
-		return tile
-	}
-	return 0
+	return c.tiles[xz]
 }
 
 func (c *client) findPath(startX int, startZ int, xLow int, xHigh int, zLow int, zHigh int, reachBorder bool) int {
