@@ -161,6 +161,7 @@ func (z *astarPathFinder) generateTraversalInfo(c *client, center *point, depth 
 	z.initBoard(z.costBoard, 2*depth+1)
 	var curPosX int
 	var curPosY int
+
 	for x := -depth; x <= depth; x++ {
 		for y := -depth; y <= depth; y++ {
 			cdx, cdy := center.x-x, center.y+y

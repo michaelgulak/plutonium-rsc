@@ -75,6 +75,10 @@ type objectLocs struct {
 	Sceneries []*objectLoc
 }
 
+type localWorld struct {
+	tiles map[int32]int32
+}
+
 func withinWorld(x, y int) bool {
 	return x >= 0 && x < maxWorldWidth && y >= 0 && y < maxWorldHeight
 }
@@ -467,10 +471,6 @@ func newLocalWorld() *localWorld {
 	}
 }
 
-type localWorld struct {
-	tiles map[int32]int32
-}
-
 func (c *localWorld) setTileAnd(x, z int, traversalMask int32) {
 	xz := (int32(x) << 16) | int32(z)
 	c.tiles[xz] = c.tiles[xz] & traversalMask
@@ -486,7 +486,6 @@ func (c *localWorld) getTileTraversalMask(x, z int) int32 {
 	if tile, ok := c.tiles[xz]; ok {
 		return tile
 	}
-	c.tiles[xz] = 0
 	return 0
 }
 
@@ -517,6 +516,7 @@ func (c *client) findPath(startX int, startZ int, xLow int, xHigh int, zLow int,
 	openListWrite := var20 + 1
 	openListSize := len(c.pathX)
 	complete := false
+
 	for openListRead != openListWrite {
 		x = int(c.pathX[openListRead])
 		z = int(c.pathZ[openListRead])

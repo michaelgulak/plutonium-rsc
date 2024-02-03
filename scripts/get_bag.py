@@ -70,5 +70,6 @@ def loop():
             thieve_npc(man)
             return 700
     
+    log("waiting for a man to be in area")
     return 700
 
