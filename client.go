@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -391,15 +392,16 @@ func main() {
 			progressDur: time.Duration(math.MaxInt),
 		}
 		if scriptPath != "" {
+			pathDir := filepath.Dir(scriptPath)
 			acct.script = &script{
-				name: scriptPath,
+				name:    scriptPath,
+				pathDir: pathDir,
 			}
 		}
 		accounts = append(accounts, acct)
 	}
 
 	wg := &sync.WaitGroup{}
-	loadScriptLock := &sync.Mutex{}
 
 	loginWait := make(chan struct{})
 
@@ -457,7 +459,7 @@ func main() {
 
 				if acc.script != nil {
 					c.script = acc.script
-					if err := c.script.load(loadScriptLock, c); err != nil {
+					if err := c.script.load(c); err != nil {
 						fmt.Printf("[%s] Script load error [%s]: %s\n", c.user, c.script.name, err)
 						break clientLoop
 					}

@@ -122,6 +122,7 @@ func loadAccount(path string) (*account, error) {
 	}
 	if acctFile.Has("script") {
 		acct.script.name = settings.executablePath + string(os.PathSeparator) + settings.ScriptSettings.Directory + string(os.PathSeparator) + acctFile.Get("script.name").(string)
+		acct.script.pathDir = filepath.Dir(acct.script.name)
 		if acctFile.Has("script.progress_report") {
 			str := acctFile.Get("script.progress_report").(string)
 			dur, err := time.ParseDuration(str)

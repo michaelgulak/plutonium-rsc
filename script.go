@@ -10,22 +10,17 @@ import (
 	"runtime"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
-	_ "github.com/go-python/gpython/builtin"
 	"github.com/olekukonko/tablewriter"
 
-	"github.com/go-python/gpython/compile"
-	_ "github.com/go-python/gpython/math"
 	"github.com/go-python/gpython/py"
-	pysys "github.com/go-python/gpython/sys"
-	_ "github.com/go-python/gpython/time"
-	"github.com/go-python/gpython/vm"
+	_ "github.com/go-python/gpython/stdlib"
 )
 
 type script struct {
 	name            string
+	pathDir         string
 	running         bool
 	c               *client
 	settings        py.StringDict
@@ -63,15 +58,7 @@ type longPath struct {
 	c         *client
 }
 
-func init() {
-	args := []string{"script.py"}
-	py.MustGetModule("sys").Globals["argv"] = pysys.MakeArgv(args)
-}
-
-func (s *script) load(loadScriptLock *sync.Mutex, c *client) error {
-	loadScriptLock.Lock()
-	defer loadScriptLock.Unlock()
-
+func (s *script) load(c *client) error {
 	s.c = c
 
 	if !s.loaded {
@@ -80,29 +67,47 @@ func (s *script) load(loadScriptLock *sync.Mutex, c *client) error {
 			return err
 		}
 		defer f.Close()
-		var obj py.Object
 		str, err := io.ReadAll(f)
 		if err != nil {
 			return err
 		}
-		obj, err = compile.Compile(string(str), s.name, "exec", 0, true)
+
+		opts := py.DefaultContextOpts()
+
+		opts.SysPaths = append(opts.SysPaths, s.pathDir)
+
+		ctx := py.NewContext(opts)
+		modImpl := &py.ModuleImpl{
+			CodeSrc: string(str),
+			Globals: py.NewStringDict(),
+		}
+		s.addPreGlobals(modImpl)
+		module, err := ctx.ModuleInit(modImpl)
 		if err != nil {
-			return err
+			fmt.Printf("[BOT] Script compile error: %s\n", err)
+			os.Exit(1)
 		}
 
-		code := obj.(*py.Code)
-		s.module = py.NewModule(c.user, "", nil, nil)
-		s.module.Globals["__file__"] = py.String(s.name)
+		s.module = module
 
-		s.addGlobals(s.module, c)
+		for _, v := range module.Globals {
+			switch v := v.(type) {
+			case *py.Module:
+				if v.ModuleImpl.Info.FileDesc != "" {
+					s.addGlobals(v, c)
+				}
+			}
+		}
 
-		_, err = vm.Run(s.module.Globals, s.module.Globals, code, nil)
+		s.addGlobals(module, c)
+
+		_, err = ctx.RunCode(module.ModuleImpl.Code, module.Globals, module.Globals, nil)
 		if err != nil {
 			py.TracebackDump(err)
 			log.Fatal(err)
 		}
 
-		if loopFn, ok := s.module.Globals["loop"]; !ok {
+		if loopFn, ok := module.Globals["loop"]; !ok {
 			return fmt.Errorf("loop function not found")
 		} else {
 			s.loopFn = loopFn.(*py.Function)
@@ -113,6 +118,14 @@ func (s *script) load(loadScriptLock *sync.Mutex, c *client) error {
 		s.loaded = true
 		s.running = true
 	} else {
+		for _, v := range s.module.Globals {
+			switch v := v.(type) {
+			case *py.Module:
+				if v.ModuleImpl.Info.FileDesc != "" {
+					s.addGlobals(v, c)
+				}
+			}
+		}
 		s.addGlobals(s.module, c)
 	}
 
@@ -555,15 +568,13 @@ func (s *script) loop() int {
 	if err != nil {
 		py.TracebackDump(err)
 		fmt.Printf("[%s] Script loop error[%s]: %s\n", s.c.user, s.name, err.Error())
-		s.running = false
-		s.c.account.autologin = false
+		os.Exit(1)
 		return 500
 	}
 	res0, ok := res.(py.Int)
 	if !ok {
-		s.running = false
-		s.c.account.autologin = false
-		fmt.Printf("[%s] Script [%s] did not return a sleep time, stopping\n", s.c.user, s.name)
+		fmt.Printf("[%s] Script [%s] did not return a sleep time\n", s.c.user, s.name)
+		os.Exit(1)
 	}
 	return int(res0)
 }
@@ -628,22 +639,25 @@ func (s *script) addHooks(module *py.Module, c *client) {
 	}
 }
 
-func (s *script) addGlobals(module *py.Module, c *client) {
+func (s *script) addPreGlobals(module *py.ModuleImpl) {
 	module.Globals["settings"] = &py.Type{
 		ObjectType: py.ObjectType,
 		Name:       "settings",
 		Dict:       s.settings,
 	}
-	module.Globals["stop_account"] = py.MustNewMethod("stop_account", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-		c.scriptKillSignal <- struct{}{}
-		return py.None, nil
-	}, py.METH_STATIC, "")
 	module.Globals["SLEEPING_BAG"] = py.Int(1263)
 	bankers := make([]py.Object, len(bankersID))
 	for i := 0; i < len(bankers); i++ {
 		bankers[i] = py.Int(bankersID[i])
 	}
 	module.Globals["BANKERS"] = py.NewListFromItems(bankers)
+}
+
+func (s *script) addGlobals(module *py.Module, c *client) {
+	module.Globals["stop_account"] = py.MustNewMethod("stop_account", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		c.scriptKillSignal <- struct{}{}
+		return py.None, nil
+	}, py.METH_STATIC, "")
 	module.Globals["create_packet"] = py.MustNewMethod("create_packet", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.createPacket(byte(args[0].(py.Int)))
 		return py.None, nil
