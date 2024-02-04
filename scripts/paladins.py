@@ -2,7 +2,7 @@
 
 # Start near or inside paladin room.
 
-# This script only uses cakes.
+# This script only uses cake.
 # Make sure you are at least 28 hp or you will die.
 
 import time

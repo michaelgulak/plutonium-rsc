@@ -1,5 +1,6 @@
 # Seers Yews by RLN
 #
+# Go near the yew trees at seers with an axe and sleeping bag.
 # No script settings required for this script.
 
 import time

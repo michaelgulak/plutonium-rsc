@@ -1,6 +1,6 @@
 # Falador Thiever by RLN
 
-# Pickpockets guards in Falador at different spots. Only uses cakes.
+# Pickpockets guards in Falador at different spots. Only uses cake.
 
 # Script block should look like this:
 
@@ -8,9 +8,9 @@
 # name = "falador_thiever.py"
 #
 # [script.settings]
-# spot = "spot 1"
+# spot = 1
 #
-# Where spot can be "spot 1", "spot 2", or "spot 3".
+# Where spot can be 1, 2, or 3.
 
 import time
 
@@ -27,11 +27,11 @@ CAKE_IDS = [335,333,330]
 
 spot = None
 
-if settings.spot == "spot 1":
+if settings.spot == 1:
     spot = Spot(322, 530, 15, 20, 315, 540)
-elif settings.spot == "spot 2":
+elif settings.spot == 2:
     spot = Spot(322, 513, 15, 17, 315, 522)
-elif settings.spot == "spot 3":
+elif settings.spot == 3:
     spot = Spot(334, 535, 10, 18, 326, 545)
 else:
     raise RuntimeError('Incorrect spot chosen')

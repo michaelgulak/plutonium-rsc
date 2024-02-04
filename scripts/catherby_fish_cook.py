@@ -10,18 +10,23 @@
 # powerfish = false
 #
 # Possible values for fish_type are: shrimp/anchovies, sardines/herring,
-# tuna/swordfish, lobsters, mackarel/cod/bass, shark.
+# tuna/swordfish, lobster, mackarel/cod/bass, shark.
 
 import time
 
-EQUIPMENT       = [[376], [377, 380], [379], [375], [548],[379]]
+EQUIPMENT       = [[376, SLEEPING_BAG], \
+                   [377, 380, SLEEPING_BAG], \
+                   [379, SLEEPING_BAG], \
+                   [375, SLEEPING_BAG], \
+                   [548, SLEEPING_BAG], \
+                   [379, SLEEPING_BAG]]
 RAW_FISH_IDS    = [[349,351], [354,361], [366,369], [372], [552,550,554], [545]]
 COOKED_FISH_IDS = [[350,352], [355,362], [367,370], [373], [551,553,555], [546]]
 
 SHRIMP_ANCHOVIES  = 0
 SARDINES_HERRING  = 1
 TUNA_SWORDIES     = 2
-LOBSTERS          = 3
+LOBSTER           = 3
 MACKEREL_COD_BASS = 4
 SHARK             = 5
 
@@ -45,8 +50,8 @@ elif settings.fish_type == "sardines/herring":
     fishing_spot = FishingSpot((418,500), 2, RAW_FISH_IDS[SARDINES_HERRING], COOKED_FISH_IDS[SARDINES_HERRING], EQUIPMENT[SARDINES_HERRING])
 elif settings.fish_type == "tuna/swordfish":
     fishing_spot = FishingSpot((409,504), 1, RAW_FISH_IDS[TUNA_SWORDIES], COOKED_FISH_IDS[TUNA_SWORDIES], EQUIPMENT[TUNA_SWORDIES])
-elif settings.fish_type == "lobsters":
-    fishing_spot = FishingSpot((409,504), 2, RAW_FISH_IDS[LOBSTERS], COOKED_FISH_IDS[LOBSTERS], EQUIPMENT[LOBSTERS])
+elif settings.fish_type == "lobster":
+    fishing_spot = FishingSpot((409,504), 2, RAW_FISH_IDS[LOBSTER], COOKED_FISH_IDS[LOBSTER], EQUIPMENT[LOBSTER])
 elif settings.fish_type == "mackarel/cod/bass":
     fishing_spot = FishingSpot((406,505), 1, RAW_FISH_IDS[MACKEREL_COD_BASS], COOKED_FISH_IDS[MACKEREL_COD_BASS], EQUIPMENT[MACKEREL_COD_BASS])
 elif settings.fish_type == "shark":
@@ -82,25 +87,18 @@ def fish():
     if fish != None:
         if fishing_spot.at_type == 1:
             at_object(fish)
-            fish_timeout = time.time() + 5
-            return 900
         elif fishing_spot.at_type == 2:
             at_object2(fish)
-            fish_timeout = time.time() + 5
-            return 900
+
+        fish_timeout = time.time() + 5
+        return 900
 
     return 5000  
 
 def bank_next_item():
     global fish_banked
 
-    items = get_inventory_items()
-    item_to_bank = None
-    for item in items:
-        if item.id == SLEEPING_BAG or item.id in fishing_spot.equipment:
-            continue
-        item_to_bank = item
-        break
+    item_to_bank = get_inventory_item_except(fishing_spot.equipment)
 
     if item_to_bank != None:
         inv_count = get_inventory_count_by_id(item_to_bank.id)
@@ -150,7 +148,7 @@ def cook():
         if not is_bank_open():
             return open_bank()
         else:
-            if len(fishing_spot.equipment) + 1 != get_total_inventory_count():
+            if len(fishing_spot.equipment) != get_total_inventory_count():
                 return bank_next_item()
             else:
                 close_bank()
