@@ -207,7 +207,7 @@ func (z *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, 
 }
 
 func (z *world) loadWorld() {
-	archiveFile := settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.Landscape
+	archiveFile := settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.Landscape
 	tileArchive, err := zip.OpenReader(archiveFile)
 	if err != nil {
 		fmt.Println(err)
@@ -238,7 +238,7 @@ func (z *world) loadWorld() {
 			}
 		}
 	}
-	objectLocStr := settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.SceneryLocs
+	objectLocStr := settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.SceneryLocs
 	f, err := os.Open(objectLocStr)
 	if err != nil {
 		fmt.Println(err)

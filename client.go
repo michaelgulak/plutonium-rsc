@@ -24,6 +24,7 @@ const (
 	supportBankNotes = false
 	skillCount       = 18
 	readWriteTimeout = 10
+	botVersion       = "1.3.0"
 )
 
 var (
@@ -306,17 +307,10 @@ func main() {
 		configPath string
 		acctFile   string
 		autologin  bool
+		version    bool
 		closing    = make(chan struct{})
 		sigs       = make(chan os.Signal, 1)
 	)
-
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		<-sigs
-		fmt.Println("[BOT] Received kill signal")
-		close(closing)
-	}()
 
 	/*f, err := os.Create("cpu.pprof")
 	if err != nil {
@@ -329,14 +323,28 @@ func main() {
 
 	flag.StringVar(&user, "u", "", "OpenRSC username")
 	flag.StringVar(&pass, "p", "", "OpenRSC password")
-	flag.StringVar(&regFile, "r", "", "Register accounts file")
-	flag.StringVar(&scriptPath, "s", "", "Python script file")
+	flag.StringVar(&regFile, "r", "", "Register accounts path")
+	flag.StringVar(&scriptPath, "s", "", "Python script path")
 	flag.StringVar(&acctFile, "f", "", "Account file")
 	flag.StringVar(&configPath, "c", "settings.toml", "Config file path")
 	flag.BoolVar(&autologin, "l", false, "Autologin flag")
+	flag.BoolVar(&version, "v", false, "Version flag")
 	flag.Parse()
 
+	if version {
+		fmt.Printf("Plutonium v%s\n", botVersion)
+		os.Exit(0)
+	}
+
 	parseConfig(configPath)
+
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-sigs
+		fmt.Println("[BOT] Received kill signal")
+		close(closing)
+	}()
 
 	if regFile != "" {
 		doAccountCreations(closing, regFile)
@@ -411,7 +419,7 @@ func main() {
 			continue
 		}
 		var err error
-		acc.progressFile, err = os.Create(settings.LogSettings.Directory + string(os.PathSeparator) + settings.LogSettings.ProgressReports + string(os.PathSeparator) + acc.username + ".log")
+		acc.progressFile, err = os.Create(settings.executablePath + string(os.PathSeparator) + settings.LogSettings.Directory + string(os.PathSeparator) + settings.LogSettings.ProgressReports + string(os.PathSeparator) + acc.username + ".log")
 		if err != nil {
 			fmt.Printf("[%s] Error creating progress report file: %s\n", acc.username, err)
 			os.Exit(1)
@@ -745,7 +753,7 @@ func (c *client) close() {
 
 func loadDefs() {
 	// tile defs
-	f1, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.TileDefs)
+	f1, err := os.Open(settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.TileDefs)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -759,7 +767,7 @@ func loadDefs() {
 	}
 
 	// door defs
-	f2, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.DoorDefs)
+	f2, err := os.Open(settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.DoorDefs)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -773,7 +781,7 @@ func loadDefs() {
 	}
 
 	// object defs
-	f3, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.ObjectDefs)
+	f3, err := os.Open(settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.ObjectDefs)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -787,7 +795,7 @@ func loadDefs() {
 	}
 
 	// item defs
-	f4, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.ItemDefs)
+	f4, err := os.Open(settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.ItemDefs)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -801,7 +809,7 @@ func loadDefs() {
 	}
 
 	// word hashes
-	f5, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.WordHashes)
+	f5, err := os.Open(settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.WordHashes)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -965,7 +973,7 @@ func (c *client) doCaptcha(buf []byte) {
 	if sleepWord, ok := wordHashes[hash]; ok {
 		c.sendSleepWord(sleepWord)
 	} else {
-		c.sendSleepWord("")
+		c.sendSleepWord("unknown")
 	}
 }
 
