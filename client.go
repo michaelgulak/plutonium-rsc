@@ -2,6 +2,8 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -10,7 +12,9 @@ import (
 	"math"
 	"math/rand"
 	"net"
+	"net/http"
 	"os"
+	"os/exec"
 	"os/signal"
 	"path/filepath"
 	"runtime"
@@ -394,7 +398,7 @@ func main() {
 		if scriptPath != "" {
 			pathDir := filepath.Dir(scriptPath)
 			acct.script = &script{
-				name:    scriptPath,
+				path:    scriptPath,
 				pathDir: pathDir,
 			}
 		}
@@ -460,7 +464,7 @@ func main() {
 				if acc.script != nil {
 					c.script = acc.script
 					if err := c.script.load(c); err != nil {
-						fmt.Printf("[%s] Script load error [%s]: %s\n", c.user, c.script.name, err)
+						fmt.Printf("[%s] Script load error [%s]: %s\n", c.user, c.script.path, err)
 						break clientLoop
 					}
 				}
@@ -968,15 +972,77 @@ func (c *client) init() {
 }
 
 func (c *client) doCaptcha(buf []byte) {
-	hasher := fnv.New32()
-	hasher.Write(buf)
-	hash := hasher.Sum32()
+	var sleepWord string
 
-	if sleepWord, ok := wordHashes[hash]; ok {
-		c.sendSleepWord(sleepWord)
-	} else {
-		c.sendSleepWord("unknown")
+	switch settings.OcrSettings.OcrType {
+	case "local":
+		bmpData := convertImage(buf)
+		if bmpData == nil {
+			return
+		}
+		num := rand.Intn(math.MaxInt)
+		randName := hex.EncodeToString([]byte{byte(num >> 24), byte(num >> 16), byte(num >> 8), byte(num)}) + ".bmp"
+		path := settings.OcrSettings.Directory + string(os.PathSeparator) + randName
+		f, err := os.Create(path)
+		if err != nil {
+			fmt.Printf("[%s] Error creating sleep bmp file: %s\n", c.user, err)
+			return
+		}
+		_, err = io.Copy(f, bytes.NewReader(bmpData))
+		f.Close()
+		if err != nil {
+			fmt.Printf("[%s] Error copying sleepword bytes to file: %s\n", c.user, err)
+			os.Remove(path)
+			return
+		}
+		cmd := exec.Command(settings.OcrSettings.OcrPath, path)
+		bs, err := cmd.CombinedOutput()
+		if err != nil {
+			fmt.Printf("[%s] Error getting sleepword from external ocr: %s\n", c.user, err)
+			os.Remove(path)
+			return
+		}
+		sleepWord = strings.Trim(string(bs), " \r\n\t")
+		os.Remove(path)
+	case "server":
+		bmpData := convertImage(buf)
+		if bmpData == nil {
+			return
+		}
+		body := bytes.NewReader(bmpData)
+		resp, err := http.Post(settings.OcrSettings.OcrEndpoint, "application/octet-stream", body)
+		if err != nil {
+			fmt.Printf("[%s] Sleep server error: %s\n", c.user, err)
+			return
+		}
+
+		scanner := bufio.NewScanner(resp.Body)
+
+		if scanner.Scan() {
+			sleepWord = scanner.Text()
+		} else {
+			fmt.Printf("[%s] Sleep server did not return a scannable line\n", c.user)
+			return
+		}
+	case "hash":
+		hasher := fnv.New32()
+		wrote := 0
+		for wrote < len(buf) {
+			n, _ := hasher.Write(buf[wrote:])
+			wrote += n
+		}
+		hash := hasher.Sum32()
+
+		var ok bool
+		if sleepWord, ok = wordHashes[hash]; !ok {
+			sleepWord = "unknown"
+		}
+	default:
+		fmt.Printf("[%s] Unknown ocr setting\n", c.user)
+		return
 	}
+
+	c.sendSleepWord(sleepWord)
 }
 
 func readBytesRaw(conn net.Conn, length int) ([]byte, error) {

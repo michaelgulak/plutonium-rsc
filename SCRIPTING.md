@@ -103,6 +103,10 @@ Check out the API documentation [here](https://gitlab.com/open-runescape-classic
 
 There are many. Here I will document the limitations known about gpython.
 
+#### Globals in submodules
+
+You won't be able to access the settings object in submodules outside of functions. It's fine within functions.
+
 #### List comprehensions
 
 If you pass a variable to a function that uses that variable in a list comprehension you must make a local copy of the variable before using it. For example:

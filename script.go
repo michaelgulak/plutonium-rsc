@@ -19,7 +19,7 @@ import (
 )
 
 type script struct {
-	name            string
+	path            string
 	pathDir         string
 	running         bool
 	c               *client
@@ -61,8 +61,21 @@ type longPath struct {
 func (s *script) load(c *client) error {
 	s.c = c
 
+	var addGlobalsToSubmodules func(module *py.Module)
+	addGlobalsToSubmodules = func(module *py.Module) {
+		for _, v := range module.Globals {
+			switch v := v.(type) {
+			case *py.Module:
+				if v.ModuleImpl.Info.FileDesc != "" {
+					s.addGlobals(v, c)
+					addGlobalsToSubmodules(v)
+				}
+			}
+		}
+	}
+
 	if !s.loaded {
-		f, err := os.Open(s.name)
+		f, err := os.Open(s.path)
 		if err != nil {
 			return err
 		}
@@ -90,15 +103,7 @@ func (s *script) load(c *client) error {
 
 		s.module = module
 
-		for _, v := range module.Globals {
-			switch v := v.(type) {
-			case *py.Module:
-				if v.ModuleImpl.Info.FileDesc != "" {
-					s.addGlobals(v, c)
-				}
-			}
-		}
-
+		addGlobalsToSubmodules(module)
 		s.addGlobals(module, c)
 
 		_, err = ctx.RunCode(module.ModuleImpl.Code, module.Globals, module.Globals, nil)
@@ -118,14 +123,7 @@ func (s *script) load(c *client) error {
 		s.loaded = true
 		s.running = true
 	} else {
-		for _, v := range s.module.Globals {
-			switch v := v.(type) {
-			case *py.Module:
-				if v.ModuleImpl.Info.FileDesc != "" {
-					s.addGlobals(v, c)
-				}
-			}
-		}
+		addGlobalsToSubmodules(s.module)
 		s.addGlobals(s.module, c)
 	}
 
@@ -567,13 +565,13 @@ func (s *script) loop() int {
 	res, err := s.loopFn.M__call__(nil, nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Script loop error[%s]: %s\n", s.c.user, s.name, err.Error())
+		fmt.Printf("[%s] Script loop error[%s]: %s\n", s.c.user, s.path, err.Error())
 		os.Exit(1)
 		return 500
 	}
 	res0, ok := res.(py.Int)
 	if !ok {
-		fmt.Printf("[%s] Script [%s] did not return a sleep time\n", s.c.user, s.name)
+		fmt.Printf("[%s] Script [%s] did not return a sleep time\n", s.c.user, s.path)
 		os.Exit(1)
 	}
 	return int(res0)
@@ -654,6 +652,20 @@ func (s *script) addPreGlobals(module *py.ModuleImpl) {
 }
 
 func (s *script) addGlobals(module *py.Module, c *client) {
+	// readd preglobals so that submodules can access them
+	module.Globals["settings"] = &py.Type{
+		ObjectType: py.ObjectType,
+		Name:       "settings",
+		Dict:       s.settings,
+	}
+	module.Globals["SLEEPING_BAG"] = py.Int(1263)
+	bankers := make([]py.Object, len(bankersID))
+	for i := 0; i < len(bankers); i++ {
+		bankers[i] = py.Int(bankersID[i])
+	}
+	module.Globals["BANKERS"] = py.NewListFromItems(bankers)
+
+	// general
 	module.Globals["stop_account"] = py.MustNewMethod("stop_account", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.scriptKillSignal <- struct{}{}
 		return py.None, nil

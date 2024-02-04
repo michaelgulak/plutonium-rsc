@@ -1,6 +1,9 @@
 [server]
 address = "game.openrsc.com:43235"
 
+[ocr]
+ocr_type = "hash"
+
 [data]
 directory    = "data"
 landscape    = "Authentic_P2PLandscape.orsc"

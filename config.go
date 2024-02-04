@@ -30,6 +30,13 @@ type account struct {
 	lastProgressReport time.Time
 }
 
+type ocrSettings struct {
+	OcrType     string `toml:"ocr_type"`
+	OcrEndpoint string `toml:"ocr_endpoint"`
+	Directory   string `toml:"directory"`
+	OcrPath     string `toml:"ocr_path"`
+}
+
 type dataSettings struct {
 	Directory   string `toml:"directory"`
 	Landscape   string `toml:"landscape"`
@@ -65,6 +72,7 @@ type logSettings struct {
 type config struct {
 	executablePath  string
 	ServerSettings  *serverSettings  `toml:"server"`
+	OcrSettings     *ocrSettings     `toml:"ocr"`
 	DataSettings    *dataSettings    `toml:"data"`
 	AccountSettings *accountSettings `toml:"accounts"`
 	ClientSettings  *clientSettings  `toml:"client"`
@@ -121,8 +129,8 @@ func loadAccount(path string) (*account, error) {
 		acct.debug = acctFile.Get("account.debug").(bool)
 	}
 	if acctFile.Has("script") {
-		acct.script.name = settings.executablePath + string(os.PathSeparator) + settings.ScriptSettings.Directory + string(os.PathSeparator) + acctFile.Get("script.name").(string)
-		acct.script.pathDir = filepath.Dir(acct.script.name)
+		acct.script.path = settings.executablePath + string(os.PathSeparator) + settings.ScriptSettings.Directory + string(os.PathSeparator) + acctFile.Get("script.name").(string)
+		acct.script.pathDir = filepath.Dir(acct.script.path)
 		if acctFile.Has("script.progress_report") {
 			str := acctFile.Get("script.progress_report").(string)
 			dur, err := time.ParseDuration(str)
