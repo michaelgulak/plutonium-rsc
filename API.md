@@ -40,9 +40,13 @@ After this is called, the script has 15 seconds to clean up (ie. get out of comb
 
 Tells the bot to close the account loop, terminating the running account. Usually used with on_kill_signal() after the account is out of combat and the script prepares everything to be able to kill the account loop.
 
-###### in_rect(x, z, width, height)
+###### in_rect(area_x, area_z, width, height)
 
-`x` and `z` are the starting point which should be the north-west coordinate. The width extends east, while the height extends south. Note that just subtracting the coordinates will not work to calculate the width or height. For example, width should be calculated as `x1 - x2 + 1` (x1 is first because the x coordinate decreases in RSC as you move east).
+Checks whether the player is in a rectangular area. `area_x` and `area_z` are the starting point which should be the north-west coordinate. The width extends east, while the height extends south. Note that just subtracting the coordinates will not work to calculate the width or height. For example, width should be calculated as `x1 - x2 + 1` (x1 is first because the x coordinate decreases in RSC as you move east).
+
+###### point_in_rect(point_x, point_z, area_x, area_z, width, height)
+
+Same as `in_rect` except instead of using the client coordinates it checks the supplied `point_x` and `point_z`.
 
 ###### set_fatigue_tricking(True)
 ###### stop_script()

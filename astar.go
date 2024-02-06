@@ -83,6 +83,12 @@ type path struct {
 	startY    int
 }
 
+type longPath struct {
+	points    []*point
+	currentPt int
+	c         *client
+}
+
 func abs(a int) int {
 	if a < 0 {
 		return -a
@@ -113,7 +119,7 @@ func calcDistance(one, two *point) int {
 }
 
 func newAstarPathFinder(c *client, start *point, end *point, depth int) *astarPathFinder {
-	z := &astarPathFinder{
+	p := &astarPathFinder{
 		costBoard:   nil,
 		openNodes:   []*node{},
 		closedNodes: []*node{},
@@ -123,42 +129,42 @@ func newAstarPathFinder(c *client, start *point, end *point, depth int) *astarPa
 		depth:       depth,
 		path:        newPath(start.x, start.y),
 	}
-	z.generateTraversalInfo(c, start, depth)
+	p.generateTraversalInfo(c, start, depth)
 
-	return z
+	return p
 }
 
 func newNode(x int, y int) *node {
-	z := &node{
+	n := &node{
 		position: &point{x, y},
 		state:    initState,
 	}
 
-	return z
+	return n
 }
 
-func (z *astarPathFinder) buildPath() *path {
-	parent := z.closedNodes[len(z.closedNodes)-1].parent
-	endNode := z.costBoard[parent.x][parent.y]
+func (p *astarPathFinder) buildPath() *path {
+	parent := p.closedNodes[len(p.closedNodes)-1].parent
+	endNode := p.costBoard[parent.x][parent.y]
 	for endNode != nil {
-		worldX := z.worldStart.x + z.depth - endNode.position.x
-		worldY := z.worldStart.y - z.depth + endNode.position.y
+		worldX := p.worldStart.x + p.depth - endNode.position.x
+		worldY := p.worldStart.y - p.depth + endNode.position.y
 		if endNode.parent == nil {
 			endNode = nil
 		} else {
-			z.path.addDirect(worldX, worldY)
-			endNode = z.costBoard[endNode.parent.x][endNode.parent.y]
+			p.path.addDirect(worldX, worldY)
+			endNode = p.costBoard[endNode.parent.x][endNode.parent.y]
 		}
 	}
-	return z.path
+	return p.path
 }
 
-func (z *astarPathFinder) generateTraversalInfo(c *client, center *point, depth int) {
+func (p *astarPathFinder) generateTraversalInfo(c *client, center *point, depth int) {
 	if depth < 1 {
 		return
 	}
-	z.costBoard = make([][]*node, 2*depth+1)
-	z.initBoard(z.costBoard, 2*depth+1)
+	p.costBoard = make([][]*node, 2*depth+1)
+	p.initBoard(p.costBoard, 2*depth+1)
 	var curPosX int
 	var curPosY int
 
@@ -173,16 +179,16 @@ func (z *astarPathFinder) generateTraversalInfo(c *client, center *point, depth 
 			curPosY = y + depth
 			if ok {
 				if y < depth {
-					z.costBoard[curPosX][curPosY+1].northBlocked = true
+					p.costBoard[curPosX][curPosY+1].northBlocked = true
 				}
 				if x > -depth {
-					z.costBoard[curPosX-1][curPosY].eastBlocked = true
+					p.costBoard[curPosX-1][curPosY].eastBlocked = true
 				}
 				if y > -depth {
-					z.costBoard[curPosX][curPosY-1].southBlocked = true
+					p.costBoard[curPosX][curPosY-1].southBlocked = true
 				}
 				if x < depth {
-					z.costBoard[curPosX+1][curPosY].westBlocked = true
+					p.costBoard[curPosX+1][curPosY].westBlocked = true
 				}
 			}
 			tile := c.combinedTile(cdx, cdy)
@@ -191,39 +197,39 @@ func (z *astarPathFinder) generateTraversalInfo(c *client, center *point, depth 
 			}
 			if tile&(fullBlockA|fullBlockB|fullBlockC) != 0 {
 				if y < depth {
-					z.costBoard[curPosX][curPosY+1].northBlocked = true
+					p.costBoard[curPosX][curPosY+1].northBlocked = true
 				}
 				if x > -depth {
-					z.costBoard[curPosX-1][curPosY].eastBlocked = true
+					p.costBoard[curPosX-1][curPosY].eastBlocked = true
 				}
 				if y > -depth {
-					z.costBoard[curPosX][curPosY-1].southBlocked = true
+					p.costBoard[curPosX][curPosY-1].southBlocked = true
 				}
 				if x < depth {
-					z.costBoard[curPosX+1][curPosY].westBlocked = true
+					p.costBoard[curPosX+1][curPosY].westBlocked = true
 				}
 			} else {
-				if !z.costBoard[curPosX][curPosY].southBlocked {
-					z.costBoard[curPosX][curPosY].southBlocked = (tile & southBlocked) != 0
+				if !p.costBoard[curPosX][curPosY].southBlocked {
+					p.costBoard[curPosX][curPosY].southBlocked = (tile & southBlocked) != 0
 				}
-				if !z.costBoard[curPosX][curPosY].westBlocked {
-					z.costBoard[curPosX][curPosY].westBlocked = (tile & westBlocked) != 0
+				if !p.costBoard[curPosX][curPosY].westBlocked {
+					p.costBoard[curPosX][curPosY].westBlocked = (tile & westBlocked) != 0
 				}
-				if !z.costBoard[curPosX][curPosY].northBlocked {
-					z.costBoard[curPosX][curPosY].northBlocked = (tile & northBlocked) != 0
+				if !p.costBoard[curPosX][curPosY].northBlocked {
+					p.costBoard[curPosX][curPosY].northBlocked = (tile & northBlocked) != 0
 				}
-				if !z.costBoard[curPosX][curPosY].eastBlocked {
-					z.costBoard[curPosX][curPosY].eastBlocked = (tile & eastBlocked) != 0
+				if !p.costBoard[curPosX][curPosY].eastBlocked {
+					p.costBoard[curPosX][curPosY].eastBlocked = (tile & eastBlocked) != 0
 				}
 			}
 		}
 	}
 }
 
-func (z *astarPathFinder) findNextNode() *node {
+func (p *astarPathFinder) findNextNode() *node {
 	minimum := math.MaxInt
 	minNode := (*node)(nil)
-	for _, node := range z.openNodes {
+	for _, node := range p.openNodes {
 		if node.hCost < minimum {
 			minimum = node.hCost
 			minNode = node
@@ -234,98 +240,98 @@ func (z *astarPathFinder) findNextNode() *node {
 	return minNode
 }
 
-func (z *astarPathFinder) findPath() *path {
-	if z.depth < 1 {
+func (p *astarPathFinder) findPath() *path {
+	if p.depth < 1 {
 		return nil
 	}
-	if z.pointStart.x == z.pointEnd.x && z.pointStart.y == z.pointEnd.y {
+	if p.pointStart.x == p.pointEnd.x && p.pointStart.y == p.pointEnd.y {
 		return nil
 	}
-	z.costBoard[z.depth][z.depth].selectNode(z)
+	p.costBoard[p.depth][p.depth].selectNode(p)
 	for {
-		next := z.findNextNode()
+		next := p.findNextNode()
 		if next == nil {
 			return nil
 		}
-		if next.position.x == z.pointEnd.x && next.position.y == z.pointEnd.y {
-			z.closedNodes = append(z.closedNodes, next)
-			return z.buildPath()
+		if next.position.x == p.pointEnd.x && next.position.y == p.pointEnd.y {
+			p.closedNodes = append(p.closedNodes, next)
+			return p.buildPath()
 		}
-		next.selectNode(z)
+		next.selectNode(p)
 	}
 }
 
-func (z *astarPathFinder) initBoard(board [][]*node, depth int) {
+func (p *astarPathFinder) initBoard(board [][]*node, depth int) {
 	if board == nil {
 		return
 	}
-	for i := 0; i < len(z.costBoard); i++ {
+	for i := 0; i < len(p.costBoard); i++ {
 		board[i] = make([]*node, depth)
-		for j := 0; j < len(z.costBoard[i]); j++ {
+		for j := 0; j < len(p.costBoard[i]); j++ {
 			board[i][j] = newNode(i, j)
 		}
 	}
 }
 
-func (z *node) calcGCost(a *astarPathFinder) {
-	z.gCost = calcDistance(z.position, a.pointEnd)
+func (n *node) calcGCost(p *astarPathFinder) {
+	n.gCost = calcDistance(n.position, p.pointEnd)
 }
 
-func (z *node) calcHCost() {
-	z.hCost = z.fCost + z.gCost
+func (n *node) calcHCost() {
+	n.hCost = n.fCost + n.gCost
 }
 
-func (z *node) getNeighbor(a *astarPathFinder, dir adjacentDirection) (n *node) {
+func (n *node) getNeighbor(p *astarPathFinder, dir adjacentDirection) *node {
 	switch dir {
 	case _south:
-		if z.position.y < 2*a.depth {
-			return a.costBoard[z.position.x][z.position.y+1]
+		if n.position.y < 2*p.depth {
+			return p.costBoard[n.position.x][n.position.y+1]
 		} else {
 			return nil
 		}
 	case _southWest:
-		if z.position.y < 2*a.depth && z.position.x > 0 {
-			n := a.costBoard[z.position.x-1][z.position.y+1]
-			return n
+		if n.position.y < 2*p.depth && n.position.x > 0 {
+			n1 := p.costBoard[n.position.x-1][n.position.y+1]
+			return n1
 		} else {
 			return nil
 		}
 	case _west:
-		if z.position.x > 0 {
-			return a.costBoard[z.position.x-1][z.position.y]
+		if n.position.x > 0 {
+			return p.costBoard[n.position.x-1][n.position.y]
 		} else {
 			return nil
 		}
 	case _northWest:
-		if z.position.y > 0 && z.position.x > 0 {
-			n := a.costBoard[z.position.x-1][z.position.y-1]
-			return n
+		if n.position.y > 0 && n.position.x > 0 {
+			n1 := p.costBoard[n.position.x-1][n.position.y-1]
+			return n1
 		} else {
 			return nil
 		}
 	case _north:
-		if z.position.y > 0 {
-			return a.costBoard[z.position.x][z.position.y-1]
+		if n.position.y > 0 {
+			return p.costBoard[n.position.x][n.position.y-1]
 		} else {
 			return nil
 		}
 	case _northEast:
-		if z.position.y > 0 && z.position.x < 2*a.depth {
-			n := a.costBoard[z.position.x+1][z.position.y-1]
-			return n
+		if n.position.y > 0 && n.position.x < 2*p.depth {
+			n1 := p.costBoard[n.position.x+1][n.position.y-1]
+			return n1
 		} else {
 			return nil
 		}
 	case _east:
-		if z.position.x < 2*a.depth {
-			return a.costBoard[z.position.x+1][z.position.y]
+		if n.position.x < 2*p.depth {
+			return p.costBoard[n.position.x+1][n.position.y]
 		} else {
 			return nil
 		}
 	case _southEast:
-		if z.position.y < 2*a.depth && z.position.x < 2*a.depth {
-			n := a.costBoard[z.position.x+1][z.position.y+1]
-			return n
+		if n.position.y < 2*p.depth && n.position.x < 2*p.depth {
+			n1 := p.costBoard[n.position.x+1][n.position.y+1]
+			return n1
 		} else {
 			return nil
 		}
@@ -342,45 +348,45 @@ func findIndex(node *node, ns []*node) int {
 	return -1
 }
 
-func (z *node) selectNode(a *astarPathFinder) {
-	if z.state == openState {
-		idx := findIndex(z, a.openNodes)
-		a.openNodes = append(a.openNodes[:idx], a.openNodes[idx+1:]...)
+func (n *node) selectNode(p *astarPathFinder) {
+	if n.state == openState {
+		idx := findIndex(n, p.openNodes)
+		p.openNodes = append(p.openNodes[:idx], p.openNodes[idx+1:]...)
 	}
-	z.setState(closedState)
-	a.closedNodes = append(a.closedNodes, z)
+	n.setState(closedState)
+	p.closedNodes = append(p.closedNodes, n)
 	neighbor := (*node)(nil)
-	neighbor = z.getNeighbor(a, _south)
-	if !z.southBlocked && neighbor != nil {
-		neighbor.update(a, z, basicCost)
+	neighbor = n.getNeighbor(p, _south)
+	if !n.southBlocked && neighbor != nil {
+		neighbor.update(p, n, basicCost)
 	}
-	neighbor = z.getNeighbor(a, _west)
-	if !z.westBlocked && neighbor != nil {
-		neighbor.update(a, z, basicCost)
+	neighbor = n.getNeighbor(p, _west)
+	if !n.westBlocked && neighbor != nil {
+		neighbor.update(p, n, basicCost)
 	}
-	neighbor = z.getNeighbor(a, _north)
-	if !z.northBlocked && neighbor != nil {
-		neighbor.update(a, z, basicCost)
+	neighbor = n.getNeighbor(p, _north)
+	if !n.northBlocked && neighbor != nil {
+		neighbor.update(p, n, basicCost)
 	}
-	neighbor = z.getNeighbor(a, _east)
-	if !z.eastBlocked && neighbor != nil {
-		neighbor.update(a, z, basicCost)
+	neighbor = n.getNeighbor(p, _east)
+	if !n.eastBlocked && neighbor != nil {
+		neighbor.update(p, n, basicCost)
 	}
-	neighbor = z.getNeighbor(a, _southWest)
-	if !(z.southBlocked || z.westBlocked) && !diagBlocked(a, z, _southWest) && neighbor != nil {
-		neighbor.update(a, z, diagCost)
+	neighbor = n.getNeighbor(p, _southWest)
+	if !(n.southBlocked || n.westBlocked) && !diagBlocked(p, n, _southWest) && neighbor != nil {
+		neighbor.update(p, n, diagCost)
 	}
-	neighbor = z.getNeighbor(a, _northWest)
-	if !(z.northBlocked || z.westBlocked) && !diagBlocked(a, z, _northWest) && neighbor != nil {
-		neighbor.update(a, z, diagCost)
+	neighbor = n.getNeighbor(p, _northWest)
+	if !(n.northBlocked || n.westBlocked) && !diagBlocked(p, n, _northWest) && neighbor != nil {
+		neighbor.update(p, n, diagCost)
 	}
-	neighbor = z.getNeighbor(a, _northEast)
-	if !(z.northBlocked || z.eastBlocked) && !diagBlocked(a, z, _northEast) && neighbor != nil {
-		neighbor.update(a, z, diagCost)
+	neighbor = n.getNeighbor(p, _northEast)
+	if !(n.northBlocked || n.eastBlocked) && !diagBlocked(p, n, _northEast) && neighbor != nil {
+		neighbor.update(p, n, diagCost)
 	}
-	neighbor = z.getNeighbor(a, _southEast)
-	if !(z.southBlocked || z.eastBlocked) && !diagBlocked(a, z, _southEast) && neighbor != nil {
-		neighbor.update(a, z, diagCost)
+	neighbor = n.getNeighbor(p, _southEast)
+	if !(n.southBlocked || n.eastBlocked) && !diagBlocked(p, n, _southEast) && neighbor != nil {
+		neighbor.update(p, n, diagCost)
 	}
 }
 
@@ -431,27 +437,27 @@ func diagBlocked(a *astarPathFinder, n *node, dir adjacentDirection) bool {
 	return true
 }
 
-func (z *node) setState(state nodeState) {
-	z.state = state
+func (n *node) setState(state nodeState) {
+	n.state = state
 }
 
-func (z *node) update(a *astarPathFinder, node *node, cost int) {
-	if z.state == initState {
-		z.setState(openState)
-		z.fCost = node.fCost + cost
-		z.calcGCost(a)
-		a.openNodes = append(a.openNodes, z)
-	} else if z.state == closedState {
+func (n *node) update(a *astarPathFinder, node *node, cost int) {
+	if n.state == initState {
+		n.setState(openState)
+		n.fCost = node.fCost + cost
+		n.calcGCost(a)
+		a.openNodes = append(a.openNodes, n)
+	} else if n.state == closedState {
 		return
 	} else {
 		newFcost := node.fCost + cost
-		if newFcost > z.fCost {
+		if newFcost > n.fCost {
 			return
 		}
-		z.fCost = newFcost
+		n.fCost = newFcost
 	}
-	z.calcHCost()
-	z.parent = node.position
+	n.calcHCost()
+	n.parent = node.position
 }
 
 func newPath(startX, startY int) (z *path) {
@@ -463,6 +469,6 @@ func newPath(startX, startY int) (z *path) {
 	return
 }
 
-func (z *path) addDirect(x int, y int) {
-	z.waypoints.PushFront(&point{x, y})
+func (p *path) addDirect(x int, y int) {
+	p.waypoints.PushFront(&point{x, y})
 }

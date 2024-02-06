@@ -101,7 +101,7 @@ After creation you may want to run the `skip_tutorial.py` script on the accounts
 
 Each bot instance should use 10-20x less memory than an APOS client.
 
-If you see your memory going up, you're probably using walk_path_to from too large of a distance. Consider using calculate_path.
+If you see your memory going up, you're probably using walk_path_to from too large of a distance. Consider using calculate_path_to.
 
 If you happen to notice that the VIRT memory allocated is high, it is due to [Go reserving a lot of virtual memory for allocations](https://go.dev/doc/faq#Why_does_my_Go_process_use_so_much_virtual_memory). Check the RES memory of htop to see the real memory footprint.
 

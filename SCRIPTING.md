@@ -2,12 +2,6 @@
 
 Scripts are written in python. Many accessor methods are provided to scripts in order to control the bot.
 
-## Windows
-
-On Windows you'll have to make sure that your line endings are LF and not CRLF. You can do this with [Visual Studio Code](https://code.visualstudio.com/) by going to the bar at the bottom and switching CRLF to LF. Example:
-
-![Line Endings](images/lf.png "Line endings")
-
 ## Script layout
 
 The basis of scripting is the `loop` function. You will want to define a function like this:
@@ -19,9 +13,9 @@ def loop():
 
 Whatever you return from `loop` will be the wait time in milliseconds before `loop` gets called again.
 
-## Config
+## Script Settings
 
-A `settings` object is available in the global scope which contains what was defined in the account toml file under the `[script.settings]` section.
+A `settings` object is available in the global scope which contains what was defined in the account toml file under the `[script.settings]` section. You won't be able to access the settings object in submodules outside of functions. It's accessible within functions.
 
 For example with a config file like this:
 
@@ -101,36 +95,8 @@ Check out the API documentation [here](https://gitlab.com/open-runescape-classic
 
 ## Limitations of gpython
 
-There are many. Here I will document the limitations known about gpython.
-
-#### Globals in submodules
-
-You won't be able to access the settings object in submodules outside of functions. It's fine within functions.
-
-#### List comprehensions
-
-If you pass a variable to a function that uses that variable in a list comprehension you must make a local copy of the variable before using it. For example:
-
-```python
-def a(b):
-    b0 = b
-    return [x for x in range(10) if x > b0]
-```
-
-Without the line `b0 = b`, you will receive an error `NameError: "free variable 'b' referenced before assignment in enclosing scope"`.
-
-#### Strings
-
-There are only 3 functions attached to the `str` object. `startswith`, `endswith` and `split`.
-
-#### Time
-
-`time.time_ns()` is missing. Use `time.time()` instead.
+Here I will document the limitations I know about gpython.
 
 #### Dicts
 
-Dicts can only have string keys.
-
-#### Map/Filter/Reduce
-
-Map/filter/reduce aren't defined.
+Dicts can only have string keys. You can do `mydict[str(myint)] = myvalue` then access it the same way for every case. It's just a minor annoyance.

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"os"
 	"runtime"
@@ -52,27 +51,9 @@ type script struct {
 	bankOptionMenuTimeout time.Time
 }
 
-type longPath struct {
-	points    []*point
-	currentPt int
-	c         *client
-}
-
-func (s *script) load(c *client) error {
+func (c *client) loadScript() error {
+	s := c.script
 	s.c = c
-
-	var addGlobalsToSubmodules func(module *py.Module)
-	addGlobalsToSubmodules = func(module *py.Module) {
-		for _, v := range module.Globals {
-			switch v := v.(type) {
-			case *py.Module:
-				if v.ModuleImpl.Info.FileDesc != "" {
-					s.addGlobals(v, c)
-					addGlobalsToSubmodules(v)
-				}
-			}
-		}
-	}
 
 	if !s.loaded {
 		f, err := os.Open(s.path)
@@ -80,7 +61,7 @@ func (s *script) load(c *client) error {
 			return err
 		}
 		defer f.Close()
-		str, err := io.ReadAll(f)
+		raw, err := io.ReadAll(f)
 		if err != nil {
 			return err
 		}
@@ -90,27 +71,22 @@ func (s *script) load(c *client) error {
 		opts.SysPaths = append(opts.SysPaths, s.pathDir)
 
 		ctx := py.NewContext(opts)
+
 		modImpl := &py.ModuleImpl{
-			CodeSrc: string(str),
+			CodeSrc: string(raw),
 			Globals: py.NewStringDict(),
 		}
+
 		s.addPreGlobals(modImpl)
+
 		module, err := ctx.ModuleInit(modImpl)
 		if err != nil {
-			fmt.Printf("[BOT] Script compile error: %s\n", err)
-			os.Exit(1)
+			return fmt.Errorf("script compile error: %s", err)
 		}
 
 		s.module = module
 
-		addGlobalsToSubmodules(module)
-		s.addGlobals(module, c)
-
-		_, err = ctx.RunCode(module.ModuleImpl.Code, module.Globals, module.Globals, nil)
-		if err != nil {
-			py.TracebackDump(err)
-			log.Fatal(err)
-		}
+		s.addGlobalsToAll(module)
 
 		if loopFn, ok := module.Globals["loop"]; !ok {
 			return fmt.Errorf("loop function not found")
@@ -123,8 +99,7 @@ func (s *script) load(c *client) error {
 		s.loaded = true
 		s.running = true
 	} else {
-		addGlobalsToSubmodules(s.module)
-		s.addGlobals(s.module, c)
+		s.addGlobalsToAll(s.module)
 	}
 
 	return nil
@@ -135,17 +110,13 @@ func (s *script) callOnProgressReport() {
 		res, err := s.onProgressReport.M__call__(nil, nil)
 		if err != nil {
 			py.TracebackDump(err)
-			fmt.Printf("[%s] Error in on_progress_report handler, stopping script: %s\n", s.c.user, err)
-			s.c.account.autologin = false
-			s.running = false
-			return
+			fmt.Printf("[%s] Error in on_progress_report handler: %s\n", s.c.user, err)
+			os.Exit(1)
 		}
 		dict, ok := res.(py.StringDict)
 		if !ok {
-			fmt.Printf("[%s] on_progress_report should return a string dict, stopping script: %s\n", s.c.user, err)
-			s.c.account.autologin = false
-			s.running = false
-			return
+			fmt.Printf("[%s] on_progress_report should return a string dict\n", s.c.user)
+			os.Exit(1)
 		}
 		table := tablewriter.NewWriter(s.c.account.progressFile)
 		if runtime.GOOS == "windows" {
@@ -177,9 +148,8 @@ func (s *script) callOnServerMessage(message string) {
 	_, err := s.onServerMessage.M__call__(py.Tuple([]py.Object{py.String(message)}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onServerMessage handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_server_message handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -187,9 +157,8 @@ func (s *script) callOnTradeRequest(name string) {
 	_, err := s.onTradeRequest.M__call__(py.Tuple([]py.Object{py.String(name)}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onTradeRequest handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_trade_request handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -197,9 +166,8 @@ func (s *script) callOnChatMessage(message, from string) {
 	_, err := s.onChatMessage.M__call__(py.Tuple([]py.Object{py.String(message), py.String(from)}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onChatMessage handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_chat_message handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -207,9 +175,8 @@ func (s *script) callOnPrivateMessage(message, from string) {
 	_, err := s.onPrivateMessage.M__call__(py.Tuple([]py.Object{py.String(message), py.String(from)}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onPrivateMessage handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_private_message handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -217,9 +184,8 @@ func (s *script) callOnPlayerDamaged(damage int, p *player) {
 	_, err := s.onPlayerDamaged.M__call__(py.Tuple([]py.Object{py.Int(damage), p}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onPlayerDamaged handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_player_damaged handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -227,9 +193,8 @@ func (s *script) callOnNPCDamaged(damage int, n *npc) {
 	_, err := s.onNPCDamaged.M__call__(py.Tuple([]py.Object{py.Int(damage), n}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onNPCDamaged handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_npc_damaged handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -237,9 +202,8 @@ func (s *script) callOnNPCSpawned(n *npc) {
 	_, err := s.onNPCSpawned.M__call__(py.Tuple([]py.Object{n}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onNPCSpawned handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_npc_spawned handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -247,9 +211,8 @@ func (s *script) callOnNPCDespawned(n *npc) {
 	_, err := s.onNPCDespawned.M__call__(py.Tuple([]py.Object{n}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onNPCDespawned handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_npc_despawned handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -257,9 +220,8 @@ func (s *script) callOnNPCProjectile(projectileType int, n *npc, p *player) {
 	_, err := s.onNPCProjectile.M__call__(py.Tuple([]py.Object{py.Int(projectileType), n, p}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onNPCProjectile handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_npc_projectile handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -267,9 +229,8 @@ func (s *script) callOnNPCMessage(message string, n *npc, p *player) {
 	_, err := s.onNPCMessage.M__call__(py.Tuple([]py.Object{py.String(message), n, p}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onNPCMessage handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_npc_message handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -277,9 +238,8 @@ func (s *script) callOnDeath() {
 	_, err := s.onDeath.M__call__(nil, nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onDeath handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_death handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -287,9 +247,8 @@ func (s *script) callOnGroundItemSpawned(g *groundItem) {
 	_, err := s.onGroundItemSpawned.M__call__(py.Tuple([]py.Object{g}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onGroundItemSpawned handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_ground_item_spawned handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -297,9 +256,8 @@ func (s *script) callOnGroundItemDespawned(g *groundItem) {
 	_, err := s.onGroundItemDespawned.M__call__(py.Tuple([]py.Object{g}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onGroundItemDespawned handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_ground_item_despawned handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -307,9 +265,8 @@ func (s *script) callOnObjectSpawned(o *object) {
 	_, err := s.onObjectSpawned.M__call__(py.Tuple([]py.Object{o}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onObjectSpawned handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_object_spawned handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -317,9 +274,8 @@ func (s *script) callOnObjectDespawned(o *object) {
 	_, err := s.onObjectDespawned.M__call__(py.Tuple([]py.Object{o}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onObjectDespawned handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_object_despawned handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -327,9 +283,8 @@ func (s *script) callOnWallObjectSpawned(o *wallObject) {
 	_, err := s.onWallObjectSpawned.M__call__(py.Tuple([]py.Object{o}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onWallObjectSpawned handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_wall_object_spawned handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -337,9 +292,8 @@ func (s *script) callOnWallObjectDespawned(o *wallObject) {
 	_, err := s.onWallObjectDespawned.M__call__(py.Tuple([]py.Object{o}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onWallObjectDespawned handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_wall_object_despawned handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -347,9 +301,8 @@ func (s *script) callOnKillSignal() {
 	_, err := s.onKillSignal.M__call__(nil, nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onKillSignal handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_kill_signal handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -567,7 +520,6 @@ func (s *script) loop() int {
 		py.TracebackDump(err)
 		fmt.Printf("[%s] Script loop error[%s]: %s\n", s.c.user, s.path, err.Error())
 		os.Exit(1)
-		return 500
 	}
 	res0, ok := res.(py.Int)
 	if !ok {
@@ -651,6 +603,18 @@ func (s *script) addPreGlobals(module *py.ModuleImpl) {
 	module.Globals["BANKERS"] = py.NewListFromItems(bankers)
 }
 
+func (s *script) addGlobalsToAll(module *py.Module) {
+	for _, v := range module.Globals {
+		switch v := v.(type) {
+		case *py.Module:
+			if v.ModuleImpl.Info.FileDesc != "" {
+				s.addGlobalsToAll(v)
+			}
+		}
+	}
+	s.addGlobals(module, s.c)
+}
+
 func (s *script) addGlobals(module *py.Module, c *client) {
 	// readd preglobals so that submodules can access them
 	module.Globals["settings"] = &py.Type{
@@ -707,6 +671,15 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		width := int(args[2].(py.Int))
 		height := int(args[3].(py.Int))
 		return py.Bool(c.inRect(x, z, width, height)), nil
+	}, py.METH_STATIC, "")
+	module.Globals["point_in_rect"] = py.MustNewMethod("point_in_rect", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		x1 := int(args[0].(py.Int))
+		z1 := int(args[1].(py.Int))
+		x2 := int(args[2].(py.Int))
+		z2 := int(args[3].(py.Int))
+		width := int(args[4].(py.Int))
+		height := int(args[5].(py.Int))
+		return py.Bool(inRect(x1, z1, x2, z2, width, height)), nil
 	}, py.METH_STATIC, "")
 	module.Globals["open_bank"] = py.MustNewMethod("open_bank", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		if c.optionMenuVisible {

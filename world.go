@@ -83,32 +83,32 @@ func withinWorld(x, y int) bool {
 	return x >= 0 && x < maxWorldWidth && y >= 0 && y < maxWorldHeight
 }
 
-func newWorld() (z *world) {
-	z = &world{
+func newWorld() *world {
+	w := &world{
 		regions:       map[int16]map[int16]*region{},
 		pathWalkerMap: map[int32]struct{}{},
 	}
-	return
+	return w
 }
 
-func (z *world) getRegion(x int, y int) *region {
+func (w *world) getRegion(x int, y int) *region {
 	regionX := int16(x / 48)
 	regionY := int16(y / 48)
 
-	if _, ok := z.regions[regionX]; !ok {
-		z.regions[regionX] = map[int16]*region{}
+	if _, ok := w.regions[regionX]; !ok {
+		w.regions[regionX] = map[int16]*region{}
 	}
-	if _, ok := z.regions[regionX][regionY]; !ok {
-		z.regions[regionX][regionY] = newRegion(regionX, regionY)
+	if _, ok := w.regions[regionX][regionY]; !ok {
+		w.regions[regionX][regionY] = newRegion(regionX, regionY)
 	}
-	return z.regions[regionX][regionY]
+	return w.regions[regionX][regionY]
 }
 
-func (z *world) getTile(x int, y int) int32 {
+func (w *world) getTile(x int, y int) int32 {
 	if !withinWorld(x, y) {
 		return math.MaxInt32
 	}
-	r := z.getRegion(x, y)
+	r := w.getRegion(x, y)
 	if r.tile != math.MaxInt32 {
 		return r.tile
 	}
@@ -155,7 +155,7 @@ func fileToBuffer(r io.ReadCloser) *bytes.Buffer {
 	return buf
 }
 
-func (z *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, height int, bigX int, bigY int) bool {
+func (w *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, height int, bigX int, bigY int) bool {
 	s := (*sector)(nil)
 
 	filename := fmt.Sprintf("h%dx%dy%d", height, sectionX, sectionY)
@@ -182,31 +182,31 @@ func (z *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, 
 			}
 			groundOverlay := sectorTile.groundOverlay
 			if groundOverlay > 0 && tileDefs[groundOverlay-1].ObjectType != 0 {
-				z.getRegion(bx, by).tiles[bx%48][by%48] |= 0x40
+				w.getRegion(bx, by).tiles[bx%48][by%48] |= 0x40
 			}
 			verticalWall := int(sectorTile.verticalWall)
 			if verticalWall > 0 && doorDefs[verticalWall-1].Unknown == 0 && doorDefs[verticalWall-1].DoorType != 0 {
-				z.getRegion(bx, by).tiles[bx%48][by%48] |= 1       // 1
-				z.getRegion(bx, by-1).tiles[bx%48][(by-1)%48] |= 4 // 4
+				w.getRegion(bx, by).tiles[bx%48][by%48] |= 1       // 1
+				w.getRegion(bx, by-1).tiles[bx%48][(by-1)%48] |= 4 // 4
 			}
 			horizontalWall := int(sectorTile.horizontalWall)
 			if horizontalWall > 0 && doorDefs[horizontalWall-1].Unknown == 0 && doorDefs[horizontalWall-1].DoorType != 0 {
-				z.getRegion(bx, by).tiles[bx%48][by%48] |= 2
-				z.getRegion(bx-1, by).tiles[(bx-1)%48][by%48] |= 8 // 8
+				w.getRegion(bx, by).tiles[bx%48][by%48] |= 2
+				w.getRegion(bx-1, by).tiles[(bx-1)%48][by%48] |= 8 // 8
 			}
 			diagonalWalls := int(sectorTile.diagonalWalls)
 			if diagonalWalls > 0 && diagonalWalls < 12000 && doorDefs[diagonalWalls-1].Unknown == 0 && doorDefs[diagonalWalls-1].DoorType != 0 {
-				z.getRegion(bx, by).tiles[bx%48][by%48] |= 0x20
+				w.getRegion(bx, by).tiles[bx%48][by%48] |= 0x20
 			}
 			if diagonalWalls > 12000 && diagonalWalls < 24000 && doorDefs[diagonalWalls-12001].Unknown == 0 && doorDefs[diagonalWalls-12001].DoorType != 0 {
-				z.getRegion(bx, by).tiles[bx%48][by%48] |= 0x10
+				w.getRegion(bx, by).tiles[bx%48][by%48] |= 0x10
 			}
 		}
 	}
 	return true
 }
 
-func (z *world) loadWorld() {
+func (w *world) loadWorld() {
 	archiveFile := settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.Landscape
 	tileArchive, err := zip.OpenReader(archiveFile)
 	if err != nil {
@@ -223,7 +223,7 @@ func (z *world) loadWorld() {
 			for sy := 0; sy < 944; sy += 48 {
 				x := (sx + wildX) / 48
 				y := (sy + lvl*944 + wildY) / 48
-				if z.loadSection(tileArchive, x, y, lvl, sx, sy+944*lvl) {
+				if w.loadSection(tileArchive, x, y, lvl, sx, sy+944*lvl) {
 					sectors++
 				}
 			}
@@ -233,7 +233,7 @@ func (z *world) loadWorld() {
 	for lvl := 0; lvl < 4; lvl++ {
 		for sx := 0; sx < 20; sx++ {
 			for sy := 0; sy < 20; sy++ {
-				region := z.getRegion(sx*48, sy*48+(48*20*lvl))
+				region := w.getRegion(sx*48, sy*48+(48*20*lvl))
 				region.checkRedundantRegion()
 			}
 		}
@@ -254,7 +254,7 @@ func (z *world) loadWorld() {
 	}
 
 	for _, v := range sceneries.Sceneries {
-		z.setUnwalkableTiles(v)
+		w.setUnwalkableTiles(v)
 	}
 }
 
@@ -471,19 +471,19 @@ func newLocalWorld() *localWorld {
 	}
 }
 
-func (c *localWorld) setTileAnd(x, z int, traversalMask int32) {
+func (l *localWorld) setTileAnd(x, z int, traversalMask int32) {
 	xz := (int32(x) << 16) | int32(z)
-	c.tiles[xz] = c.tiles[xz] & traversalMask
+	l.tiles[xz] = l.tiles[xz] & traversalMask
 }
 
-func (c *localWorld) setTileOr(x, z int, traversalMask int32) {
+func (l *localWorld) setTileOr(x, z int, traversalMask int32) {
 	xz := (int32(x) << 16) | int32(z)
-	c.tiles[xz] = c.tiles[xz] | traversalMask
+	l.tiles[xz] = l.tiles[xz] | traversalMask
 }
 
-func (c *localWorld) getTileTraversalMask(x, z int) int32 {
+func (l *localWorld) getTileTraversalMask(x, z int) int32 {
 	xz := (int32(x) << 16) | int32(z)
-	return c.tiles[xz]
+	return l.tiles[xz]
 }
 
 func (c *client) findPath(startX int, startZ int, xLow int, xHigh int, zLow int, zHigh int, reachBorder bool) int {

@@ -34,7 +34,7 @@ type ocrSettings struct {
 	OcrType     string `toml:"ocr_type"`
 	OcrEndpoint string `toml:"ocr_endpoint"`
 	Directory   string `toml:"directory"`
-	OcrPath     string `toml:"ocr_path"`
+	OcrFileName string `toml:"ocr_filename"`
 }
 
 type dataSettings struct {

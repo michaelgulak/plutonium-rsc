@@ -313,6 +313,7 @@ func main() {
 		acctFile   string
 		autologin  bool
 		version    bool
+		help       bool
 		closing    = make(chan struct{})
 		sigs       = make(chan os.Signal, 1)
 	)
@@ -334,10 +335,17 @@ func main() {
 	flag.StringVar(&configPath, "c", "settings.toml", "Config file path")
 	flag.BoolVar(&autologin, "l", false, "Autologin flag")
 	flag.BoolVar(&version, "v", false, "Version flag")
+	flag.BoolVar(&help, "h", false, "Help")
 	flag.Parse()
 
 	if version {
 		fmt.Printf("Plutonium v%s\n", botVersion)
+		os.Exit(0)
+	}
+
+	if help {
+		fmt.Printf("Plutonium v%s command line arguments:\n\n", botVersion)
+		flag.PrintDefaults()
 		os.Exit(0)
 	}
 
@@ -354,6 +362,17 @@ func main() {
 	if regFile != "" {
 		doAccountCreations(closing, regFile)
 		return
+	}
+
+	if settings.OcrSettings.OcrType == "local" {
+		_, err := os.Stat(settings.executablePath + string(os.PathSeparator) + settings.OcrSettings.OcrFileName)
+		if os.IsNotExist(err) {
+			fmt.Printf("[BOT] OCR not found: %s\n", err)
+			os.Exit(1)
+		} else if err != nil {
+			fmt.Printf("[BOT] OCR Error: %s\n", err)
+			os.Exit(1)
+		}
 	}
 
 	fmt.Printf("[BOT] Loading definitions...")
@@ -463,9 +482,9 @@ func main() {
 
 				if acc.script != nil {
 					c.script = acc.script
-					if err := c.script.load(c); err != nil {
+					if err := c.loadScript(); err != nil {
 						fmt.Printf("[%s] Script load error [%s]: %s\n", c.user, c.script.path, err)
-						break clientLoop
+						os.Exit(1)
 					}
 				}
 
@@ -494,10 +513,12 @@ func main() {
 						continue clientLoop
 					case 3:
 						fmt.Printf("[%s] Invalid username or password\n", c.user)
-						break clientLoop
+						time.Sleep(time.Second * 5)
+						continue clientLoop
 					case 5:
 						fmt.Printf("[%s] The client has been updated\n", c.user)
-						break clientLoop
+						time.Sleep(time.Second * 5)
+						continue clientLoop
 					case 6:
 						fmt.Printf("[%s] You may only use 1 character at once, waiting 5-7 minutes\n", c.user)
 						select {
@@ -995,7 +1016,7 @@ func (c *client) doCaptcha(buf []byte) {
 			os.Remove(path)
 			return
 		}
-		cmd := exec.Command(settings.OcrSettings.OcrPath, path)
+		cmd := exec.Command(settings.executablePath+string(os.PathSeparator)+settings.OcrSettings.OcrFileName, path)
 		bs, err := cmd.CombinedOutput()
 		if err != nil {
 			fmt.Printf("[%s] Error getting sleepword from external ocr: %s\n", c.user, err)
@@ -2284,9 +2305,9 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			c.ignoreList[i].arg1 = p.readString()
 			c.ignoreList[i].old = p.readString()
 		}
-	case 183: // Can't logout response packet
+	case 183: // can't logout response packet
 		if c.account.debug {
-			fmt.Printf("[%s] Got a CANT_LOGOUT server response\n", c.user)
+			fmt.Printf("[%s] Logout Request: Cannot logout\n", c.user)
 		}
 	case 5: // quest stage info
 		updateQuestType := p.readByte()
