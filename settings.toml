@@ -2,9 +2,7 @@
 address = "game.openrsc.com:43235"
 
 [ocr]
-directory = "sleepwords"
-ocr_type = "local"
-ocr_path = "./focr"
+ocr_type = "hash"
 
 [data]
 directory    = "data"
@@ -14,6 +12,7 @@ scenery_locs = "SceneryLocs.json"
 tile_defs    = "TileDefs.json"
 door_defs    = "DoorDefs.json"
 object_defs  = "ObjectDefs.json"
+word_hashes  = "Words.json"
 
 [accounts]
 directory = "accounts"

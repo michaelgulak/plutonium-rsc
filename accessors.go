@@ -141,11 +141,11 @@ func (c *client) isObjectReachable(o *object) bool {
 	)
 	def := objectDefs[o.id]
 	if o.dir != 0 && o.dir != 4 {
-		objWidth = def.Height
-		objHeight = def.Width
+		objWidth = int(def.Height)
+		objHeight = int(def.Width)
 	} else {
-		objHeight = def.Height
-		objWidth = def.Width
+		objHeight = int(def.Height)
+		objWidth = int(def.Width)
 	}
 	destX := o.x
 	destZ := o.z

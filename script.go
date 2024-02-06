@@ -4,28 +4,22 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"math/rand"
 	"os"
 	"runtime"
 	"sort"
 	"strings"
-	"sync"
 	"time"
 
-	_ "github.com/go-python/gpython/builtin"
 	"github.com/olekukonko/tablewriter"
 
-	"github.com/go-python/gpython/compile"
-	_ "github.com/go-python/gpython/math"
 	"github.com/go-python/gpython/py"
-	pysys "github.com/go-python/gpython/sys"
-	_ "github.com/go-python/gpython/time"
-	"github.com/go-python/gpython/vm"
+	_ "github.com/go-python/gpython/stdlib"
 )
 
 type script struct {
-	name            string
+	path            string
+	pathDir         string
 	running         bool
 	c               *client
 	settings        py.StringDict
@@ -57,52 +51,44 @@ type script struct {
 	bankOptionMenuTimeout time.Time
 }
 
-type longPath struct {
-	points    []*point
-	currentPt int
-	c         *client
-}
-
-func init() {
-	args := []string{"script.py"}
-	py.MustGetModule("sys").Globals["argv"] = pysys.MakeArgv(args)
-}
-
-func (s *script) load(loadScriptLock *sync.Mutex, c *client) error {
-	loadScriptLock.Lock()
-	defer loadScriptLock.Unlock()
-
+func (c *client) loadScript() error {
+	s := c.script
 	s.c = c
 
 	if !s.loaded {
-		f, err := os.Open(s.name)
+		f, err := os.Open(s.path)
 		if err != nil {
 			return err
 		}
 		defer f.Close()
-		var obj py.Object
-		str, err := io.ReadAll(f)
-		if err != nil {
-			return err
-		}
-		obj, err = compile.Compile(string(str), s.name, "exec", 0, true)
+		raw, err := io.ReadAll(f)
 		if err != nil {
 			return err
 		}
 
-		code := obj.(*py.Code)
-		s.module = py.NewModule(c.user, "", nil, nil)
-		s.module.Globals["__file__"] = py.String(s.name)
+		opts := py.DefaultContextOpts()
 
-		s.addGlobals(s.module, c)
+		opts.SysPaths = append(opts.SysPaths, s.pathDir)
 
-		_, err = vm.Run(s.module.Globals, s.module.Globals, code, nil)
-		if err != nil {
-			py.TracebackDump(err)
-			log.Fatal(err)
+		ctx := py.NewContext(opts)
+
+		modImpl := &py.ModuleImpl{
+			CodeSrc: string(raw),
+			Globals: py.NewStringDict(),
 		}
 
-		if loopFn, ok := s.module.Globals["loop"]; !ok {
+		s.addPreGlobals(modImpl)
+
+		module, err := ctx.ModuleInit(modImpl)
+		if err != nil {
+			return fmt.Errorf("script compile error: %s", err)
+		}
+
+		s.module = module
+
+		s.addGlobalsToAll(module)
+
+		if loopFn, ok := module.Globals["loop"]; !ok {
 			return fmt.Errorf("loop function not found")
 		} else {
 			s.loopFn = loopFn.(*py.Function)
@@ -113,7 +99,7 @@ func (s *script) load(loadScriptLock *sync.Mutex, c *client) error {
 		s.loaded = true
 		s.running = true
 	} else {
-		s.addGlobals(s.module, c)
+		s.addGlobalsToAll(s.module)
 	}
 
 	return nil
@@ -124,17 +110,13 @@ func (s *script) callOnProgressReport() {
 		res, err := s.onProgressReport.M__call__(nil, nil)
 		if err != nil {
 			py.TracebackDump(err)
-			fmt.Printf("[%s] Error in on_progress_report handler, stopping script: %s\n", s.c.user, err)
-			s.c.account.autologin = false
-			s.running = false
-			return
+			fmt.Printf("[%s] Error in on_progress_report handler: %s\n", s.c.user, err)
+			os.Exit(1)
 		}
 		dict, ok := res.(py.StringDict)
 		if !ok {
-			fmt.Printf("[%s] on_progress_report should return a string dict, stopping script: %s\n", s.c.user, err)
-			s.c.account.autologin = false
-			s.running = false
-			return
+			fmt.Printf("[%s] on_progress_report should return a string dict\n", s.c.user)
+			os.Exit(1)
 		}
 		table := tablewriter.NewWriter(s.c.account.progressFile)
 		if runtime.GOOS == "windows" {
@@ -166,9 +148,8 @@ func (s *script) callOnServerMessage(message string) {
 	_, err := s.onServerMessage.M__call__(py.Tuple([]py.Object{py.String(message)}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onServerMessage handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_server_message handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -176,9 +157,8 @@ func (s *script) callOnTradeRequest(name string) {
 	_, err := s.onTradeRequest.M__call__(py.Tuple([]py.Object{py.String(name)}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onTradeRequest handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_trade_request handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -186,9 +166,8 @@ func (s *script) callOnChatMessage(message, from string) {
 	_, err := s.onChatMessage.M__call__(py.Tuple([]py.Object{py.String(message), py.String(from)}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onChatMessage handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_chat_message handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -196,9 +175,8 @@ func (s *script) callOnPrivateMessage(message, from string) {
 	_, err := s.onPrivateMessage.M__call__(py.Tuple([]py.Object{py.String(message), py.String(from)}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onPrivateMessage handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_private_message handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -206,9 +184,8 @@ func (s *script) callOnPlayerDamaged(damage int, p *player) {
 	_, err := s.onPlayerDamaged.M__call__(py.Tuple([]py.Object{py.Int(damage), p}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onPlayerDamaged handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_player_damaged handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -216,9 +193,8 @@ func (s *script) callOnNPCDamaged(damage int, n *npc) {
 	_, err := s.onNPCDamaged.M__call__(py.Tuple([]py.Object{py.Int(damage), n}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onNPCDamaged handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_npc_damaged handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -226,9 +202,8 @@ func (s *script) callOnNPCSpawned(n *npc) {
 	_, err := s.onNPCSpawned.M__call__(py.Tuple([]py.Object{n}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onNPCSpawned handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_npc_spawned handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -236,9 +211,8 @@ func (s *script) callOnNPCDespawned(n *npc) {
 	_, err := s.onNPCDespawned.M__call__(py.Tuple([]py.Object{n}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onNPCDespawned handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_npc_despawned handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -246,9 +220,8 @@ func (s *script) callOnNPCProjectile(projectileType int, n *npc, p *player) {
 	_, err := s.onNPCProjectile.M__call__(py.Tuple([]py.Object{py.Int(projectileType), n, p}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onNPCProjectile handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_npc_projectile handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -256,9 +229,8 @@ func (s *script) callOnNPCMessage(message string, n *npc, p *player) {
 	_, err := s.onNPCMessage.M__call__(py.Tuple([]py.Object{py.String(message), n, p}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onNPCMessage handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_npc_message handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -266,9 +238,8 @@ func (s *script) callOnDeath() {
 	_, err := s.onDeath.M__call__(nil, nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onDeath handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_death handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -276,9 +247,8 @@ func (s *script) callOnGroundItemSpawned(g *groundItem) {
 	_, err := s.onGroundItemSpawned.M__call__(py.Tuple([]py.Object{g}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onGroundItemSpawned handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_ground_item_spawned handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -286,9 +256,8 @@ func (s *script) callOnGroundItemDespawned(g *groundItem) {
 	_, err := s.onGroundItemDespawned.M__call__(py.Tuple([]py.Object{g}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onGroundItemDespawned handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_ground_item_despawned handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -296,9 +265,8 @@ func (s *script) callOnObjectSpawned(o *object) {
 	_, err := s.onObjectSpawned.M__call__(py.Tuple([]py.Object{o}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onObjectSpawned handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_object_spawned handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -306,9 +274,8 @@ func (s *script) callOnObjectDespawned(o *object) {
 	_, err := s.onObjectDespawned.M__call__(py.Tuple([]py.Object{o}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onObjectDespawned handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_object_despawned handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -316,9 +283,8 @@ func (s *script) callOnWallObjectSpawned(o *wallObject) {
 	_, err := s.onWallObjectSpawned.M__call__(py.Tuple([]py.Object{o}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onWallObjectSpawned handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_wall_object_spawned handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -326,9 +292,8 @@ func (s *script) callOnWallObjectDespawned(o *wallObject) {
 	_, err := s.onWallObjectDespawned.M__call__(py.Tuple([]py.Object{o}), nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onWallObjectDespawned handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_wall_object_despawned handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -336,9 +301,8 @@ func (s *script) callOnKillSignal() {
 	_, err := s.onKillSignal.M__call__(nil, nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in onKillSignal handler, stopping script: %s\n", s.c.user, err)
-		s.c.account.autologin = false
-		s.running = false
+		fmt.Printf("[%s] Error in on_kill_signal handler: %s\n", s.c.user, err)
+		os.Exit(1)
 	}
 }
 
@@ -554,16 +518,13 @@ func (s *script) loop() int {
 	res, err := s.loopFn.M__call__(nil, nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Script loop error[%s]: %s\n", s.c.user, s.name, err.Error())
-		s.running = false
-		s.c.account.autologin = false
-		return 500
+		fmt.Printf("[%s] Script loop error[%s]: %s\n", s.c.user, s.path, err.Error())
+		os.Exit(1)
 	}
 	res0, ok := res.(py.Int)
 	if !ok {
-		s.running = false
-		s.c.account.autologin = false
-		fmt.Printf("[%s] Script [%s] did not return a sleep time, stopping\n", s.c.user, s.name)
+		fmt.Printf("[%s] Script [%s] did not return a sleep time\n", s.c.user, s.path)
+		os.Exit(1)
 	}
 	return int(res0)
 }
@@ -628,22 +589,51 @@ func (s *script) addHooks(module *py.Module, c *client) {
 	}
 }
 
-func (s *script) addGlobals(module *py.Module, c *client) {
+func (s *script) addPreGlobals(module *py.ModuleImpl) {
 	module.Globals["settings"] = &py.Type{
 		ObjectType: py.ObjectType,
 		Name:       "settings",
 		Dict:       s.settings,
 	}
-	module.Globals["stop_account"] = py.MustNewMethod("stop_account", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-		c.scriptKillSignal <- struct{}{}
-		return py.None, nil
-	}, py.METH_STATIC, "")
 	module.Globals["SLEEPING_BAG"] = py.Int(1263)
 	bankers := make([]py.Object, len(bankersID))
 	for i := 0; i < len(bankers); i++ {
 		bankers[i] = py.Int(bankersID[i])
 	}
 	module.Globals["BANKERS"] = py.NewListFromItems(bankers)
+}
+
+func (s *script) addGlobalsToAll(module *py.Module) {
+	for _, v := range module.Globals {
+		switch v := v.(type) {
+		case *py.Module:
+			if v.ModuleImpl.Info.FileDesc != "" {
+				s.addGlobalsToAll(v)
+			}
+		}
+	}
+	s.addGlobals(module, s.c)
+}
+
+func (s *script) addGlobals(module *py.Module, c *client) {
+	// readd preglobals so that submodules can access them
+	module.Globals["settings"] = &py.Type{
+		ObjectType: py.ObjectType,
+		Name:       "settings",
+		Dict:       s.settings,
+	}
+	module.Globals["SLEEPING_BAG"] = py.Int(1263)
+	bankers := make([]py.Object, len(bankersID))
+	for i := 0; i < len(bankers); i++ {
+		bankers[i] = py.Int(bankersID[i])
+	}
+	module.Globals["BANKERS"] = py.NewListFromItems(bankers)
+
+	// general
+	module.Globals["stop_account"] = py.MustNewMethod("stop_account", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		c.scriptKillSignal <- struct{}{}
+		return py.None, nil
+	}, py.METH_STATIC, "")
 	module.Globals["create_packet"] = py.MustNewMethod("create_packet", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.createPacket(byte(args[0].(py.Int)))
 		return py.None, nil
@@ -681,6 +671,15 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		width := int(args[2].(py.Int))
 		height := int(args[3].(py.Int))
 		return py.Bool(c.inRect(x, z, width, height)), nil
+	}, py.METH_STATIC, "")
+	module.Globals["point_in_rect"] = py.MustNewMethod("point_in_rect", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		x1 := int(args[0].(py.Int))
+		z1 := int(args[1].(py.Int))
+		x2 := int(args[2].(py.Int))
+		z2 := int(args[3].(py.Int))
+		width := int(args[4].(py.Int))
+		height := int(args[5].(py.Int))
+		return py.Bool(inRect(x1, z1, x2, z2, width, height)), nil
 	}, py.METH_STATIC, "")
 	module.Globals["open_bank"] = py.MustNewMethod("open_bank", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		if c.optionMenuVisible {
@@ -1210,9 +1209,17 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		c.useInventoryItemOnPlayer(args[0].(*item), args[1].(*player))
 		return py.None, nil
 	}, py.METH_STATIC, "")
+	module.Globals["get_inventory_item_at_index"] = py.MustNewMethod("get_inventory_item_at_index", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return c.inventory[args[0].(py.Int)], nil
+	}, py.METH_STATIC, "")
 
 	// npcs
-
+	module.Globals["get_npc_count"] = py.MustNewMethod("get_npc_count", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return py.Int(c.npcCount), nil
+	}, py.METH_STATIC, "")
+	module.Globals["get_npc_at_index"] = py.MustNewMethod("get_npc_at_index", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return c.npcs[args[0].(py.Int)], nil
+	}, py.METH_STATIC, "")
 	module.Globals["get_npcs"] = py.MustNewMethod("get_npcs", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		objs := make([]py.Object, c.npcCount)
 		for i := 0; i < c.npcCount; i++ {
@@ -1453,6 +1460,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	}, py.METH_STATIC, "")
 	module.Globals["get_player_count"] = py.MustNewMethod("get_player_count", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.playerCount), nil
+	}, py.METH_STATIC, "")
+	module.Globals["get_player_at_index"] = py.MustNewMethod("get_player_at_index", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return c.players[args[0].(py.Int)], nil
 	}, py.METH_STATIC, "")
 	module.Globals["get_player_by_name"] = py.MustNewMethod("get_player_by_name", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		player := c.getPlayerByName(string(args[0].(py.String)))
@@ -1751,6 +1761,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["get_object_count"] = py.MustNewMethod("get_object_count", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.objectCount), nil
 	}, py.METH_STATIC, "")
+	module.Globals["get_object_at_index"] = py.MustNewMethod("get_object_at_index", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return c.objects[args[0].(py.Int)], nil
+	}, py.METH_STATIC, "")
 	module.Globals["get_object_from_coords"] = py.MustNewMethod("get_object_from_coords", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		obj := c.getObjectFromCoords(int(args[0].(py.Int)), int(args[1].(py.Int)))
 		if obj == nil {
@@ -1923,6 +1936,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["get_wall_object_count"] = py.MustNewMethod("get_wall_object_count", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.wallObjectCount), nil
 	}, py.METH_STATIC, "")
+	module.Globals["get_wall_object_at_index"] = py.MustNewMethod("get_wall_object_at_index", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return c.wallObjects[args[0].(py.Int)], nil
+	}, py.METH_STATIC, "")
 	module.Globals["get_wall_object_from_coords"] = py.MustNewMethod("get_wall_object_from_coords", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		obj := c.getWallObjectFromCoords(int(args[0].(py.Int)), int(args[1].(py.Int)))
 		if obj == nil {
@@ -1987,6 +2003,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["get_bank_size"] = py.MustNewMethod("get_bank_size", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.bankItemCount), nil
 	}, py.METH_STATIC, "")
+	module.Globals["get_bank_item_at_index"] = py.MustNewMethod("get_bank_item_at_index", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return c.bankItems[args[0].(py.Int)], nil
+	}, py.METH_STATIC, "")
 	module.Globals["has_bank_item"] = py.MustNewMethod("has_bank_item", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.hasBankItem(int(args[0].(py.Int)))), nil
 	}, py.METH_STATIC, "")
@@ -2018,6 +2037,12 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 			objs[i] = c.shopItems[i]
 		}
 		return py.NewListFromItems(objs), nil
+	}, py.METH_STATIC, "")
+	module.Globals["get_shop_item_count"] = py.MustNewMethod("get_shop_item_count", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return py.Int(c.shopItemCount), nil
+	}, py.METH_STATIC, "")
+	module.Globals["get_shop_item_at_index"] = py.MustNewMethod("get_shop_item_at_index", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return c.shopItems[args[0].(py.Int)], nil
 	}, py.METH_STATIC, "")
 	module.Globals["is_shop_open"] = py.MustNewMethod("is_shop_open", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.shopping), nil

@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 func (c *client) walkToEntity(x1, z1, x2, z2 int, border bool) bool {
 	return c.walkTo(x1, z1, x2, z2, true, border)
@@ -23,11 +25,11 @@ func (c *client) walkToObject(o *object) bool {
 	)
 	def := objectDefs[o.id]
 	if o.dir != 0 && o.dir != 4 {
-		objWidth = def.Height
-		objHeight = def.Width
+		objWidth = int(def.Height)
+		objHeight = int(def.Width)
 	} else {
-		objHeight = def.Height
-		objWidth = def.Width
+		objHeight = int(def.Height)
+		objWidth = int(def.Width)
 	}
 	destX := o.x
 	destZ := o.z
@@ -81,16 +83,16 @@ func (c *client) walkTo(xLow, zLow, xHigh, zHigh int, entity, border bool) bool 
 			return false
 		}
 		l = 1
-		px[0] = xLow
-		pz[0] = zLow
+		px[0] = int16(xLow)
+		pz[0] = int16(zLow)
 		if c.account.debug {
 			fmt.Printf("[%s] Path length was -1 in walk to entity (%d,%d)\n", c.user, xLow, zLow)
 		}
 	}
 
 	count := l - 1
-	startX := px[count]
-	startZ := pz[count]
+	startX := int(px[count])
+	startZ := int(pz[count])
 	count--
 
 	if entity {
@@ -107,8 +109,8 @@ func (c *client) walkTo(xLow, zLow, xHigh, zHigh int, entity, border bool) bool 
 	}
 
 	for i := count; i >= 0 && i > count-25; i-- {
-		c.writeByte(byte(px[i] - startX))
-		c.writeByte(byte(pz[i] - startZ))
+		c.writeByte(byte(int(px[i]) - startX))
+		c.writeByte(byte(int(pz[i]) - startZ))
 	}
 
 	c.sendPacket()
@@ -130,8 +132,8 @@ func (c *client) walkToGroundItem1(xLow, zLow, xHigh, zHigh int, border bool) bo
 	pz := c.pathZ
 
 	count := l - 1
-	startX := px[count]
-	startZ := pz[count]
+	startX := int(px[count])
+	startZ := int(pz[count])
 	count--
 
 	c.createPacket(16)
@@ -143,8 +145,8 @@ func (c *client) walkToGroundItem1(xLow, zLow, xHigh, zHigh int, border bool) bo
 	}
 
 	for i := count; i >= 0 && i > count-25; i-- {
-		c.writeByte(byte(px[i] - startX))
-		c.writeByte(byte(pz[i] - startZ))
+		c.writeByte(byte(int(px[i]) - startX))
+		c.writeByte(byte(int(pz[i]) - startZ))
 	}
 
 	c.sendPacket()
@@ -409,6 +411,7 @@ func (c *client) dropInventoryItem(item *item) {
 	}
 	c.createPacket(246)
 	c.writeShort(item.slot)
+	c.writeShort(item.amount)
 	c.sendPacket()
 }
 

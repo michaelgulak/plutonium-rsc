@@ -34,64 +34,88 @@ var (
 	northWestBlocked = fullBlock | wallNorthWest
 )
 
-func withinWorld(x, y int) bool {
-	return x >= 0 && x < maxWorldWidth && y >= 0 && y < maxWorldHeight
-}
-
 type world struct {
-	regions       map[int32]map[int32]*region
+	regions       map[int16]map[int16]*region
 	pathWalkerMap map[int32]struct{}
 }
 
-func newWorld() (z *world) {
-	z = &world{
-		regions:       map[int32]map[int32]*region{},
-		pathWalkerMap: map[int32]struct{}{},
-	}
-	return
-}
-
-func fileToBuffer(r io.ReadCloser) *bytes.Buffer {
-	defer r.Close()
-	buf := &bytes.Buffer{}
-	_, err := io.Copy(buf, r)
-	if err != nil {
-		panic(err)
-	}
-	return buf
-}
-
-func (z *world) getRegion(x int, y int) *region {
-	regionX := x / 48
-	regionY := y / 48
-	return z.getRegionFromSectorCoordinates(regionX, regionY)
-}
-
-func (z *world) getRegionFromSectorCoordinates(regionX int, regionY int) *region {
-	if _, ok := z.regions[int32(regionX)]; !ok {
-		z.regions[int32(regionX)] = map[int32]*region{}
-	}
-	if _, ok := z.regions[int32(regionX)][int32(regionY)]; !ok {
-		z.regions[int32(regionX)][int32(regionY)] = newRegion(regionX, regionY)
-	}
-	return z.regions[int32(regionX)][int32(regionY)]
-}
-
-func (z *world) getTile(x int, y int) int32 {
-	if !withinWorld(x, y) {
-		return math.MaxInt32
-	}
-	return z.getRegion(x, y).getTileValue(x%48, y%48)
+type sector struct {
+	tiles []*tile
 }
 
 type region struct {
 	tiles   [][]int32
 	tile    int32
-	regionX int
-	regionY int
+	regionX int16
+	regionY int16
 }
 
-func newRegion(regionX int, regionY int) (z *region) {
+type tile struct {
+	diagonalWalls   int16
+	groundElevation int8
+	groundOverlay   int8
+	groundTexture   int8
+	horizontalWall  int8
+	roofTexture     int8
+	verticalWall    int8
+}
+
+type coord struct {
+	X int16
+	Y int16
+}
+
+type objectLoc struct {
+	ID        int
+	Pos       *coord
+	Direction int
+}
+
+type objectLocs struct {
+	Sceneries []*objectLoc
+}
+
+type localWorld struct {
+	tiles map[int32]int32
+}
+
+func withinWorld(x, y int) bool {
+	return x >= 0 && x < maxWorldWidth && y >= 0 && y < maxWorldHeight
+}
+
+func newWorld() *world {
+	w := &world{
+		regions:       map[int16]map[int16]*region{},
+		pathWalkerMap: map[int32]struct{}{},
+	}
+	return w
+}
+
+func (w *world) getRegion(x int, y int) *region {
+	regionX := int16(x / 48)
+	regionY := int16(y / 48)
+
+	if _, ok := w.regions[regionX]; !ok {
+		w.regions[regionX] = map[int16]*region{}
+	}
+	if _, ok := w.regions[regionX][regionY]; !ok {
+		w.regions[regionX][regionY] = newRegion(regionX, regionY)
+	}
+	return w.regions[regionX][regionY]
+}
+
+func (w *world) getTile(x int, y int) int32 {
+	if !withinWorld(x, y) {
+		return math.MaxInt32
+	}
+	r := w.getRegion(x, y)
+	if r.tile != math.MaxInt32 {
+		return r.tile
+	}
+	return r.tiles[x%48][y%48]
+}
+
+func newRegion(regionX int16, regionY int16) (z *region) {
 	z = &region{}
 	z.regionX = regionX
 	z.regionY = regionY
@@ -121,17 +145,20 @@ func (r *region) checkRedundantRegion() {
 	}
 }
 
-func (z *region) getTileValue(regionX int, regionY int) int32 {
-	if z.tile != math.MaxInt32 {
-		return z.tile
+func fileToBuffer(r io.ReadCloser) *bytes.Buffer {
+	defer r.Close()
+	buf := &bytes.Buffer{}
+	_, err := io.Copy(buf, r)
+	if err != nil {
+		panic(err)
 	}
-	return z.tiles[regionX][regionY]
+	return buf
 }
 
-func (z *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, height int, bigX int, bigY int) bool {
+func (w *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, height int, bigX int, bigY int) bool {
 	s := (*sector)(nil)
 
-	filename := fmt.Sprintf("h%vx%vy%v", height, sectionX, sectionY)
+	filename := fmt.Sprintf("h%dx%dy%d", height, sectionX, sectionY)
 	e, err := reader.Open(filename)
 	if err != nil {
 		panic(err)
@@ -149,53 +176,38 @@ func (z *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, 
 			if !withinWorld(bx, by) {
 				continue
 			}
-			sectorTile := s.getTile2(x, y)
+			sectorTile := s.tiles[x*48+y]
 			if int(sectorTile.groundOverlay) == 250 {
 				sectorTile.groundOverlay = 2
 			}
 			groundOverlay := sectorTile.groundOverlay
 			if groundOverlay > 0 && tileDefs[groundOverlay-1].ObjectType != 0 {
-				z.getRegion(bx, by).tiles[bx%48][by%48] |= 0x40
+				w.getRegion(bx, by).tiles[bx%48][by%48] |= 0x40
 			}
 			verticalWall := int(sectorTile.verticalWall)
 			if verticalWall > 0 && doorDefs[verticalWall-1].Unknown == 0 && doorDefs[verticalWall-1].DoorType != 0 {
-				z.getRegion(bx, by).tiles[bx%48][by%48] |= 1       // 1
-				z.getRegion(bx, by-1).tiles[bx%48][(by-1)%48] |= 4 // 4
+				w.getRegion(bx, by).tiles[bx%48][by%48] |= 1       // 1
+				w.getRegion(bx, by-1).tiles[bx%48][(by-1)%48] |= 4 // 4
 			}
 			horizontalWall := int(sectorTile.horizontalWall)
 			if horizontalWall > 0 && doorDefs[horizontalWall-1].Unknown == 0 && doorDefs[horizontalWall-1].DoorType != 0 {
-				z.getRegion(bx, by).tiles[bx%48][by%48] |= 2
-				z.getRegion(bx-1, by).tiles[(bx-1)%48][by%48] |= 8 // 8
+				w.getRegion(bx, by).tiles[bx%48][by%48] |= 2
+				w.getRegion(bx-1, by).tiles[(bx-1)%48][by%48] |= 8 // 8
 			}
 			diagonalWalls := int(sectorTile.diagonalWalls)
 			if diagonalWalls > 0 && diagonalWalls < 12000 && doorDefs[diagonalWalls-1].Unknown == 0 && doorDefs[diagonalWalls-1].DoorType != 0 {
-				z.getRegion(bx, by).tiles[bx%48][by%48] |= 0x20
+				w.getRegion(bx, by).tiles[bx%48][by%48] |= 0x20
 			}
 			if diagonalWalls > 12000 && diagonalWalls < 24000 && doorDefs[diagonalWalls-12001].Unknown == 0 && doorDefs[diagonalWalls-12001].DoorType != 0 {
-				z.getRegion(bx, by).tiles[bx%48][by%48] |= 0x10
+				w.getRegion(bx, by).tiles[bx%48][by%48] |= 0x10
 			}
 		}
 	}
 	return true
 }
 
-type coord struct {
-	X int
-	Y int
-}
-
-type objectLoc struct {
-	ID        int
-	Pos       *coord
-	Direction int
-}
-
-type objectLocs struct {
-	Sceneries []*objectLoc
-}
-
-func (z *world) loadWorld() {
-	archiveFile := settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.Landscape
+func (w *world) loadWorld() {
+	archiveFile := settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.Landscape
 	tileArchive, err := zip.OpenReader(archiveFile)
 	if err != nil {
 		fmt.Println(err)
@@ -203,15 +215,15 @@ func (z *world) loadWorld() {
 	}
 	defer tileArchive.Close()
 	sectors := 0
-	FloorCount := 4
-	for lvl := 0; lvl < FloorCount; lvl++ {
+	floorCount := 4
+	for lvl := 0; lvl < floorCount; lvl++ {
 		wildX := 2304
 		wildY := 1776 - lvl*944
 		for sx := 0; sx <= 1008-48; sx += 48 {
 			for sy := 0; sy < 944; sy += 48 {
 				x := (sx + wildX) / 48
 				y := (sy + lvl*944 + wildY) / 48
-				if z.loadSection(tileArchive, x, y, lvl, sx, sy+944*lvl) {
+				if w.loadSection(tileArchive, x, y, lvl, sx, sy+944*lvl) {
 					sectors++
 				}
 			}
@@ -221,12 +233,12 @@ func (z *world) loadWorld() {
 	for lvl := 0; lvl < 4; lvl++ {
 		for sx := 0; sx < 20; sx++ {
 			for sy := 0; sy < 20; sy++ {
-				region := z.getRegion(sx*48, sy*48+(48*20*lvl))
+				region := w.getRegion(sx*48, sy*48+(48*20*lvl))
 				region.checkRedundantRegion()
 			}
 		}
 	}
-	objectLocStr := settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.SceneryLocs
+	objectLocStr := settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.SceneryLocs
 	f, err := os.Open(objectLocStr)
 	if err != nil {
 		fmt.Println(err)
@@ -241,16 +253,15 @@ func (z *world) loadWorld() {
 		os.Exit(1)
 	}
 
-	for i := 0; i < len(sceneries.Sceneries); i++ {
-		obj := sceneries.Sceneries[i]
-		z.setUnwalkableTiles(obj)
+	for _, v := range sceneries.Sceneries {
+		w.setUnwalkableTiles(v)
 	}
 }
 
 func (w *world) setUnwalkableTiles(o *objectLoc) {
 	var (
-		objWidth  int
-		objHeight int
+		objWidth  int16
+		objHeight int16
 	)
 	def := objectDefs[o.ID]
 	if o.Direction != 0 && o.Direction != 4 {
@@ -266,97 +277,54 @@ func (w *world) setUnwalkableTiles(o *objectLoc) {
 	if def.Typ != 2 && def.Typ != 3 && def.Typ != 0 {
 		for x := destX; x <= objWidth-1+destX; x++ {
 			for y := destZ; y <= destZ+objHeight-1; y++ {
-				w.pathWalkerMap[int32(x<<16)|int32(y)] = struct{}{}
+				w.pathWalkerMap[(int32(x)<<16)|int32(y)] = struct{}{}
 			}
 		}
 	}
 }
 
-type sector struct {
-	tiles []*tile
-}
-
-func newSector() (z *sector) {
-	z = &sector{}
-	z.tiles = make([]*tile, 48*48)
-	for i := 0; i < len(z.tiles); i++ {
-		z.tiles[i] = newTile()
-	}
-	return
-}
-
-func (z *sector) getTile(i int) *tile {
-	return z.tiles[i]
-}
-
-func (z *sector) getTile2(x int, y int) *tile {
-	return z.getTile(x*48 + y)
-}
-
-func (z *sector) setTile(i int, t *tile) {
-	z.tiles[i] = t
-}
-
-func (z *sector) SetTile2(x int, y int, t *tile) {
-	z.setTile(x*48+y, t)
-}
-
 func unpackSector(in *bytes.Buffer) *sector {
 	length := 48 * 48
-	sector := newSector()
+	sector := &sector{
+		tiles: make([]*tile, 48*48),
+	}
 	for i := 0; i < length; i++ {
-		sector.setTile(i, unpackTile(in))
+		sector.tiles[i] = unpackTile(in)
 	}
 	return sector
 }
 
-type tile struct {
-	diagonalWalls   int16
-	groundElevation int8
-	groundOverlay   int8
-	groundTexture   int8
-	horizontalWall  int8
-	roofTexture     int8
-	verticalWall    int8
-}
-
-func newTile() (z *tile) {
-	z = &tile{}
-	z.diagonalWalls = 0
-	z.groundElevation = 0
-	z.groundOverlay = 0
-	z.groundTexture = 0
-	z.horizontalWall = 0
-	z.roofTexture = 0
-	z.verticalWall = 0
-	return
-}
-
-func readByteFromBuffer(buf *bytes.Buffer) int8 {
+func readInt8FromBuffer(buf *bytes.Buffer) int8 {
 	b, err := buf.ReadByte()
 	if err != nil {
-		panic(err)
+		fmt.Println("unpackTile:", err)
+		os.Exit(1)
 	}
 	return int8(b)
 }
 
-func readByte0FromBuffer(buf *bytes.Buffer) byte {
+func readByteFromBuffer(buf *bytes.Buffer) byte {
 	b, err := buf.ReadByte()
 	if err != nil {
-		panic(err)
+		fmt.Println("unpackTile2:", err)
+		os.Exit(1)
 	}
 	return b
 }
 
 func unpackTile(in *bytes.Buffer) *tile {
-	tile := newTile()
-	tile.groundElevation = readByteFromBuffer(in)
-	tile.groundTexture = readByteFromBuffer(in)
-	tile.groundOverlay = readByteFromBuffer(in)
-	tile.roofTexture = readByteFromBuffer(in)
-	tile.horizontalWall = readByteFromBuffer(in)
-	tile.verticalWall = readByteFromBuffer(in)
-	tile.diagonalWalls = int16((int(readByte0FromBuffer(in)) << 24) | (int(readByte0FromBuffer(in)) << 16) | (int(readByte0FromBuffer(in)) << 8) | int(readByte0FromBuffer(in)))
+	tile := &tile{
+		groundElevation: readInt8FromBuffer(in),
+		groundTexture:   readInt8FromBuffer(in),
+		groundOverlay:   readInt8FromBuffer(in),
+		roofTexture:     readInt8FromBuffer(in),
+		horizontalWall:  readInt8FromBuffer(in),
+		verticalWall:    readInt8FromBuffer(in),
+		diagonalWalls: int16((int(readByteFromBuffer(in)) << 24) |
+			(int(readByteFromBuffer(in)) << 16) |
+			(int(readByteFromBuffer(in)) << 8) |
+			int(readByteFromBuffer(in))),
+	}
 	return tile
 }
 
@@ -372,11 +340,11 @@ func (c *client) registerGameObject(o *object) {
 	var width int
 	var height int
 	if dir == 0 || dir == 4 {
-		width = def.Width
-		height = def.Height
+		width = int(def.Width)
+		height = int(def.Height)
 	} else {
-		height = def.Width
-		width = def.Height
+		height = int(def.Width)
+		width = int(def.Height)
 	}
 	for x := o.x; x < o.x+width; x++ {
 		for y := o.z; y < o.z+height; y++ {
@@ -440,11 +408,11 @@ func (c *client) unregisterGameObject(o *object) {
 	var width int
 	var height int
 	if dir == 0 || dir == 4 {
-		width = def.Width
-		height = def.Height
+		width = int(def.Width)
+		height = int(def.Height)
 	} else {
-		height = def.Width
-		width = def.Height
+		height = int(def.Width)
+		width = int(def.Height)
 	}
 	for x := o.x; x < o.x+width; x++ {
 		for y := o.z; y < o.z+height; y++ {
@@ -487,12 +455,8 @@ func (c *client) unregisterWallObject(o *wallObject) {
 	}
 }
 
-func (c *client) getTile(x, z int) int32 {
-	return c.world.getTile(x, z)
-}
-
 func (c *client) combinedTile(x, z int) int32 {
-	tile1 := c.getTile(x, z)
+	tile1 := c.world.getTile(x, z)
 	if tile1 == math.MaxInt32 {
 		return math.MaxInt32
 	}
@@ -507,27 +471,19 @@ func newLocalWorld() *localWorld {
 	}
 }
 
-type localWorld struct {
-	tiles map[int32]int32
+func (l *localWorld) setTileAnd(x, z int, traversalMask int32) {
+	xz := (int32(x) << 16) | int32(z)
+	l.tiles[xz] = l.tiles[xz] & traversalMask
 }
 
-func (c *localWorld) setTileAnd(x, z int, traversalMask int32) {
+func (l *localWorld) setTileOr(x, z int, traversalMask int32) {
 	xz := (int32(x) << 16) | int32(z)
-	c.tiles[xz] = c.tiles[xz] & traversalMask
+	l.tiles[xz] = l.tiles[xz] | traversalMask
 }
 
-func (c *localWorld) setTileOr(x, z int, traversalMask int32) {
+func (l *localWorld) getTileTraversalMask(x, z int) int32 {
 	xz := (int32(x) << 16) | int32(z)
-	c.tiles[xz] = c.tiles[xz] | traversalMask
-}
-
-func (c *localWorld) getTileTraversalMask(x, z int) int32 {
-	xz := (int32(x) << 16) | int32(z)
-	if tile, ok := c.tiles[xz]; ok {
-		return tile
-	}
-	c.tiles[xz] = 0
-	return c.tiles[xz]
+	return l.tiles[xz]
 }
 
 func (c *client) findPath(startX int, startZ int, xLow int, xHigh int, zLow int, zHigh int, reachBorder bool) int {
@@ -552,14 +508,15 @@ func (c *client) findPath(startX int, startZ int, xLow int, xHigh int, zLow int,
 	x := startX
 	z := startZ
 	c.pathFindSource[startX][startZ] = 99
-	c.pathX[var20] = startX
-	c.pathZ[var20] = startZ
+	c.pathX[var20] = int16(startX)
+	c.pathZ[var20] = int16(startZ)
 	openListWrite := var20 + 1
 	openListSize := len(c.pathX)
 	complete := false
+
 	for openListRead != openListWrite {
-		x = c.pathX[openListRead]
-		z = c.pathZ[openListRead]
+		x = int(c.pathX[openListRead])
+		z = int(c.pathZ[openListRead])
 		openListRead = (1 + openListRead) % openListSize
 		if x >= xLow && x <= xHigh && z >= zLow && z <= zHigh {
 			complete = true
@@ -584,62 +541,61 @@ func (c *client) findPath(startX int, startZ int, xLow int, xHigh int, zLow int,
 			}
 		}
 		if x > 0 && c.pathFindSource[x-1][z] == 0 && c.combinedTile(baseX+x-1, baseZ+z)&westBlocked == 0 {
-			c.pathX[openListWrite] = x - 1
-			c.pathZ[openListWrite] = z
+			c.pathX[openListWrite] = int16(x - 1)
+			c.pathZ[openListWrite] = int16(z)
 			c.pathFindSource[x-1][z] = sourceWest
 			openListWrite = (openListWrite + 1) % openListSize
 		}
 		if x < 95 && c.pathFindSource[1+x][z] == 0 && c.combinedTile(baseX+1+x, baseZ+z)&eastBlocked == 0 {
-			c.pathX[openListWrite] = 1 + x
-			c.pathZ[openListWrite] = z
+			c.pathX[openListWrite] = int16(1 + x)
+			c.pathZ[openListWrite] = int16(z)
 			c.pathFindSource[x+1][z] = sourceEast
 			openListWrite = (1 + openListWrite) % openListSize
 		}
 		if z > 0 && c.pathFindSource[x][z-1] == 0 && southBlocked&c.combinedTile(baseX+x, baseZ+z-1) == 0 {
-			c.pathX[openListWrite] = x
-			c.pathZ[openListWrite] = z - 1
+			c.pathX[openListWrite] = int16(x)
+			c.pathZ[openListWrite] = int16(z - 1)
 			c.pathFindSource[x][z-1] = sourceSouth
 			openListWrite = (openListWrite + 1) % openListSize
 		}
 		if z < 95 && c.pathFindSource[x][1+z] == 0 && northBlocked&c.combinedTile(baseX+x, baseZ+1+z) == 0 {
-			c.pathX[openListWrite] = x
-			c.pathZ[openListWrite] = z + 1
+			c.pathX[openListWrite] = int16(x)
+			c.pathZ[openListWrite] = int16(z + 1)
 			c.pathFindSource[x][z+1] = sourceNorth
 			openListWrite = (openListWrite + 1) % openListSize
 		}
 		if x > 0 && z > 0 && southBlocked&c.combinedTile(baseX+x, baseZ+z-1) == 0 && westBlocked&c.combinedTile(baseX+x-1, baseZ+z) == 0 && southWestBlocked&c.combinedTile(baseX+x-1, baseZ+z-1) == 0 && c.pathFindSource[x-1][z-1] == 0 {
-			c.pathX[openListWrite] = x - 1
-			c.pathZ[openListWrite] = z - 1
-			c.pathFindSource[x-1][z-1] = sourceSouthWest
+			c.pathX[openListWrite] = int16(x - 1)
+			c.pathZ[openListWrite] = int16(z - 1)
+			c.pathFindSource[x-1][z-1] = int16(sourceSouthWest)
 			openListWrite = (1 + openListWrite) % openListSize
 		}
 		if x < 95 && z > 0 && c.combinedTile(baseX+x, baseZ+z-1)&southBlocked == 0 && c.combinedTile(baseX+1+x, baseZ+z)&eastBlocked == 0 && c.combinedTile(baseX+x+1, baseZ+z-1)&southEastBlocked == 0 && c.pathFindSource[1+x][z-1] == 0 {
-			c.pathX[openListWrite] = 1 + x
-			c.pathZ[openListWrite] = z - 1
-			c.pathFindSource[x+1][z-1] = sourceSouthEast
+			c.pathX[openListWrite] = int16(1 + x)
+			c.pathZ[openListWrite] = int16(z - 1)
+			c.pathFindSource[x+1][z-1] = int16(sourceSouthEast)
 			openListWrite = (1 + openListWrite) % openListSize
 		}
 		if x > 0 && z < 95 && c.combinedTile(baseX+x, baseZ+1+z)&northBlocked == 0 && c.combinedTile(baseX+x-1, baseZ+z)&westBlocked == 0 && c.combinedTile(baseX+x-1, baseZ+1+z)&northWestBlocked == 0 && c.pathFindSource[x-1][1+z] == 0 {
-			c.pathX[openListWrite] = x - 1
-			c.pathZ[openListWrite] = 1 + z
+			c.pathX[openListWrite] = int16(x - 1)
+			c.pathZ[openListWrite] = int16(1 + z)
 			openListWrite = (1 + openListWrite) % openListSize
-			c.pathFindSource[x-1][z+1] = sourceNorthWest
+			c.pathFindSource[x-1][z+1] = int16(sourceNorthWest)
 		}
-		if x < 95 && z < 95 && northBlocked&c.combinedTile(baseX+x, baseZ+1+z) == 0 && c.combinedTile(baseX+x+1, baseX+z)&eastBlocked == 0 && northEastBlocked&c.combinedTile(baseX+x+1, baseZ+1+z) == 0 && c.pathFindSource[x+1][1+z] == 0 {
-			c.pathX[openListWrite] = 1 + x
-			c.pathZ[openListWrite] = 1 + z
-			c.pathFindSource[1+x][1+z] = sourceNorthEast
+		if x < 95 && z < 95 && northBlocked&c.combinedTile(baseX+x, baseZ+1+z) == 0 && c.combinedTile(baseX+x+1, baseZ+z)&eastBlocked == 0 && northEastBlocked&c.combinedTile(baseX+x+1, baseZ+1+z) == 0 && c.pathFindSource[x+1][1+z] == 0 {
+			c.pathX[openListWrite] = int16(1 + x)
+			c.pathZ[openListWrite] = int16(1 + z)
+			c.pathFindSource[1+x][1+z] = int16(sourceNorthEast)
 			openListWrite = (openListWrite + 1) % openListSize
 		}
 	}
 	if !complete {
 		return -1
 	} else {
-		c.pathX[0] = x
-		c.pathZ[0] = z
+		c.pathX[0] = int16(x)
+		c.pathZ[0] = int16(z)
 		openListRead = 1
-		var prevSource int
-		prevSource = c.pathFindSource[x][z]
+		prevSource := c.pathFindSource[x][z]
 		source := prevSource
 		for x != startX || z != startZ {
 			if prevSource != source {
@@ -647,8 +603,8 @@ func (c *client) findPath(startX int, startZ int, xLow int, xHigh int, zLow int,
 					return -1
 				}
 				prevSource = source
-				c.pathX[openListRead] = x
-				c.pathZ[openListRead] = z
+				c.pathX[openListRead] = int16(x)
+				c.pathZ[openListRead] = int16(z)
 				openListRead++
 			}
 			if source&sourceSouth != 0 {

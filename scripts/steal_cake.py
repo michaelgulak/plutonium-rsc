@@ -1,7 +1,5 @@
 # Ardougne cake thieving script by RLN
 
-# Make sure you start this script with at least one cake in your inventory.
-
 CAKE_IDS = [335,333,330]
 
 click_timeout = 0
@@ -26,11 +24,8 @@ def bank():
     cake_count = get_inventory_count_by_id(330)
     cake_stolen = get_bank_count(330) + cake_count
 
-    if cake_count == 0:
-        withdraw(330, 1)
-        return 2000
-    elif cake_count > 1:
-        deposit(330, cake_count-1)
+    if cake_count > 0:
+        deposit(330, cake_count)
         return 2000
     else:
         close_bank()
@@ -60,7 +55,10 @@ def thieve():
         return 2000
     
     if get_current_stat(3) <= 9:
-        return eat_cake()
+        cake = get_inventory_item_by_id(ids=CAKE_IDS)
+        if cake != None:
+            use_item(cake)
+            return 1350
     
     if get_x() != 543 or get_z() != 600:
         if in_radius_of(550, 612, 15):
@@ -81,9 +79,7 @@ def thieve():
 
 def loop():
     if is_bank_open() \
-        or get_total_inventory_count() == 30 \
-        or get_inventory_count_by_id(ids=CAKE_IDS) == 0:
-
+        or get_total_inventory_count() == 30:
         return bank()
     
     return thieve()

@@ -14,6 +14,10 @@ import (
 	"github.com/pelletier/go-toml"
 )
 
+var (
+	settings config
+)
+
 type account struct {
 	username           string
 	password           string
@@ -26,15 +30,11 @@ type account struct {
 	lastProgressReport time.Time
 }
 
-var (
-	settings config
-)
-
 type ocrSettings struct {
 	OcrType     string `toml:"ocr_type"`
 	OcrEndpoint string `toml:"ocr_endpoint"`
 	Directory   string `toml:"directory"`
-	OcrPath     string `toml:"ocr_path"`
+	OcrFileName string `toml:"ocr_filename"`
 }
 
 type dataSettings struct {
@@ -45,6 +45,7 @@ type dataSettings struct {
 	TileDefs    string `toml:"tile_defs"`
 	DoorDefs    string `toml:"door_defs"`
 	ObjectDefs  string `toml:"object_defs"`
+	WordHashes  string `toml:"word_hashes"`
 }
 
 type accountSettings struct {
@@ -69,6 +70,7 @@ type logSettings struct {
 }
 
 type config struct {
+	executablePath  string
 	ServerSettings  *serverSettings  `toml:"server"`
 	OcrSettings     *ocrSettings     `toml:"ocr"`
 	DataSettings    *dataSettings    `toml:"data"`
@@ -79,6 +81,16 @@ type config struct {
 }
 
 func parseConfig(filePath string) {
+	ex, err := os.Executable()
+	if err != nil {
+		fmt.Println("[BOT] Error locating binary")
+		os.Exit(1)
+	}
+	ex = filepath.Dir(ex)
+	if filePath == "settings.toml" {
+		filePath = ex + string(os.PathSeparator) + filePath
+	}
+
 	f, err := os.Open(filePath)
 	if err != nil {
 		fmt.Printf("Error opening settings file: %s\n", err)
@@ -90,6 +102,7 @@ func parseConfig(filePath string) {
 		fmt.Printf("Error parsing settings file: %s\n", err)
 		os.Exit(1)
 	}
+	settings.executablePath = ex
 }
 
 func loadAccount(path string) (*account, error) {
@@ -116,7 +129,8 @@ func loadAccount(path string) (*account, error) {
 		acct.debug = acctFile.Get("account.debug").(bool)
 	}
 	if acctFile.Has("script") {
-		acct.script.name = settings.ScriptSettings.Directory + string(os.PathSeparator) + acctFile.Get("script.name").(string)
+		acct.script.path = settings.executablePath + string(os.PathSeparator) + settings.ScriptSettings.Directory + string(os.PathSeparator) + acctFile.Get("script.name").(string)
+		acct.script.pathDir = filepath.Dir(acct.script.path)
 		if acctFile.Has("script.progress_report") {
 			str := acctFile.Get("script.progress_report").(string)
 			dur, err := time.ParseDuration(str)
@@ -198,7 +212,7 @@ func loadAccount(path string) (*account, error) {
 }
 
 func loadAccounts() ([]*account, error) {
-	files, err := os.ReadDir(settings.AccountSettings.Directory)
+	files, err := os.ReadDir(settings.executablePath + string(os.PathSeparator) + settings.AccountSettings.Directory)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +221,7 @@ func loadAccounts() ([]*account, error) {
 		if !strings.HasSuffix(f.Name(), ".toml") {
 			continue
 		}
-		acct, err := loadAccount(settings.AccountSettings.Directory + string(os.PathSeparator) + f.Name())
+		acct, err := loadAccount(settings.executablePath + string(os.PathSeparator) + settings.AccountSettings.Directory + string(os.PathSeparator) + f.Name())
 		if err != nil {
 			return nil, err
 		}

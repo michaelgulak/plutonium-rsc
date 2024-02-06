@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"flag"
 	"fmt"
+	"hash/fnv"
 	"io"
 	"math"
 	"math/rand"
@@ -15,6 +16,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"runtime"
 	"strings"
 	"sync"
@@ -27,6 +29,7 @@ const (
 	supportBankNotes = false
 	skillCount       = 18
 	readWriteTimeout = 10
+	botVersion       = "1.3.0"
 )
 
 var (
@@ -34,6 +37,7 @@ var (
 	doorDefs   []*doorDef
 	objectDefs []*objectDef
 	itemDefs   []*itemDef
+	wordHashes = map[uint32]string{}
 )
 
 type client struct {
@@ -43,7 +47,6 @@ type client struct {
 	pass                string
 	packetChan          chan *RSCPacket
 	lastSentPacketTime  int64
-	sendLock            *sync.Mutex
 	closed              chan struct{}
 	closedLock          *sync.Mutex
 	sleepChan           chan []byte
@@ -98,7 +101,7 @@ type client struct {
 	prayers                   [50]bool
 	fatigue                   int
 	accurateFatigue           float64
-	sleepingFatigue           int64
+	sleepingFatigue           int32
 	sleeping                  bool
 	combatStyle               int
 	optionMenuVisible         bool
@@ -136,9 +139,9 @@ type client struct {
 	decodedChatLength         int
 	encodedChatLength         int
 	appearanceChange          bool
-	pathX                     [8000]int
-	pathZ                     [8000]int
-	pathFindSource            [96][96]int
+	pathX                     [8000]int16
+	pathZ                     [8000]int16
+	pathFindSource            [96][96]int16
 
 	blackhole bool
 }
@@ -151,10 +154,10 @@ type npc struct {
 	sprite             int
 	currentHP          int
 	maxHP              int
-	waypointsX         [10]int
-	waypointsZ         [10]int
-	waypointCurrent    int
-	waypointNext       int
+	waypointsX         [10]int16
+	waypointsZ         [10]int16
+	waypointCurrent    int8
+	waypointNext       int8
 	messageTime        time.Time
 	lastMessageTimeout time.Duration
 }
@@ -167,10 +170,10 @@ type player struct {
 	currentHP          int
 	maxHP              int
 	combatLevel        int
-	waypointsX         [10]int
-	waypointsZ         [10]int
-	waypointCurrent    int
-	waypointNext       int
+	waypointsX         [10]int16
+	waypointsZ         [10]int16
+	waypointCurrent    int8
+	waypointNext       int8
 	username           string
 	messageTime        time.Time
 	lastMessageTimeout time.Duration
@@ -241,46 +244,47 @@ type quest struct {
 }
 
 type tileDef struct {
-	Colour     int
-	TileValue  int
+	/*Colour     int
+	TileValue  int*/
 	ObjectType int
 }
 
 type doorDef struct {
-	Name             string
+	/*Name             string
 	Description      string
 	Command1         string
-	Command2         string
-	DoorType         int
-	Unknown          int
-	WallObjectHeight int
+	Command2         string*/
+	DoorType int
+	Unknown  int
+	/*WallObjectHeight int
 	ModelVar2        int
 	ModelVar3        int
 	ID               int
+	*/
 }
 
 type objectDef struct {
-	Name          string
+	/*Name          string
 	Description   string
 	Command1      string
-	Command2      string
-	Typ           int
-	Width         int
-	Height        int
-	GroundItemVar int
+	Command2      string*/
+	Typ    int16
+	Width  int16
+	Height int16
+	/*GroundItemVar int
 	ObjectModel   string
-	ID            int
+	ID int*/
 }
 
 type itemDef struct {
-	ID               int
+	/*ID int
 	Name             string
 	Description      string
-	Command          string
-	IsFemaleOnly     int
-	IsMembersOnly    int
-	IsStackable      int
-	IsUntradable     int
+	Command          string*/
+	/*IsFemaleOnly     int
+	IsMembersOnly    int*/
+	IsStackable int
+	/*IsUntradable     int
 	IsWearable       int
 	AppearanceID     int
 	WearableID       int
@@ -292,8 +296,9 @@ type itemDef struct {
 	WeaponPowerBonus int
 	MagicBonus       int
 	PrayerBonus      int
-	BasePrice        int
 	IsNoteable       int
+	*/
+	BasePrice int
 }
 
 func main() {
@@ -307,17 +312,11 @@ func main() {
 		configPath string
 		acctFile   string
 		autologin  bool
+		version    bool
+		help       bool
 		closing    = make(chan struct{})
 		sigs       = make(chan os.Signal, 1)
 	)
-
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
-	go func() {
-		<-sigs
-		fmt.Println("[BOT] Received kill signal")
-		close(closing)
-	}()
 
 	/*f, err := os.Create("cpu.pprof")
 	if err != nil {
@@ -330,14 +329,35 @@ func main() {
 
 	flag.StringVar(&user, "u", "", "OpenRSC username")
 	flag.StringVar(&pass, "p", "", "OpenRSC password")
-	flag.StringVar(&regFile, "r", "", "Register accounts file")
-	flag.StringVar(&scriptPath, "s", "", "Python script file")
+	flag.StringVar(&regFile, "r", "", "Register accounts path")
+	flag.StringVar(&scriptPath, "s", "", "Python script path")
 	flag.StringVar(&acctFile, "f", "", "Account file")
 	flag.StringVar(&configPath, "c", "settings.toml", "Config file path")
 	flag.BoolVar(&autologin, "l", false, "Autologin flag")
+	flag.BoolVar(&version, "v", false, "Version flag")
+	flag.BoolVar(&help, "h", false, "Help")
 	flag.Parse()
 
+	if version {
+		fmt.Printf("Plutonium v%s\n", botVersion)
+		os.Exit(0)
+	}
+
+	if help {
+		fmt.Printf("Plutonium v%s command line arguments:\n\n", botVersion)
+		flag.PrintDefaults()
+		os.Exit(0)
+	}
+
 	parseConfig(configPath)
+
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	go func() {
+		<-sigs
+		fmt.Println("[BOT] Received kill signal")
+		close(closing)
+	}()
 
 	if regFile != "" {
 		doAccountCreations(closing, regFile)
@@ -345,12 +365,12 @@ func main() {
 	}
 
 	if settings.OcrSettings.OcrType == "local" {
-		_, err := os.Stat(settings.OcrSettings.OcrPath)
+		_, err := os.Stat(settings.executablePath + string(os.PathSeparator) + settings.OcrSettings.OcrFileName)
 		if os.IsNotExist(err) {
-			fmt.Printf("OCR not found: %s\n", err)
+			fmt.Printf("[BOT] OCR not found: %s\n", err)
 			os.Exit(1)
 		} else if err != nil {
-			fmt.Printf("OCR Error: %s\n", err)
+			fmt.Printf("[BOT] OCR Error: %s\n", err)
 			os.Exit(1)
 		}
 	}
@@ -395,15 +415,16 @@ func main() {
 			progressDur: time.Duration(math.MaxInt),
 		}
 		if scriptPath != "" {
+			pathDir := filepath.Dir(scriptPath)
 			acct.script = &script{
-				name: scriptPath,
+				path:    scriptPath,
+				pathDir: pathDir,
 			}
 		}
 		accounts = append(accounts, acct)
 	}
 
 	wg := &sync.WaitGroup{}
-	loadScriptLock := &sync.Mutex{}
 
 	loginWait := make(chan struct{})
 
@@ -423,7 +444,7 @@ func main() {
 			continue
 		}
 		var err error
-		acc.progressFile, err = os.Create(settings.LogSettings.Directory + string(os.PathSeparator) + settings.LogSettings.ProgressReports + string(os.PathSeparator) + acc.username + ".log")
+		acc.progressFile, err = os.Create(settings.executablePath + string(os.PathSeparator) + settings.LogSettings.Directory + string(os.PathSeparator) + settings.LogSettings.ProgressReports + string(os.PathSeparator) + acc.username + ".log")
 		if err != nil {
 			fmt.Printf("[%s] Error creating progress report file: %s\n", acc.username, err)
 			os.Exit(1)
@@ -445,7 +466,6 @@ func main() {
 					user:             acc.username,
 					pass:             acc.password,
 					world:            world,
-					sendLock:         &sync.Mutex{},
 					closed:           make(chan struct{}),
 					closedLock:       &sync.Mutex{},
 					packetChan:       make(chan *RSCPacket, 32),
@@ -462,9 +482,9 @@ func main() {
 
 				if acc.script != nil {
 					c.script = acc.script
-					if err := c.script.load(loadScriptLock, c); err != nil {
-						fmt.Printf("[%s] Script load error [%s]: %s\n", c.user, c.script.name, err)
-						break clientLoop
+					if err := c.loadScript(); err != nil {
+						fmt.Printf("[%s] Script load error [%s]: %s\n", c.user, c.script.path, err)
+						os.Exit(1)
 					}
 				}
 
@@ -493,10 +513,12 @@ func main() {
 						continue clientLoop
 					case 3:
 						fmt.Printf("[%s] Invalid username or password\n", c.user)
-						break clientLoop
+						time.Sleep(time.Second * 5)
+						continue clientLoop
 					case 5:
 						fmt.Printf("[%s] The client has been updated\n", c.user)
-						break clientLoop
+						time.Sleep(time.Second * 5)
+						continue clientLoop
 					case 6:
 						fmt.Printf("[%s] You may only use 1 character at once, waiting 5-7 minutes\n", c.user)
 						select {
@@ -611,9 +633,9 @@ func main() {
 							}
 						case buf = <-c.sleepChan:
 							drainTicker()
-							t = time.NewTicker(500 * time.Millisecond)
+							t = time.NewTicker(600 * time.Millisecond)
 						case <-t.C:
-							sleepFatigue := atomic.LoadInt64(&c.sleepingFatigue)
+							sleepFatigue := atomic.LoadInt32(&c.sleepingFatigue)
 							if c.script != nil && c.script.fatigueTricking && sleepFatigue < 100 {
 								drainTicker()
 								c.captchaChan <- buf
@@ -629,6 +651,7 @@ func main() {
 					}
 				}()
 
+				idleChan := make(chan struct{}, 1)
 				go func() {
 					var diff int64
 					t := time.NewTimer(time.Second * 5)
@@ -643,8 +666,7 @@ func main() {
 							diff = time.Now().Unix() - atomic.LoadInt64(&c.lastSentPacketTime)
 
 							if diff >= 5 {
-								c.createPacket(67)
-								c.sendPacket()
+								idleChan <- struct{}{}
 
 								t.Reset(5 * time.Second)
 							} else {
@@ -681,6 +703,9 @@ func main() {
 							<-scriptTimer.C
 						}
 						break loop
+					case <-idleChan:
+						c.createPacket(67)
+						c.sendPacket()
 					case packet := <-c.packetChan:
 						opcode := packet.readByteAsInt()
 						c.handlePacket(packet, opcode, len(packet.buf)-1)
@@ -755,21 +780,21 @@ func (c *client) close() {
 
 func loadDefs() {
 	// tile defs
-	f, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.TileDefs)
+	f1, err := os.Open(settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.TileDefs)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	defer f.Close()
+	defer f1.Close()
 
-	err = json.NewDecoder(f).Decode(&tileDefs)
+	err = json.NewDecoder(f1).Decode(&tileDefs)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
 
 	// door defs
-	f2, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.DoorDefs)
+	f2, err := os.Open(settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.DoorDefs)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -783,7 +808,7 @@ func loadDefs() {
 	}
 
 	// object defs
-	f3, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.ObjectDefs)
+	f3, err := os.Open(settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.ObjectDefs)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -797,14 +822,28 @@ func loadDefs() {
 	}
 
 	// item defs
-	f1, err := os.Open(settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.ItemDefs)
+	f4, err := os.Open(settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.ItemDefs)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	defer f1.Close()
+	defer f4.Close()
 
-	err = json.NewDecoder(f1).Decode(&itemDefs)
+	err = json.NewDecoder(f4).Decode(&itemDefs)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	// word hashes
+	f5, err := os.Open(settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.WordHashes)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer f5.Close()
+
+	err = json.NewDecoder(f5).Decode(&wordHashes)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -856,7 +895,7 @@ func doAccountCreations(closing chan struct{}, fileStr string) {
 		}
 		_ = sessionPacket
 
-		p.createPacket0(2)
+		p.createPacket(2)
 		p.writeBytes([]byte(username))
 		p.writeByte(10)
 		p.writeBytes([]byte(encodeCredential(password)))
@@ -954,15 +993,14 @@ func (c *client) init() {
 }
 
 func (c *client) doCaptcha(buf []byte) {
-	bmpData := convertImage(buf)
-	if bmpData == nil {
-		return
-	}
-
 	var sleepWord string
 
 	switch settings.OcrSettings.OcrType {
 	case "local":
+		bmpData := convertImage(buf)
+		if bmpData == nil {
+			return
+		}
 		num := rand.Intn(math.MaxInt)
 		randName := hex.EncodeToString([]byte{byte(num >> 24), byte(num >> 16), byte(num >> 8), byte(num)}) + ".bmp"
 		path := settings.OcrSettings.Directory + string(os.PathSeparator) + randName
@@ -978,7 +1016,7 @@ func (c *client) doCaptcha(buf []byte) {
 			os.Remove(path)
 			return
 		}
-		cmd := exec.Command(settings.OcrSettings.OcrPath, path)
+		cmd := exec.Command(settings.executablePath+string(os.PathSeparator)+settings.OcrSettings.OcrFileName, path)
 		bs, err := cmd.CombinedOutput()
 		if err != nil {
 			fmt.Printf("[%s] Error getting sleepword from external ocr: %s\n", c.user, err)
@@ -988,6 +1026,10 @@ func (c *client) doCaptcha(buf []byte) {
 		sleepWord = strings.Trim(string(bs), " \r\n\t")
 		os.Remove(path)
 	case "server":
+		bmpData := convertImage(buf)
+		if bmpData == nil {
+			return
+		}
 		body := bytes.NewReader(bmpData)
 		resp, err := http.Post(settings.OcrSettings.OcrEndpoint, "application/octet-stream", body)
 		if err != nil {
@@ -1002,6 +1044,19 @@ func (c *client) doCaptcha(buf []byte) {
 		} else {
 			fmt.Printf("[%s] Sleep server did not return a scannable line\n", c.user)
 			return
+		}
+	case "hash":
+		hasher := fnv.New32()
+		wrote := 0
+		for wrote < len(buf) {
+			n, _ := hasher.Write(buf[wrote:])
+			wrote += n
+		}
+		hash := hasher.Sum32()
+
+		var ok bool
+		if sleepWord, ok = wordHashes[hash]; !ok {
+			sleepWord = "unknown"
 		}
 	default:
 		fmt.Printf("[%s] Unknown ocr setting\n", c.user)
@@ -1103,8 +1158,6 @@ func (client *client) login() (int, error) {
 }
 
 func (c *client) sendPacket() error {
-	defer c.sendLock.Unlock()
-
 	c.finish()
 	wrote := 0
 	length := c.RSCPacket.i
@@ -1175,17 +1228,17 @@ func (c *client) createPlayer(serverIndex, x, z, sprite int) {
 	p.z = z
 
 	if found {
-		if x != p.waypointsX[p.waypointCurrent] || z != p.waypointsZ[p.waypointCurrent] {
+		if int16(x) != p.waypointsX[p.waypointCurrent] || int16(z) != p.waypointsZ[p.waypointCurrent] {
 			p.waypointCurrent = (p.waypointCurrent + 1) % 10
-			p.waypointsX[p.waypointCurrent] = x
-			p.waypointsZ[p.waypointCurrent] = z
+			p.waypointsX[p.waypointCurrent] = int16(x)
+			p.waypointsZ[p.waypointCurrent] = int16(z)
 		}
 	} else {
 		p.serverIndex = serverIndex
 		p.waypointCurrent = 0
 		p.waypointNext = 0
-		p.waypointsX[p.waypointCurrent] = x
-		p.waypointsZ[p.waypointCurrent] = z
+		p.waypointsX[p.waypointCurrent] = int16(x)
+		p.waypointsZ[p.waypointCurrent] = int16(z)
 	}
 	c.players[c.playerCount] = p
 	c.playerCount++
@@ -1214,17 +1267,17 @@ func (c *client) createNPC(serverIndex, id, x, z, sprite int) *npc {
 	n.z = z
 
 	if found {
-		if x != n.waypointsX[n.waypointCurrent] || z != n.waypointsZ[n.waypointCurrent] {
+		if int16(x) != n.waypointsX[n.waypointCurrent] || int16(z) != n.waypointsZ[n.waypointCurrent] {
 			n.waypointCurrent = (n.waypointCurrent + 1) % 10
-			n.waypointsX[n.waypointCurrent] = x
-			n.waypointsZ[n.waypointCurrent] = z
+			n.waypointsX[n.waypointCurrent] = int16(x)
+			n.waypointsZ[n.waypointCurrent] = int16(z)
 		}
 	} else {
 		n.serverIndex = serverIndex
 		n.waypointCurrent = 0
 		n.waypointNext = 0
-		n.waypointsX[n.waypointCurrent] = x
-		n.waypointsZ[n.waypointCurrent] = z
+		n.waypointsX[n.waypointCurrent] = int16(x)
+		n.waypointsZ[n.waypointCurrent] = int16(z)
 		if c.script != nil && c.script.onNPCSpawned != nil {
 			c.script.callOnNPCSpawned(n)
 		}
@@ -1341,8 +1394,8 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 					player.waypointCurrent = (player.waypointCurrent + 1) % 10
 					player.waypointsX[player.waypointCurrent] = waypointX
 					player.waypointsZ[player.waypointCurrent] = waypointZ
-					player.x = waypointX
-					player.z = waypointZ
+					player.x = int(waypointX)
+					player.z = int(waypointZ)
 					player.sprite = dir
 					ofs += 3
 				}
@@ -1429,8 +1482,8 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 					npc.waypointCurrent = (npc.waypointCurrent + 1) % 10
 					npc.waypointsX[npc.waypointCurrent] = waypointX
 					npc.waypointsZ[npc.waypointCurrent] = waypointZ
-					npc.x = waypointX
-					npc.z = waypointZ
+					npc.x = int(waypointX)
+					npc.z = int(waypointZ)
 					npc.sprite = dir
 					ofs += 3
 				}
@@ -1876,7 +1929,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			fmt.Printf("[%s] Got sleep image\n", c.user)
 		}
 		if !c.sleeping {
-			atomic.StoreInt64(&c.sleepingFatigue, int64(c.fatigue))
+			atomic.StoreInt32(&c.sleepingFatigue, int32(c.fatigue))
 		}
 		c.sleeping = true
 		bs := p.readBytes(length)
@@ -1972,7 +2025,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		skill := p.readByteAsInt()
 		c.experience[skill] = p.readInt() / 4
 	case 244: // sleeping menu fatigue
-		atomic.StoreInt64(&c.sleepingFatigue, int64(p.readShort()))
+		atomic.StoreInt32(&c.sleepingFatigue, int32(p.readShort()))
 	case 115: // black hole
 		c.blackhole = p.readByte() != 0
 	case 123: // remove inventory item
@@ -2252,9 +2305,9 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			c.ignoreList[i].arg1 = p.readString()
 			c.ignoreList[i].old = p.readString()
 		}
-	case 183: // Can't logout response packet
+	case 183: // can't logout response packet
 		if c.account.debug {
-			fmt.Printf("[%s] Got a CANT_LOGOUT server response\n", c.user)
+			fmt.Printf("[%s] Logout Request: Cannot logout\n", c.user)
 		}
 	case 5: // quest stage info
 		updateQuestType := p.readByte()

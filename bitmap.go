@@ -105,10 +105,12 @@ func (w *Writer) Write(p []byte) (n int, err error) {
 // Bits of r in positions higher than n are ignored.
 //
 // For example:
-//   err := w.WriteBits(0x1234, 8)
+//
+//	err := w.WriteBits(0x1234, 8)
 //
 // is equivalent to:
-//   err := w.WriteBits(0x34, 8)
+//
+//	err := w.WriteBits(0x34, 8)
 func (w *Writer) WriteBits(r uint64, n uint8) (err error) {
 	// if r would have bits set at n or higher positions (zero indexed),
 	// WriteBitsUnsafe's implementation could "corrupt" bits in cache.
@@ -127,12 +129,14 @@ func (w *Writer) WriteBits(r uint64, n uint8) (err error) {
 // not satisfy this is undefined behavior (might corrupt previously written bits).
 //
 // E.g. if you want to write 8 bits:
-//   err := w.WriteBitsUnsafe(0x34, 8)        // This is OK,
-//                                            // 0x34 has no bits set higher than the 8th
-//   err := w.WriteBitsUnsafe(0x1234&0xff, 8) // &0xff masks out bits higher than the 8th
+//
+//	err := w.WriteBitsUnsafe(0x34, 8)        // This is OK,
+//	                                         // 0x34 has no bits set higher than the 8th
+//	err := w.WriteBitsUnsafe(0x1234&0xff, 8) // &0xff masks out bits higher than the 8th
 //
 // Or:
-//   err := w.WriteBits(0x1234, 8)            // bits higher than the 8th are ignored here
+//
+//	err := w.WriteBits(0x1234, 8)            // bits higher than the 8th are ignored here
 func (w *Writer) WriteBitsUnsafe(r uint64, n uint8) (err error) {
 	// Some optimization, frequent cases
 	newbits := w.bits + n

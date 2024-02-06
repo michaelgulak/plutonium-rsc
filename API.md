@@ -40,9 +40,13 @@ After this is called, the script has 15 seconds to clean up (ie. get out of comb
 
 Tells the bot to close the account loop, terminating the running account. Usually used with on_kill_signal() after the account is out of combat and the script prepares everything to be able to kill the account loop.
 
-###### in_rect(x, z, width, height)
+###### in_rect(area_x, area_z, width, height)
 
-`x` and `z` are the starting point which should be the north-west coordinate. The width extends east, while the height extends south. Note that just subtracting the coordinates will not work to calculate the width or height. For example, width should be calculated as `x1 - x2 + 1` (x1 is first because the x coordinate decreases in RSC as you move east).
+Checks whether the player is in a rectangular area. `area_x` and `area_z` are the starting point which should be the north-west coordinate. The width extends east, while the height extends south. Note that just subtracting the coordinates will not work to calculate the width or height. For example, width should be calculated as `x1 - x2 + 1` (x1 is first because the x coordinate decreases in RSC as you move east).
+
+###### point_in_rect(point_x, point_z, area_x, area_z, width, height)
+
+Same as `in_rect` except instead of using the client coordinates it checks the supplied `point_x` and `point_z`.
 
 ###### set_fatigue_tricking(True)
 ###### stop_script()
@@ -168,7 +172,7 @@ Contains the following fields: `id`, `x`, `z`.
 ###### get_ground_item_count()
 ###### get_nearest_ground_item_by_id(id OR ids=[...], reachable=True, x=216, z=636, radius=10)
 
-`x` and `z` are used as the start point for the radius. Otherwise they're unused.
+`reachable`, `x`, `z`, and `radius` are optional. `x` and `z` are used as the start point for the radius. Otherwise they're unused.
 
 ###### get_nearest_ground_item_by_id_in_rect(id OR ids=[...], x=218, z=636, width=10, height=10, reachable=True)
 
@@ -185,6 +189,8 @@ Reachable is optional.
 
 Contains the following fields: `id`, `amount`, `equipped`, `slot`. 
 
+###### get_total_inventory_count()
+###### get_inventory_item_at_index(index)
 ###### get_inventory_items()
 ###### get_inventory_item_by_id(id OR ids=[...])
 ###### get_inventory_count_by_id(id OR ids=[...])
@@ -193,7 +199,6 @@ Contains the following fields: `id`, `amount`, `equipped`, `slot`.
 Returns the first item that doesn't match the supplied array of ids.
 
 ###### has_inventory_item(id)
-###### get_total_inventory_count()
 ###### get_empty_slots()
 ###### is_inventory_item_equipped(id)
 ###### use_item(item)
@@ -216,10 +221,12 @@ Contains the following fields: `id`, `x`, `z`, `sid`, `sprite`, `current_hp`, `m
 
 Contains the following methods: `in_combat()`, `is_talking()`.
 
+###### get_npc_count()
+###### get_npc_at_index(index)
 ###### get_npcs()
 ###### get_nearest_npc_by_id(id OR ids=[...], in_combat=False, talking=False, reachable=True, x=218, z=636, radius=10)
 
-`x` and `z` are used as the start point for the radius. Otherwise they're unused.
+`in_combat`, `talking`, `reachable`, `radius`, `x`, and `z` are optional. `x` and `z` are used as the start point for the radius. Otherwise they're unused.
 
 ###### get_nearest_npc_by_id_in_rect(id OR ids=[...], in_combat=False, talking=False, reachable=True, x=218, z=636, width=10, height=10)
 ###### attack_npc(npc)
@@ -245,8 +252,9 @@ Contains the following fields: `x`, `z`, `pid`, `sprite`, `current_hp`, `max_hp`
 Contains the following methods: `in_combat()`, `is_talking()`.
 
 ###### get_my_player()
-###### get_players()
 ###### get_player_count()
+###### get_player_at_index(index)
+###### get_players()
 ###### get_player_by_name(str)
 ###### attack_player(player)
 ###### cast_on_player(spell_id, player)
@@ -306,16 +314,17 @@ Contains the following fields: `id`, `amount`.
 
 Contains the following fields: `id`, `x`, `z`, `dir`.
 
+###### get_object_count()
+###### get_object_at_index(index)
 ###### get_objects()
 ###### get_nearest_object_by_id(id OR ids=[...], reachable=True, x=218, z=636, radius=10)
 
-`x` and `z` are used as the start point for the radius. Otherwise they're unused.
+`reachable`, `x`, `z`, and `radius` are optional. `x` and `z` are used as the start point for the radius. Otherwise they're unused.
 
 ###### get_nearest_object_by_id_in_rect(id OR ids=[...], x=218, z=636, width=10, height=10, reachable=True)
 
 Reachable is optional.
 
-###### get_object_count()
 ###### get_object_from_coords(x, z)
 ###### is_object_at(x, z)
 ###### at_object(object)
@@ -328,16 +337,17 @@ Reachable is optional.
 
 Contains the following fields: `id`, `x`, `z`, `dir`.
 
+###### get_wall_object_count()
+###### get_wall_object_at_index(index)
 ###### get_wall_objects()
 ###### get_nearest_wall_object_by_id(id OR ids=[...], reachable=True, x=218, z=636, radius=10)
 
-`x` and `z` are used as the start point for the radius. Otherwise they're unused.
+`reachable`, `x`, `z`, and `radius` are optional. `x` and `z` are used as the start point for the radius. Otherwise they're unused.
 
 ###### get_nearest_wall_object_by_id_in_rect(id OR ids=[...], x=218, z=636, width=10, height=10, reachable=True)
 
 Reachable is optional.
 
-###### get_wall_object_count()
 ###### get_wall_object_from_coords(x, z)
 ###### at_wall_object(wall_object)
 ###### at_wall_object2(wall_object)
@@ -349,11 +359,12 @@ Reachable is optional.
 
 Contains the following fields: `id`, `amount`.
 
+###### get_bank_size()
+###### get_bank_item_at_index(index)
 ###### get_bank_items()
 ###### deposit(id, amount)
 ###### withdraw(id, amount)
 ###### get_bank_count(id OR ids=[...])
-###### get_bank_size()
 ###### has_bank_item(id)
 ###### is_bank_open()
 ###### close_bank()
@@ -370,6 +381,8 @@ Contains the following fields: `id`, `amount`.
 
 Contains the following fields: `id`, `amount`, `price`.
 
+###### get_shop_item_count()
+###### get_shop_item_at_index(index)
 ###### get_shop_items()
 ###### is_shop_open()
 ###### get_shop_item_by_id(id)
