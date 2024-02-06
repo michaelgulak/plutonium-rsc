@@ -1,6 +1,6 @@
 # Plutonium
 
-Plutonium is a shell bot written for the [Open RSC](https://rsc.vet/) Uranium server than runs on Linux, Windows, MacOS, etc. Being a shell bot means that it runs without any graphics whatsoever, and thus has a much smaller memory and cpu footprint than other bots. Plutonium also makes it easy to run several accounts at once. One thing to take note of is that Open RSC servers have a max player per ip limit that they change sometimes. So the most bots per ip you can run on Uranium is around 10 at any given time.
+Plutonium is a shell bot written for the [Open RSC](https://rsc.vet/) Uranium server that runs on Linux, Windows, MacOS, etc. Being a shell bot means that it runs without any graphics whatsoever, and thus has a much smaller memory and cpu footprint than other bots. Plutonium also makes it easy to run several accounts at once. One thing to take note of is that Open RSC servers have a max player per ip limit that they change sometimes. So the most bots per ip you can run on Uranium is around 10 at any given time.
 
 Plutonium was built from the ground up using Go. Scripts for it are written in python via [gpython](https://github.com/go-python/gpython). Some code is taken from the Open RSC server (in particular, the pathfinding and chat message code).
 
