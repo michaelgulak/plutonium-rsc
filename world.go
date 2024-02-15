@@ -177,10 +177,11 @@ func (w *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, 
 				continue
 			}
 			sectorTile := s.tiles[x*48+y]
-			if int(sectorTile.groundOverlay) == 250 {
+			if byte(sectorTile.groundOverlay) == 250 {
 				sectorTile.groundOverlay = 2
 			}
 			groundOverlay := sectorTile.groundOverlay
+
 			if groundOverlay > 0 && tileDefs[groundOverlay-1].ObjectType != 0 {
 				w.getRegion(bx, by).tiles[bx%48][by%48] |= 0x40
 			}

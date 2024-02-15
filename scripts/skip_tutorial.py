@@ -40,7 +40,7 @@ def loop():
                                pants_colour, \
                                skin_colour)
         log("sent appearance")
-        return 5000
+        return 2000
 
     if in_rect(244, 719, 55, 49):
         skip_tutorial()

@@ -1,4 +1,4 @@
-# Simplified version of AA_VarrockEastMiner that only mines 2 rocks by RLN
+# Plutonium version of AA_VarrockEastMiner by RLN
 #
 # Script block should look like this:
 # [script]
@@ -23,6 +23,8 @@ previous_rock         = None
 current_rock          = None
 click_timeout         = 0
 previous_rock_timeout = 0
+move_x                = -1
+move_z                = -1
 
 ore_banked = 0
 
@@ -39,15 +41,19 @@ class Coord:
 
 if settings.ore_type == "copper":
     rocks = [Rock(101, 73, 547), \
-             Rock(101, 73, 549)]
+             Rock(101, 72, 549), \
+             Rock(101, 73, 549), \
+             Rock(101, 74, 549)]
     coord = Coord(73, 548)
 elif settings.ore_type == "tin":
-    rocks = [Rock(105, 79, 546), \
-             Rock(105, 78, 545)]
+    rocks = [Rock(105, 78, 545), \
+             Rock(105, 78, 546), \
+             Rock(105, 79, 546)]
     coord = Coord(79, 545)
 elif settings.ore_type == "iron":
-    rocks = [Rock(103, 76, 544), \
-             Rock(102, 75, 543)]
+    rocks = [Rock(102, 75, 543), \
+             Rock(102, 76, 543), \
+             Rock(103, 76, 544)]
     coord = Coord(75, 544)
 
 if rocks == None:
@@ -67,12 +73,27 @@ def bank_next_item():
     
     return 2000
 
+def mine_rock(x, z):
+    debug("ATOBJECT (%d, %d)" % (x, z))
+    create_packet(136)
+    write_short(x)
+    write_short(z)
+    send_packet()
+
 def mine():
-    global click_timeout
+    global click_timeout, current_rock, move_x, move_z
 
     if get_fatigue() > 95:
         use_sleeping_bag()
         return 3000
+
+    if move_x != -1:
+        if get_x() == move_x and get_z() == move_z:
+            move_x = -1
+            move_z = -1
+        else:
+            walk_to(move_x, move_z)
+            return 700
 
     if get_x() != coord.x or get_z() != coord.z:
         if in_radius_of(102, 509, 15):
@@ -82,7 +103,7 @@ def mine():
                 return 1300
 
         walk_path_to(coord.x, coord.z)
-        return 5000
+        return 3000
     
     if click_timeout != 0 \
         and time.time() <= click_timeout:
@@ -97,7 +118,7 @@ def mine():
             continue
         
         current_rock = rock
-        at_object(obj)
+        mine_rock(obj.x, obj.z)
         click_timeout = time.time() + 5
         return 700
     
@@ -121,7 +142,7 @@ def bank():
                 return 1300
             
         walk_path_to(102, 512)
-        return 5000
+        return 3000
 
 def loop():
     if is_bank_open() \
@@ -132,8 +153,18 @@ def loop():
     
     return mine()
 
+def get_adjacent_coord():
+    if is_reachable(get_x()+1, get_z()):
+        return (get_x()+1, get_z())
+    elif is_reachable(get_x(), get_z()+1):
+        return (get_x(), get_z()+1)
+    elif is_reachable(get_x()-1, get_z()):
+        return (get_x()-1, get_z())
+    else:
+        return (get_x(), get_z()-1)
+
 def on_server_message(msg):
-    global click_timeout, previous_rock_timeout, previous_rock
+    global click_timeout, previous_rock_timeout, previous_rock, move_x, move_z
 
     if msg.startswith("You only") or msg.startswith("There is"):
         click_timeout = 0
@@ -141,6 +172,8 @@ def on_server_message(msg):
         click_timeout = 0
         previous_rock = current_rock
         previous_rock_timeout = time.time() + 1
+    elif msg.startswith("@cya@You have been standing"):
+        move_x, move_z = get_adjacent_coord()
 
 def on_progress_report():
     return {"Mining Level": get_max_stat(14), \

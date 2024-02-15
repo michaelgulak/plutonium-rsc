@@ -86,6 +86,7 @@ type path struct {
 type longPath struct {
 	points    []*point
 	currentPt int
+	length    int
 	c         *client
 }
 

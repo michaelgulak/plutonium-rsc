@@ -8,6 +8,7 @@ def loop():
         return 2000
 
     if get_max_stat(17) >= 5:
+        log("achieved 5 thieving, stopping")
         stop_script()
         set_autologin(False)
         logout()

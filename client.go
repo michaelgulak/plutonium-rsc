@@ -29,7 +29,7 @@ const (
 	supportBankNotes = false
 	skillCount       = 18
 	readWriteTimeout = 10
-	botVersion       = "1.3.0"
+	botVersion       = "1.3.1"
 )
 
 var (
@@ -277,8 +277,8 @@ type objectDef struct {
 }
 
 type itemDef struct {
+	Name string
 	/*ID int
-	Name             string
 	Description      string
 	Command          string*/
 	/*IsFemaleOnly     int

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"math/rand"
 	"os"
 	"runtime"
@@ -503,6 +504,22 @@ func (n *longPath) Type() *py.Type {
 				}
 				return py.None, nil
 			}, py.METH_CLASS, ""),
+			"set_nearest": py.MustNewMethod("set_nearest", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+				x, z := n.c.x, n.c.z
+				minIdx := 0
+				minDist := math.MaxInt
+				for i, p := range n.points {
+					if dist := distance(x, z, p.x, p.y); dist < minDist {
+						minDist = dist
+						minIdx = i
+					}
+				}
+				n.currentPt = minIdx
+				return py.None, nil
+			}, py.METH_CLASS, ""),
+			"length": py.MustNewMethod("length", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+				return py.Int(n.length), nil
+			}, py.METH_CLASS, ""),
 			"walk": py.MustNewMethod("walk", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 				if n.currentPt >= len(n.points) {
 					return py.None, nil
@@ -660,6 +677,12 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	}, py.METH_STATIC, "")
 	module.Globals["log"] = py.MustNewMethod("log", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		fmt.Printf("[%s] %s\n", c.user, args[0].(py.String))
+		return py.None, nil
+	}, py.METH_STATIC, "")
+	module.Globals["debug"] = py.MustNewMethod("debug", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		if c.account.debug {
+			fmt.Printf("[%s] %s\n", c.user, args[0].(py.String))
+		}
 		return py.None, nil
 	}, py.METH_STATIC, "")
 	module.Globals["distance"] = py.MustNewMethod("distance", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
@@ -849,6 +872,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	}, py.METH_STATIC, "")
 	module.Globals["get_empty_slots"] = py.MustNewMethod("get_empty_slots", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(30 - c.inventoryCount), nil
+	}, py.METH_STATIC, "")
+	module.Globals["get_item_name"] = py.MustNewMethod("get_item_name", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return py.String(itemDefs[int(args[0].(py.Int))].Name), nil
 	}, py.METH_STATIC, "")
 	module.Globals["get_inventory_count_by_id"] = py.MustNewMethod("get_inventory_count_by_id", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var ids []int

@@ -1,0 +1,75 @@
+# Generic walker that handles members gates by RLN
+
+# Script block should look like this:
+
+# [script]
+# name = "walker.py"
+#
+# [script.settings]
+# target_x = 329
+# target_z = 553
+
+class Gate:
+    def __init__(self, id, x, z, is_x, thresh_to, thresh_from):
+        self.id = id
+        self.x = x
+        self.z = z
+        self.is_x = is_x
+        self.thresh_to = thresh_to
+        self.thresh_from = thresh_from
+
+gates = [
+    Gate(137, 341, 487, True, 341, 342),
+    Gate(254, 434, 682, True, 434, 435),
+    Gate(138, 343, 581, False, 580, 581),
+    Gate(346, 331, 142, False, 141, 142),
+    Gate(346, 111, 142, False, 141, 142),
+]
+path = None
+
+def loop():
+    global path
+
+    if path != None:
+        path.process()
+        for gate in gates:
+            if in_radius_of(gate.x, gate.z, 15):
+                pnc = path.next_z()
+                mnc = get_z()
+                if gate.is_x:
+                    pnc = path.next_x()
+                    mnc = get_x()
+                    
+                if (pnc <= gate.thresh_to and mnc >= gate.thresh_from) or \
+                    (pnc >= gate.thresh_from and mnc <= gate.thresh_to):
+                
+                    gate_ = get_object_from_coords(gate.x, gate.z)
+                    if gate_ != None and gate_.id == gate.id:
+                        at_object(gate_)
+
+                    return 800
+        
+        if not path.complete():
+            path.walk()
+            return 800
+        else:
+            path = None
+
+    if get_x() != settings.target_x or get_z() != settings.target_z:
+        path = calculate_path_to(settings.target_x, settings.target_z)
+        if path == None:
+            log("Failed to path")
+            stop_script()
+            set_autologin(False)
+            logout()
+            return 1000
+    else:
+        path = None
+        log("Walking complete!")
+        stop_script()
+        set_autologin(False)
+        logout()
+
+        return 250
+
+    return 1000
