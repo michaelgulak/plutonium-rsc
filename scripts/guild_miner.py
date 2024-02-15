@@ -60,7 +60,7 @@ def bank():
     return 1000
  
 def mine():
-    if get_fatigue() >= 95:
+    if get_fatigue() > 95:
         use_sleeping_bag()
         return 3000
 

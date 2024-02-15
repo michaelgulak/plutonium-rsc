@@ -22,10 +22,8 @@ def get_adjacent_coord():
         return (get_x(), get_z()+1)
     elif is_reachable(get_x()-1, get_z()):
         return (get_x()-1, get_z())
-    elif is_reachable(get_x(), get_z()-1):
+    else:
         return (get_x(), get_z()-1)
-
-    return (None, None)
 
 def bank():
     global coins_banked, chaos_banked
@@ -144,9 +142,6 @@ def thieve():
 
         if move_timer:
             adj_x, adj_z = get_adjacent_coord()
-            if adj_x == None or adj_z == None:
-                move_timer = False
-                return 1000
             walk_to(adj_x, adj_z)
             move_timer = False
             return 1000

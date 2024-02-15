@@ -3,7 +3,7 @@
 # Pickpockets men in Lumbridge until it gets enough gold for a sleeping bag
 # and then buys one.
 
-# If there are no men in a narrow range it will wait until there is one.
+# If there are no men in a narrow area it will wait until there is one.
 
 MAN          = 11
 SLEEPING_BAG = 1263

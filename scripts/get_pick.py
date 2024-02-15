@@ -50,3 +50,5 @@ def loop():
         set_autologin(False)
         logout()
         return 10000
+    
+    return 2000

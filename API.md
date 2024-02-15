@@ -54,6 +54,10 @@ Same as `in_rect` except instead of using the client coordinates it checks the s
 
 Prints to the console with user prefix.
 
+###### debug(str)
+
+Prints to the console if the debug flag is set to true.
+
 ###### walk_to(x, z)
 ###### walk_path_to(x, z)
 
@@ -100,6 +104,7 @@ Can only be used in event handlers.
 ###### get_current_stat(idx)
 ###### get_experience(idx)
 ###### get_hp_percent()
+###### get_item_name(id)
 ###### skip_tutorial()
 ###### is_reachable(x, z)
 ###### is_ground_item_reachable(ground_item)
@@ -119,9 +124,13 @@ Returns a random integer between min and max, inclusive. Min and max must be >= 
 
 #### Path Object
 
-Contains the following methods: `complete`, `reset`, `process`, `walk`, `next_x`, `next_z`.
+Contains the following methods: `complete()`, `reset()`, `process()`, `walk()`, `next_x()`, `next_z()`, `set_nearest()`, `length()`.
 
 The `process` method must be called before calling `walk`. This is to make handling obstacles with `next_x` and `next_z` cleaner. For example you may want to call `process`, check if `next_z` is beyond some gate or other obstacle, then handle the obstacle before continuing to walk.
+
+The `walk` method returns false if the next tile is unreachable.
+
+The `set_nearest` method can be called on the path to set the path index to the nearest point to the player. This is useful if you calculate a path between two points and you're somewhere in between the two points because you stopped your script before the player reached the destination.
 
 ###### calculate_path_to(x, z, depth)
 
@@ -140,8 +149,7 @@ def loop():
     if path != None:
         path.process()
         if not path.complete():
-            if not path.walk():
-              path = None # We're lost, reset the path
+            path.walk():
             return 600
         else:
             path = None
