@@ -18,13 +18,14 @@ class Gate:
         self.thresh_to = thresh_to
         self.thresh_from = thresh_from
 
-gates = [
+GATES = [
     Gate(137, 341, 487, True, 341, 342),
     Gate(254, 434, 682, True, 434, 435),
     Gate(138, 343, 581, False, 580, 581),
     Gate(346, 331, 142, False, 141, 142),
     Gate(346, 111, 142, False, 141, 142),
 ]
+
 path = None
 
 def loop():
@@ -32,7 +33,7 @@ def loop():
 
     if path != None:
         path.process()
-        for gate in gates:
+        for gate in GATES:
             if in_radius_of(gate.x, gate.z, 15):
                 pnc = path.next_z()
                 mnc = get_z()
