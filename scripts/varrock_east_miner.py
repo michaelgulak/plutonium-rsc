@@ -83,10 +83,6 @@ def mine_rock(x, z):
 def mine():
     global click_timeout, current_rock, move_x, move_z
 
-    if get_fatigue() > 95:
-        use_sleeping_bag()
-        return 3000
-
     if move_x != -1:
         if get_x() == move_x and get_z() == move_z:
             move_x = -1
@@ -105,6 +101,10 @@ def mine():
         walk_path_to(coord.x, coord.z)
         return 3000
     
+    if get_fatigue() > 95:
+        use_sleeping_bag()
+        return 3000
+
     if click_timeout != 0 \
         and time.time() <= click_timeout:
         return 250
@@ -147,7 +147,7 @@ def bank():
 def loop():
     if is_bank_open() \
         or ((get_total_inventory_count() == 30) \
-        and not settings.powermine):
+            and not settings.powermine):
 
         return bank()
     
