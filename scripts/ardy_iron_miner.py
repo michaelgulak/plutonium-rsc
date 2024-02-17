@@ -7,6 +7,7 @@
 #
 # [script.settings]
 # spot  = "north"
+# powermine = false
 #
 # spot can be set to "north" or "south". North has 4 iron rocks, while south has 3.
 
@@ -22,6 +23,8 @@ previous_rock         = None
 current_rock          = None
 click_timeout         = 0
 previous_rock_timeout = 0
+move_x                = -1
+move_z                = -1
 
 ore_banked = 0
 
@@ -72,11 +75,15 @@ def mine_rock(x, z):
     send_packet()
 
 def mine():
-    global click_timeout, current_rock
+    global click_timeout, current_rock, move_x, move_z
 
-    if get_fatigue() > 95:
-        use_sleeping_bag()
-        return 3000
+    if move_x != -1:
+        if get_x() == move_x and get_z() == move_z:
+            move_x = -1
+            move_z = -1
+        else:
+            walk_to(move_x, move_z)
+            return 700
 
     if get_x() != coord.x or get_z() != coord.z:
         if in_radius_of(550, 612, 15):
@@ -88,6 +95,10 @@ def mine():
         walk_path_to(coord.x, coord.z)
         return 3000
     
+    if get_fatigue() > 95:
+        use_sleeping_bag()
+        return 3000
+
     if click_timeout != 0 \
         and time.time() <= click_timeout:
         return 250
@@ -129,14 +140,25 @@ def bank():
 
 def loop():
     if is_bank_open() \
-        or get_total_inventory_count() == 30:
+        or (get_total_inventory_count() == 30 \
+            and not settings.powermine):
 
         return bank()
     
     return mine()
 
+def get_adjacent_coord():
+    if is_reachable(get_x()+1, get_z()):
+        return (get_x()+1, get_z())
+    elif is_reachable(get_x(), get_z()+1):
+        return (get_x(), get_z()+1)
+    elif is_reachable(get_x()-1, get_z()):
+        return (get_x()-1, get_z())
+    else:
+        return (get_x(), get_z()-1)
+
 def on_server_message(msg):
-    global click_timeout, previous_rock_timeout, previous_rock
+    global click_timeout, previous_rock_timeout, previous_rock, move_x, move_z
 
     if msg.startswith("You only") or msg.startswith("There is"):
         click_timeout = 0
@@ -144,6 +166,8 @@ def on_server_message(msg):
         click_timeout = 0
         previous_rock = current_rock
         previous_rock_timeout = time.time() + 1
+    elif msg.startswith("@cya@You have been standing"):
+        move_x, move_z = get_adjacent_coord()
 
 def on_progress_report():
     return {"Mining Level": get_max_stat(14), \
