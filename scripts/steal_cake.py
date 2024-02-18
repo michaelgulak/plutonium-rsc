@@ -51,7 +51,7 @@ def thieve():
         if cake != None:
             use_item(cake)
             return 1350
-        else
+        else:
             return 1000
     
     if get_x() != 543 or get_z() != 600:
