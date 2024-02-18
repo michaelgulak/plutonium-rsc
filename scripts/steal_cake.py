@@ -24,22 +24,14 @@ def bank():
     cake_count = get_inventory_count_by_id(330)
     cake_stolen = get_bank_count(330) + cake_count
 
-    if cake_count > 0:
-        deposit(330, cake_count)
+    if cake_count > 1:
+        deposit(330, cake_count-1)
         return 2000
     else:
         close_bank()
         return 2000
     
     return 5000
-    
-def eat_cake():
-    cake = get_inventory_item_by_id(ids=CAKE_IDS)
-    if cake != None:
-        use_item(cake)
-        return 1350
-    
-    return 2000
 
 def thieve():
     if get_combat_style() != 3:
@@ -59,6 +51,8 @@ def thieve():
         if cake != None:
             use_item(cake)
             return 1350
+        else
+            return 1000
     
     if get_x() != 543 or get_z() != 600:
         if in_radius_of(550, 612, 15):
