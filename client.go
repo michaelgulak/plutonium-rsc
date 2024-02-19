@@ -29,7 +29,7 @@ const (
 	supportBankNotes = false
 	skillCount       = 18
 	readWriteTimeout = 10
-	botVersion       = "1.3.2"
+	botVersion       = "1.3.3"
 )
 
 var (
@@ -58,6 +58,7 @@ type client struct {
 	account             *account
 	localWorld          *localWorld
 	scriptKillSignal    chan struct{}
+	idleChan            chan struct{}
 
 	script *script
 
@@ -301,6 +302,14 @@ type itemDef struct {
 	BasePrice int
 }
 
+type bot struct {
+	accounts  []*account
+	wg        *sync.WaitGroup
+	loginWait chan struct{}
+	world     *world
+	closing   chan struct{}
+}
+
 func main() {
 	rand.Seed(time.Now().UnixNano())
 
@@ -314,18 +323,16 @@ func main() {
 		autologin  bool
 		version    bool
 		help       bool
-		closing    = make(chan struct{})
 		sigs       = make(chan os.Signal, 1)
 	)
 
-	/*f, err := os.Create("cpu.pprof")
-	if err != nil {
-		log.Fatal(err)
+	b := &bot{
+		accounts:  []*account{},
+		wg:        &sync.WaitGroup{},
+		loginWait: make(chan struct{}),
+		closing:   make(chan struct{}),
+		world:     newWorld(),
 	}
-	pprof.StartCPUProfile(f)
-	defer pprof.StopCPUProfile()
-	*/
-	//defer profile.Start(profile.MemProfile, profile.ProfilePath("."), profile.NoShutdownHook).Stop()
 
 	flag.StringVar(&user, "u", "", "OpenRSC username")
 	flag.StringVar(&pass, "p", "", "OpenRSC password")
@@ -351,47 +358,46 @@ func main() {
 
 	parseConfig(configPath)
 
+	if regFile != "" {
+		doAccountCreations(regFile)
+		return
+	}
+
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
 		<-sigs
 		fmt.Println("[BOT] Received kill signal")
-		close(closing)
+		close(b.closing)
 	}()
 
-	if regFile != "" {
-		doAccountCreations(closing, regFile)
-		return
-	}
+	b.checkOCR()
+	b.loadDefs()
+	b.loadWorld()
+	b.loadAccounts(user, pass, acctFile, scriptPath, autologin)
+	b.loginWaiter()
+	b.runAccounts()
 
-	if settings.OcrSettings.OcrType == "local" {
-		_, err := os.Stat(settings.executablePath + string(os.PathSeparator) + settings.OcrSettings.OcrFileName)
-		if os.IsNotExist(err) {
-			fmt.Printf("[BOT] OCR not found: %s\n", err)
-			os.Exit(1)
-		} else if err != nil {
-			fmt.Printf("[BOT] OCR Error: %s\n", err)
-			os.Exit(1)
-		}
-	}
+	fmt.Println("[BOT] All accounts are finished, exiting")
+}
 
+func (b *bot) loadDefs() {
 	fmt.Printf("[BOT] Loading definitions...")
 	loadDefs()
 	fmt.Println("complete")
+}
 
+func (b *bot) loadWorld() {
 	fmt.Printf("[BOT] Loading landscape...")
-	world := newWorld()
-	world.loadWorld()
+	b.world.loadWorld()
 	fmt.Println("complete")
+}
 
-	var (
-		accounts []*account
-		err      error
-	)
-
+func (b *bot) loadAccounts(user, pass, acctFile, scriptPath string, autologin bool) {
+	var err error
 	if user == "" && pass == "" {
 		if acctFile == "" {
-			accounts, err = loadAccounts()
+			b.accounts, err = loadAccounts()
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
@@ -402,8 +408,7 @@ func main() {
 				fmt.Println(err)
 				os.Exit(1)
 			}
-
-			accounts = append(accounts, acct)
+			b.accounts = append(b.accounts, acct)
 		}
 	} else {
 		acct := &account{
@@ -421,350 +426,310 @@ func main() {
 				pathDir: pathDir,
 			}
 		}
-		accounts = append(accounts, acct)
+		b.accounts = append(b.accounts, acct)
 	}
+}
 
-	wg := &sync.WaitGroup{}
+func (b *bot) checkOCR() {
+	if settings.OcrSettings.OcrType == "local" {
+		_, err := os.Stat(settings.executablePath + string(os.PathSeparator) + settings.OcrSettings.OcrFileName)
+		if os.IsNotExist(err) {
+			fmt.Printf("[BOT] OCR not found: %s\n", err)
+			os.Exit(1)
+		} else if err != nil {
+			fmt.Printf("[BOT] OCR Error: %s\n", err)
+			os.Exit(1)
+		}
+	}
+}
 
-	loginWait := make(chan struct{})
-
+func (b *bot) loginWaiter() {
+	if len(b.accounts) > 1 {
+		fmt.Println("[BOT] NOTE: Plutonium has to stagger logins by 6 seconds so as to not spam the server.")
+	}
 	go func() {
 		for {
-			<-loginWait
+			<-b.loginWait
 			time.Sleep(6 * time.Second)
 		}
 	}()
+}
 
-	if len(accounts) > 1 {
-		fmt.Println("[BOT] NOTE: Plutonium has to stagger logins by 6 seconds so as to not spam the server.")
-	}
-
-	for _, acc := range accounts {
+func (b *bot) runAccounts() {
+	for _, acc := range b.accounts {
 		if !acc.enabled {
 			continue
 		}
-		var err error
-		acc.progressFile, err = os.Create(settings.executablePath + string(os.PathSeparator) + settings.LogSettings.Directory + string(os.PathSeparator) + settings.LogSettings.ProgressReports + string(os.PathSeparator) + acc.username + ".log")
-		if err != nil {
-			fmt.Printf("[%s] Error creating progress report file: %s\n", acc.username, err)
-			os.Exit(1)
-		}
-		defer acc.progressFile.Close()
-		acc.lastProgressReport = time.Now()
+		f := acc.mustCreateProgressFile()
+		defer f.Close()
 
-		wg.Add(1)
-		go func(acc *account) {
-		clientLoop:
-			for {
-				select {
-				case <-closing:
-					break clientLoop
-				default:
-				}
-				c := &client{
-					RSCPacket:        &RSCPacket{buf: make([]byte, 5000)},
-					user:             acc.username,
-					pass:             acc.password,
-					world:            world,
-					closed:           make(chan struct{}),
-					closedLock:       &sync.Mutex{},
-					packetChan:       make(chan *RSCPacket, 32),
-					sleepChan:        make(chan []byte, 1),
-					captchaChan:      make(chan []byte, 1),
-					cancelSleep:      make(chan struct{}),
-					loading:          true,
-					account:          acc,
-					localWorld:       newLocalWorld(),
-					scriptKillSignal: make(chan struct{}, 1),
-				}
-
-				c.init()
-
-				if acc.script != nil {
-					c.script = acc.script
-					if err := c.loadScript(); err != nil {
-						fmt.Printf("[%s] Script load error [%s]: %s\n", c.user, c.script.path, err)
-						os.Exit(1)
-					}
-				}
-
-				select {
-				case loginWait <- struct{}{}:
-				case <-closing:
-					break clientLoop
-				}
-
-				loginResponse, err := c.login()
-				if err != nil {
-					fmt.Printf("[%s] Login error: %s\n", c.user, err)
-					time.Sleep(15 * time.Second)
-					continue clientLoop
-				}
-				fmt.Printf("[%s] Login response: %d\n", c.user, loginResponse)
-				if loginResponse&0x40 == 0 {
-					switch loginResponse {
-					case 4: // currently logged in
-						fmt.Printf("[%s] Account already logged in\n", c.user)
-						time.Sleep(time.Second * 5)
-						continue clientLoop
-					case 100: // something
-						fmt.Printf("[%s] Weird server response\n", c.user)
-						time.Sleep(time.Second * 5)
-						continue clientLoop
-					case 3:
-						fmt.Printf("[%s] Invalid username or password\n", c.user)
-						time.Sleep(time.Second * 5)
-						continue clientLoop
-					case 5:
-						fmt.Printf("[%s] The client has been updated\n", c.user)
-						time.Sleep(time.Second * 5)
-						continue clientLoop
-					case 6:
-						fmt.Printf("[%s] You may only use 1 character at once, waiting 5-7 minutes\n", c.user)
-						select {
-						case <-time.After((5 * time.Minute) + time.Duration(rand.Int63n(int64(2*time.Minute)))):
-							continue clientLoop
-						case <-closing:
-							break clientLoop
-						}
-					case 7:
-						fmt.Printf("[%s] Login attempts exceeded, waiting 5-7 minutes\n", c.user)
-						select {
-						case <-time.After((5 * time.Minute) + time.Duration(rand.Int63n(int64(2*time.Minute)))):
-							continue clientLoop
-						case <-closing:
-							break clientLoop
-						}
-					case 8:
-						fmt.Printf("[%s] Server rejected session\n", c.user)
-						time.Sleep(5 * time.Second)
-						continue clientLoop
-					case 9:
-						fmt.Printf("[%s] Error unable to login\n", c.user)
-						time.Sleep(5 * time.Second)
-						continue clientLoop
-					case 10:
-						fmt.Printf("[%s] Username already in use\n", c.user)
-						time.Sleep(10 * time.Second)
-						continue clientLoop
-					case 11:
-						fmt.Printf("[%s] Account temporarily disabled, waiting 5-7 minutes\n", c.user)
-						select {
-						case <-time.After((5 * time.Minute) + time.Duration(rand.Int63n(int64(2*time.Minute)))):
-							continue clientLoop
-						case <-closing:
-							break clientLoop
-						}
-					case 12:
-						fmt.Printf("[%s] Account permanently disabled, waiting 5-7 minutes\n", c.user)
-						select {
-						case <-time.After((5 * time.Minute) + time.Duration(rand.Int63n(int64(2*time.Minute)))):
-							continue clientLoop
-						case <-closing:
-							break clientLoop
-						}
-					case 14:
-						fmt.Printf("[%s] World full\n", c.user)
-						time.Sleep(5 * time.Second)
-						continue clientLoop
-					case 15, 16, 17, 18, 20, 21, 22, 23, 24, 25:
-						fmt.Printf("[%s] Generic server error, waiting 5-7 minutes\n", c.user)
-						select {
-						case <-time.After((5 * time.Minute) + time.Duration(rand.Int63n(int64(2*time.Minute)))):
-							continue clientLoop
-						case <-closing:
-							break clientLoop
-						}
-					default:
-						fmt.Printf("[%s] Unhandled login response \n", c.user)
-						select {
-						case <-time.After(time.Minute):
-							continue clientLoop
-						case <-closing:
-							break clientLoop
-						}
-					}
-				}
-
-				go func() {
-				out:
-					for {
-						select {
-						case <-c.closed:
-							break out
-						default:
-							message, err := c.readPacket()
-							if err != nil {
-								if err != io.EOF {
-									fmt.Printf("[%s] Read error: %s\n", c.user, err)
-								}
-								c.close()
-								break out
-							}
-
-							c.packetChan <- message
-						}
-					}
-					c.conn.Close()
-				}()
-
-				go func() {
-					t := time.NewTicker(time.Duration(math.MaxInt))
-					t.Stop()
-					var buf []byte
-
-					drainTicker := func() {
-						t.Stop()
-						select {
-						case <-t.C:
-						default:
-						}
-					}
-				loop:
-					for {
-						select {
-						case <-c.closed:
-							drainTicker()
-							break loop
-						case <-c.cancelSleep:
-							drainTicker()
-							if c.account.debug {
-								fmt.Printf("[%s] Cancelled sleep\n", c.user)
-							}
-						case buf = <-c.sleepChan:
-							drainTicker()
-							t = time.NewTicker(600 * time.Millisecond)
-						case <-t.C:
-							sleepFatigue := atomic.LoadInt32(&c.sleepingFatigue)
-							if c.script != nil && c.script.fatigueTricking && sleepFatigue < 100 {
-								drainTicker()
-								c.captchaChan <- buf
-							} else if sleepFatigue == 0 {
-								drainTicker()
-								c.captchaChan <- buf
-							} else {
-								if c.account.debug {
-									fmt.Printf("[%s] Sleep fatigue at %d\n", c.user, sleepFatigue)
-								}
-							}
-						}
-					}
-				}()
-
-				idleChan := make(chan struct{}, 1)
-				go func() {
-					var diff int64
-					t := time.NewTimer(time.Second * 5)
-					for {
-						select {
-						case <-c.closed:
-							if !t.Stop() {
-								<-t.C
-							}
-							return
-						case <-t.C:
-							diff = time.Now().Unix() - atomic.LoadInt64(&c.lastSentPacketTime)
-
-							if diff >= 5 {
-								idleChan <- struct{}{}
-
-								t.Reset(5 * time.Second)
-							} else {
-								t.Reset(time.Duration(5-diff) * time.Second)
-							}
-						}
-					}
-				}()
-
-				var (
-					progressTimer = time.NewTimer(acc.progressDur - time.Since(acc.lastProgressReport))
-					scriptTimer   = time.NewTimer(500 * time.Millisecond)
-					localClosing  = closing
-				)
-
-				if c.account.progressDur == time.Duration(math.MaxInt) {
-					c.writeProgressReportf("You have not configured progress reports")
-				} else {
-					if c.script.onProgressReport != nil {
-						c.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(acc.progressDur-time.Since(acc.lastProgressReport)).Format(time.RFC1123))
-					} else {
-						c.writeProgressReportf("Your script is not designed to output progress reports")
-					}
-				}
-
-			loop:
-				for {
-					select {
-					case <-c.closed:
-						if !progressTimer.Stop() {
-							<-progressTimer.C
-						}
-						if !scriptTimer.Stop() {
-							<-scriptTimer.C
-						}
-						break loop
-					case <-idleChan:
-						c.createPacket(67)
-						c.sendPacket()
-					case packet := <-c.packetChan:
-						opcode := packet.readByteAsInt()
-						c.handlePacket(packet, opcode, len(packet.buf)-1)
-					case <-progressTimer.C:
-						acc.lastProgressReport = time.Now()
-						if c.script != nil && c.script.running && c.account.progressDur != time.Duration(math.MaxInt) {
-							c.script.callOnProgressReport()
-							c.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(acc.progressDur).Format(time.RFC1123))
-						}
-						progressTimer.Reset(acc.progressDur)
-					case buf := <-c.captchaChan:
-						c.doCaptcha(buf)
-					case <-c.scriptKillSignal:
-						c.close()
-						fmt.Printf("[%s] Script kill signal received, terminating\n", c.user)
-						break clientLoop
-					case <-scriptTimer.C:
-						if c.script != nil && c.script.running {
-							if !c.sleeping && !c.loading {
-								scriptTimer.Reset(time.Duration(c.script.loop()) * time.Millisecond)
-							} else {
-								scriptTimer.Reset(500 * time.Millisecond)
-							}
-						} else {
-							scriptTimer.Reset(time.Duration(math.MaxInt))
-						}
-					case <-localClosing:
-						if c.script != nil && c.script.running {
-							if c.script.onKillSignal != nil {
-								c.script.callOnKillSignal()
-								localClosing = nil
-								go func() {
-									time.Sleep(15 * time.Second)
-									c.close()
-								}()
-							} else {
-								c.close()
-								fmt.Printf("[%s] No kill signal handler, terminating\n", c.user)
-								break clientLoop
-							}
-						} else {
-							c.close()
-							fmt.Printf("[%s] Script not running, terminating\n", c.user)
-							break clientLoop
-						}
-					}
-				}
-
-				if !acc.autologin {
-					break
-				}
-
-				time.Sleep(5 * time.Second)
-			}
-			wg.Done()
-		}(acc)
+		b.wg.Add(1)
+		go b.runClientLoop(acc)
 	}
-	wg.Wait()
-	fmt.Println("[BOT] All accounts are finished, exiting")
+	b.wg.Wait()
+}
+
+func (acc *account) mustCreateProgressFile() *os.File {
+	var err error
+	acc.progressFile, err = os.Create(settings.executablePath + string(os.PathSeparator) + settings.LogSettings.Directory + string(os.PathSeparator) + settings.LogSettings.ProgressReports + string(os.PathSeparator) + acc.username + ".log")
+	if err != nil {
+		fmt.Printf("[%s] Error creating progress report file: %s\n", acc.username, err)
+		os.Exit(1)
+	}
+	acc.lastProgressReport = time.Now()
+	return acc.progressFile
+}
+
+func (b *bot) runClientLoop(acc *account) {
+	runCount := 0
+clientLoop:
+	for {
+		c := &client{
+			RSCPacket:        &RSCPacket{buf: make([]byte, 5000)},
+			user:             acc.username,
+			pass:             acc.password,
+			world:            b.world,
+			closed:           make(chan struct{}),
+			closedLock:       &sync.Mutex{},
+			packetChan:       make(chan *RSCPacket, 32),
+			sleepChan:        make(chan []byte, 1),
+			captchaChan:      make(chan []byte, 1),
+			cancelSleep:      make(chan struct{}),
+			loading:          true,
+			account:          acc,
+			localWorld:       newLocalWorld(),
+			scriptKillSignal: make(chan struct{}, 1),
+			idleChan:         make(chan struct{}, 1),
+			script:           acc.script,
+		}
+
+		if c.script != nil {
+			if err := c.loadScript(); err != nil {
+				fmt.Printf("[%s] Script load error [%s]: %s\n", c.user, c.script.path, err)
+				os.Exit(1)
+			}
+		}
+
+		select {
+		case b.loginWait <- struct{}{}:
+		case <-b.closing:
+			break clientLoop
+		}
+
+		success, waitTime, err := c.login(b)
+		if err != nil {
+			fmt.Printf("[%s] Login error: %s\n", c.user, err)
+		}
+
+		if !success {
+			select {
+			case <-time.After(waitTime):
+				continue clientLoop
+			case <-b.closing:
+				break clientLoop
+			}
+		}
+
+		c.init()
+
+		go c.readHandler()
+		go c.ocrHandler()
+		go c.idleHandler()
+
+		runCount++
+		c.writeProgressHeader(runCount)
+
+		shouldBreak := c.eventLoop(b)
+		if shouldBreak || !acc.autologin {
+			break
+		}
+
+		select {
+		case <-time.After(5 * time.Second):
+			continue clientLoop
+		case <-b.closing:
+			break clientLoop
+		}
+	}
+	b.wg.Done()
+}
+
+func (c *client) readHandler() {
+out:
+	for {
+		select {
+		case <-c.closed:
+			break out
+		default:
+			message, err := c.readPacket()
+			if err != nil {
+				if err != io.EOF {
+					fmt.Printf("[%s] Read error: %s\n", c.user, err)
+				}
+				c.close()
+				break out
+			}
+
+			c.packetChan <- message
+		}
+	}
+	c.conn.Close()
+}
+
+func (c *client) ocrHandler() {
+	t := time.NewTicker(time.Duration(math.MaxInt))
+	t.Stop()
+	var buf []byte
+
+	drainTicker := func() {
+		t.Stop()
+		select {
+		case <-t.C:
+		default:
+		}
+	}
+loop:
+	for {
+		select {
+		case <-c.closed:
+			drainTicker()
+			break loop
+		case <-c.cancelSleep:
+			drainTicker()
+			if c.account.debug {
+				fmt.Printf("[%s] Cancelled sleep\n", c.user)
+			}
+		case buf = <-c.sleepChan:
+			drainTicker()
+			t = time.NewTicker(600 * time.Millisecond)
+		case <-t.C:
+			sleepFatigue := atomic.LoadInt32(&c.sleepingFatigue)
+			if c.script != nil && c.script.fatigueTricking && sleepFatigue < 100 {
+				drainTicker()
+				c.captchaChan <- buf
+			} else if sleepFatigue == 0 {
+				drainTicker()
+				c.captchaChan <- buf
+			} else {
+				if c.account.debug {
+					fmt.Printf("[%s] Sleep fatigue at %d\n", c.user, sleepFatigue)
+				}
+			}
+		}
+	}
+}
+
+func (c *client) idleHandler() {
+	t := time.NewTimer(time.Second * 5)
+	for {
+		select {
+		case <-c.closed:
+			if !t.Stop() {
+				<-t.C
+			}
+			return
+		case <-t.C:
+			diff := time.Now().Unix() - atomic.LoadInt64(&c.lastSentPacketTime)
+
+			if diff >= 5 {
+				c.idleChan <- struct{}{}
+
+				t.Reset(5 * time.Second)
+			} else {
+				t.Reset(time.Duration(5-diff) * time.Second)
+			}
+		}
+	}
+}
+
+func (c *client) eventLoop(b *bot) bool {
+	var (
+		progressTimer = time.NewTimer(c.account.progressDur - time.Since(c.account.lastProgressReport))
+		scriptTimer   = time.NewTimer(500 * time.Millisecond)
+		localClosing  = b.closing
+	)
+
+	defer func() {
+		if !progressTimer.Stop() {
+			<-progressTimer.C
+		}
+		if !scriptTimer.Stop() {
+			<-scriptTimer.C
+		}
+	}()
+
+loop:
+	for {
+		select {
+		case <-c.closed:
+			break loop
+		case <-c.idleChan:
+			c.createPacket(67)
+			c.sendPacket()
+		case packet := <-c.packetChan:
+			opcode := packet.readByteAsInt()
+			c.handlePacket(packet, opcode, len(packet.buf)-1)
+		case <-progressTimer.C:
+			c.account.lastProgressReport = time.Now()
+			if c.script != nil && c.script.running && c.script.onProgressReport != nil && c.account.progressDur != time.Duration(math.MaxInt) {
+				c.script.callOnProgressReport()
+				c.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(c.account.progressDur).Format(time.RFC1123))
+			}
+			progressTimer.Reset(c.account.progressDur)
+		case buf := <-c.captchaChan:
+			c.doCaptcha(buf)
+		case <-c.scriptKillSignal:
+			c.close()
+			fmt.Printf("[%s] Script kill signal received, terminating\n", c.user)
+			return true
+		case <-scriptTimer.C:
+			if c.script != nil && c.script.running {
+				if !c.sleeping && !c.loading {
+					scriptTimer.Reset(time.Duration(c.script.loop()) * time.Millisecond)
+				} else {
+					scriptTimer.Reset(500 * time.Millisecond)
+				}
+			} else {
+				scriptTimer.Reset(time.Duration(math.MaxInt))
+			}
+		case <-localClosing:
+			if c.script != nil && c.script.running {
+				if c.script.onKillSignal != nil {
+					c.script.callOnKillSignal()
+					localClosing = nil
+					go func() {
+						time.Sleep(15 * time.Second)
+						c.close()
+					}()
+				} else {
+					c.close()
+					fmt.Printf("[%s] No kill signal handler, terminating\n", c.user)
+					return true
+				}
+			} else {
+				c.close()
+				fmt.Printf("[%s] Script not running, terminating\n", c.user)
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func (c *client) writeProgressHeader(runCount int) {
+	if c.account.progressDur == time.Duration(math.MaxInt) {
+		if runCount == 1 {
+			c.writeProgressReportf("You have not configured progress reports")
+		}
+	} else {
+		if c.script.onProgressReport != nil {
+			tdiff := c.account.progressDur - time.Since(c.account.lastProgressReport)
+			c.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(tdiff).Format(time.RFC1123))
+		} else if runCount == 1 {
+			c.writeProgressReportf("Your script is not designed to output progress reports")
+		}
+	}
 }
 
 func (c *client) close() {
@@ -850,7 +815,7 @@ func loadDefs() {
 	}
 }
 
-func doAccountCreations(closing chan struct{}, fileStr string) {
+func doAccountCreations(fileStr string) {
 	f, err := os.Open(fileStr)
 	if err != nil {
 		fmt.Printf("Error opening register account file: %s\n", err)
@@ -866,11 +831,6 @@ func doAccountCreations(closing chan struct{}, fileStr string) {
 	buf := make([]byte, 5000)
 	p := &RSCPacket{buf: buf}
 	for scanner.Scan() {
-		select {
-		case <-closing:
-			return
-		default:
-		}
 		time.Sleep(2 * time.Second)
 
 		line := scanner.Text()
@@ -939,11 +899,7 @@ func doAccountCreations(closing chan struct{}, fileStr string) {
 			return
 		case 5:
 			fmt.Printf("[%s] You have registered too recently, waiting 5 minutes\n", username)
-			select {
-			case <-time.After(5 * time.Minute):
-			case <-closing:
-				return
-			}
+			time.Sleep(5 * time.Minute)
 			goto retry
 		case 6:
 			fmt.Printf("[%s] Invalid email address\n", username)
@@ -1098,63 +1054,116 @@ func encodeCredential(s string) string {
 	return string(s1)
 }
 
-func (client *client) login() (int, error) {
+func (c *client) login(b *bot) (bool, time.Duration, error) {
 	conn, err := net.Dial("tcp4", settings.ServerSettings.Address)
 	if err != nil {
-		return -1, fmt.Errorf("connection error: %s", err)
+		return false, time.Second * 15, fmt.Errorf("connection error: %s", err)
 	}
-	client.conn = conn
+	c.conn = conn
 
 	sessionPacket, err := readBytesRaw(conn, 4)
 	if err != nil {
-		return -1, fmt.Errorf("read session id error: %s", err)
+		return false, time.Second * 15, fmt.Errorf("read session id error: %s", err)
 	}
 	_ = sessionPacket
 
-	client.createPacket(0)
-	client.writeByte(0)
-	client.writeInt(settings.ClientSettings.ClientVersion)
-	client.writeBytes([]byte(encodeCredential(client.user)))
-	client.writeByte(10)
-	client.writeBytes([]byte(encodeCredential(client.pass)))
-	client.writeByte(10)
-	client.writeLong(0)
+	c.createPacket(0)
+	c.writeByte(0)
+	c.writeInt(settings.ClientSettings.ClientVersion)
+	c.writeBytes([]byte(encodeCredential(c.user)))
+	c.writeByte(10)
+	c.writeBytes([]byte(encodeCredential(c.pass)))
+	c.writeByte(10)
+	c.writeLong(0)
 
-	client.writeShort(228)
-	client.writeInt(1289)
-	client.writeInt(793)
-	client.writeInt(1188)
-	client.writeShort(13)
-	client.writeShort(47)
-	client.writeByte(17)
-	client.writeShort(5)
-	client.writeShort(54)
-	client.writeShort(24)
-	client.writeInt(213)
-	client.writeByte(1)
-	client.writeShort(6)
-	client.writeInt(4)
-	client.writeInt(9)
-	client.writeInt(14)
-	client.writeShort(49)
+	c.writeShort(228)
+	c.writeInt(1289)
+	c.writeInt(793)
+	c.writeInt(1188)
+	c.writeShort(13)
+	c.writeShort(47)
+	c.writeByte(17)
+	c.writeShort(5)
+	c.writeShort(54)
+	c.writeShort(24)
+	c.writeInt(213)
+	c.writeByte(1)
+	c.writeShort(6)
+	c.writeInt(4)
+	c.writeInt(9)
+	c.writeInt(14)
+	c.writeShort(49)
 
-	client.writeInt(37) // sound cache
-	client.writeByte(0) // crown count
-	client.writeByte(5)
-	client.writeInt(48 * 4)
-	client.writeBytes([]byte("63"))
-	client.writeByte(10)
+	c.writeInt(37) // sound cache
+	c.writeByte(0) // crown count
+	c.writeByte(5)
+	c.writeInt(48 * 4)
+	c.writeBytes([]byte("63"))
+	c.writeByte(10)
 
-	client.sendPacket()
+	c.sendPacket()
 
 	var loginResponse byte
 	loginRespBuf, err := readBytesRaw(conn, 1)
 	if err != nil {
-		return -1, err
+		return false, time.Second * 15, err
 	}
 	loginResponse = loginRespBuf[0]
 
-	return int(loginResponse), nil
+	fmt.Printf("[%s] Login response: %d\n", c.user, loginResponse)
+
+	if loginResponse&0x40 == 0 {
+		switch loginResponse {
+		case 4: // currently logged in
+			fmt.Printf("[%s] Account already logged in\n", c.user)
+			return false, time.Second * 5, nil
+		case 100: // something
+			fmt.Printf("[%s] Weird server response\n", c.user)
+			return false, time.Second * 5, nil
+		case 3:
+			fmt.Printf("[%s] Invalid username or password\n", c.user)
+			return false, time.Second * 5, nil
+		case 5:
+			fmt.Printf("[%s] The client has been updated\n", c.user)
+			return false, time.Second * 5, nil
+		case 6:
+			fmt.Printf("[%s] You may only use 1 character at once, waiting 5-7 minutes\n", c.user)
+			return false, rand5To7Minutes(), nil
+		case 7:
+			fmt.Printf("[%s] Login attempts exceeded, waiting 5-7 minutes\n", c.user)
+			return false, rand5To7Minutes(), nil
+		case 8:
+			fmt.Printf("[%s] Server rejected session\n", c.user)
+			return false, time.Second * 5, nil
+		case 9:
+			fmt.Printf("[%s] Error unable to login\n", c.user)
+			return false, time.Second * 5, nil
+		case 10:
+			fmt.Printf("[%s] Username already in use\n", c.user)
+			return false, time.Second * 10, nil
+		case 11:
+			fmt.Printf("[%s] Account temporarily disabled, waiting 5-7 minutes\n", c.user)
+			return false, rand5To7Minutes(), nil
+		case 12:
+			fmt.Printf("[%s] Account permanently disabled, waiting 5-7 minutes\n", c.user)
+			return false, rand5To7Minutes(), nil
+		case 14:
+			fmt.Printf("[%s] World full\n", c.user)
+			return false, time.Second * 5, nil
+		case 15, 16, 17, 18, 20, 21, 22, 23, 24, 25:
+			fmt.Printf("[%s] Generic server error, waiting 5-7 minutes\n", c.user)
+			return false, rand5To7Minutes(), nil
+		default:
+			fmt.Printf("[%s] Unhandled login response \n", c.user)
+			return false, time.Minute, nil
+		}
+	}
+
+	return true, 0, nil
+}
+
+func rand5To7Minutes() time.Duration {
+	return (5 * time.Minute) + time.Duration(rand.Int63n(int64(2*time.Minute)))
 }
 
 func (c *client) sendPacket() error {

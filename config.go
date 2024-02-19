@@ -119,6 +119,8 @@ func loadAccount(path string) (*account, error) {
 	}
 	if acctFile.Has("account.autologin") {
 		acct.autologin = acctFile.Get("account.autologin").(bool)
+	} else {
+		acct.autologin = true
 	}
 	if acctFile.Has("account.enabled") {
 		acct.enabled = acctFile.Get("account.enabled").(bool)
