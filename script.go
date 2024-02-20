@@ -7,6 +7,7 @@ import (
 	"math"
 	"math/rand"
 	"os"
+	"path/filepath"
 	"runtime"
 	"sort"
 	"strings"
@@ -74,6 +75,9 @@ func (c *client) loadScript() error {
 		ctx := py.NewContext(opts)
 
 		modImpl := &py.ModuleImpl{
+			Info: py.ModuleInfo{
+				FileDesc: filepath.Base(s.path),
+			},
 			CodeSrc: string(raw),
 			Globals: py.NewStringDict(),
 		}
