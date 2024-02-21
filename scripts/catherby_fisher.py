@@ -1,13 +1,16 @@
 # Catherby fish/cook by RLN
+# Modified by Millz for optional bank raw fish. cook_and_bank, and raw_bank should be set exclusively.
+#   Setting both cook_and_bank and raw_bank to false will powerfish (drop items on ground).
 #
 # Script block should look like this:
 # [script]
-# name            = "catherby_fish_cook.py"
+# name            = "catherby_fisher.py"
 # progress_report = "20m"
 
 # [script.settings]
 # fish_type = "shrimp/anchovies"
-# powerfish = false
+# cook_and_bank = false
+# raw_bank = false
 #
 # Possible values for fish_type are: shrimp/anchovies, sardines/herring,
 # tuna/swordfish, lobster, mackarel/cod/bass, shark.
@@ -43,6 +46,10 @@ fish_banked  = {}
 fish_timeout = 0
 cook_timeout = 0
 move_timer = False
+init = False
+start_time = time.time()
+start_fish_xp = 0
+start_cook_xp = 0
 
 if settings.fish_type == "shrimp/anchovies":
     fishing_spot = FishingSpot((418,500), 1, RAW_FISH_IDS[SHRIMP_ANCHOVIES], COOKED_FISH_IDS[SHRIMP_ANCHOVIES], EQUIPMENT[SHRIMP_ANCHOVIES])
@@ -60,7 +67,13 @@ else:
     raise RuntimeError("Unknown fish type")
 
 def fish():
-    global fish_timeout, move_timer
+    global init, fish_timeout, move_timer, start_fish_xp, start_cook_xp
+    
+    if init is False:
+        init = True
+        start_fish_xp = get_experience(10)
+        start_cook_xp = get_experience(7)
+
 
     if move_timer:
         if get_x() != fishing_spot.coord[0] or get_z() != fishing_spot.coord[1] - 2:
@@ -102,7 +115,8 @@ def bank_next_item():
 
     if item_to_bank != None:
         inv_count = get_inventory_count_by_id(item_to_bank.id)
-        if item_to_bank.id in fishing_spot.cooked_fish_ids:
+        if (item_to_bank.id in fishing_spot.cooked_fish_ids) or \
+            (item_to_bank.id in fishing_spot.raw_fish_ids):
             fish_banked[str(item_to_bank.id)] = get_bank_count(item_to_bank.id) + inv_count
 
         deposit(item_to_bank.id, inv_count)
@@ -156,21 +170,53 @@ def cook():
     
     return 5000
 
+def bank():
+    if in_radius_of(439,497,15):
+        door = get_object_from_coords(439, 497)
+        if door != None and door.id == 64:
+            at_object(door)
+            return 1300
+    
+    if distance_to(439, 496) > 10:
+        walk_path_to(439,496)
+        return 1200
+
+    if not is_bank_open():
+        return open_bank()
+    else:
+        if len(fishing_spot.equipment) != get_total_inventory_count():
+            return bank_next_item()
+        else:
+            close_bank()
+            return 1000
+
+
 def loop():
     if get_fatigue() > 95:
         use_sleeping_bag()
         return 5000
     
-    if is_bank_open() \
-        or ((get_total_inventory_count() == 30) \
-        and not settings.powerfish):
-
+    if settings.cook_and_bank and (is_bank_open() \
+        or get_total_inventory_count() == 30):
         return cook()
     
+    if settings.raw_bank and (is_bank_open() \
+        or get_total_inventory_count() == 30):
+        return bank()
+        
     return fish()
 
+
+def xp_per_hour(gained_xp, start_time_seconds):
+    if gained_xp == 0:
+        return "0"
+    elapsed_time = time.time() - start_time_seconds
+    gained_per_second = gained_xp / elapsed_time
+    return int(gained_per_second * 3600)
+    
+    
 def on_server_message(msg):
-    global fish_timeout, cook_timeout, move_timer
+    global fish_timeout, cook_timeout, move_timer, start_time, start_fish_xp, start_cook_xp
 
     if msg.startswith("You accidentally") or msg.endswith("nicely cooked"):
         cook_timeout = 0
@@ -178,11 +224,26 @@ def on_server_message(msg):
         fish_timeout = 0
     elif msg.startswith("@cya@You have been standing"):
         move_timer = True
+    elif "advanced" in msg:
+        start_time = time.time()
+        start_fish_xp = get_experience(10)
+        start_cook_xp = get_experience(7)
 
 def on_progress_report():
+    gained_fish_xp = get_experience(10) - start_fish_xp
+    gained_cook_xp = get_experience(7) - start_cook_xp
+        
     count = 0
     for k in fish_banked:
         count += fish_banked[k]
+
+    if settings.cook_and_bank:
+        return {"Fishing Level": get_max_stat(10), \
+                "Fishing XP/HR": xp_per_hour(gained_fish_xp, start_time), \
+                "Cooking Level": get_max_stat(7), \
+                "Cooking XP/HR": xp_per_hour(gained_cook_xp, start_time), \
+                "Fish Banked":   count}
+
     return {"Fishing Level": get_max_stat(10), \
-            "Cooking Level": get_max_stat(7), \
+            "Fishing XP/HR": xp_per_hour(gained_fish_xp, start_time), \
             "Fish Banked":   count}
