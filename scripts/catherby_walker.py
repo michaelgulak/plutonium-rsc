@@ -49,7 +49,7 @@ def collect_coins():
         else:
             path = None
 
-    if not in_rect(135, 643, 20, 6):
+    if not in_rect(135, 643, 20, 7):
         path = calculate_path_to(124, 647)
         if path == None:
             stop_script()
@@ -168,7 +168,6 @@ def pick_bananas():
 def walk_to_brim_boat():
     global state, path
 
-
     if not in_combat() and get_max_stat(3) < 22 and get_max_stat(3) - get_current_stat(3) >= 2:
         banana = get_inventory_item_by_id(249)
         if banana != None:
@@ -261,7 +260,7 @@ def walk_to_catherby_1():
     return 1000
 
 def walk_to_catherby_2():
-    global state, path
+    global path
 
     if path != None:
         path.process()
