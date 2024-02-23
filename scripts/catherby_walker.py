@@ -49,7 +49,7 @@ def collect_coins():
         else:
             path = None
 
-    if not in_rect(135, 643, 20, 7):
+    if not in_radius_of(120, 648, 15):
         path = calculate_path_to(124, 647)
         if path == None:
             stop_script()
@@ -60,12 +60,12 @@ def collect_coins():
 
         return 100
     
-    coins = get_nearest_ground_item_by_id_in_rect(10, x=135, z=643, width=20, height=7)
+    coins = get_nearest_ground_item_by_id(10, reachable=True, x=120, z=648, radius=15)
     if coins != None:
         pickup_item(coins)
         return 700
         
-    man = get_nearest_npc_by_id_in_rect(11, in_combat=False, x=135, z=643, width=20, height=7)
+    man = get_nearest_npc_by_id(11, in_combat=False, reachable=True, x=120, z=648, radius=15)
     if man != None:
         thieve_npc(man)
         return 700
@@ -210,7 +210,7 @@ def take_boat_2():
     global state
 
     if in_radius_of(538, 617, 10):
-        if settings.stop_at_ardy != None and settings.stop_at_ardy:
+        if hasattr(settings, "stop_at_ardy") and settings.stop_at_ardy:
             stop_script()
             set_autologin(False)
             logout()

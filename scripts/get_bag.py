@@ -8,9 +8,8 @@
 MAN          = 11
 SLEEPING_BAG = 1263
 MEAT         = 132
+SPAWN_PT     = 120, 648
 SHOP_NPCS    = [83, 55]
-RECT_PT      = (135, 643)
-RECT_DIMS    = (20, 7)
 SHOP_PT      = (133, 643)
 
 def loop():
@@ -56,16 +55,16 @@ def loop():
             buy_shop_item(SLEEPING_BAG, 1)
             return 3000
     else:
-        if not in_rect(RECT_PT[0], RECT_PT[1], RECT_DIMS[0], RECT_DIMS[1]):
-            walk_path_to(124, 647)
+        if not in_radius_of(SPAWN_PT[0], SPAWN_PT[1], 15):
+            walk_path_to(120, 648)
             return 5000
     
-        coins = get_nearest_ground_item_by_id_in_rect(10, x=RECT_PT[0], z=RECT_PT[1], width=RECT_DIMS[0], height=RECT_DIMS[1])
+        coins = get_nearest_ground_item_by_id(10, reachable=True, x=SPAWN_PT[0], z=SPAWN_PT[1], radius=15)
         if coins != None:
             pickup_item(coins)
             return 700
         
-        man = get_nearest_npc_by_id_in_rect(MAN, in_combat=False, x=RECT_PT[0], z=RECT_PT[1], width=RECT_DIMS[0], height=RECT_DIMS[1])
+        man = get_nearest_npc_by_id(MAN, in_combat=False, reachable=True, x=SPAWN_PT[0], z=SPAWN_PT[1], radius=15)
         if man != None:
             thieve_npc(man)
             return 700
