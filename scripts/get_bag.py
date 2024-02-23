@@ -10,7 +10,7 @@ SLEEPING_BAG = 1263
 MEAT         = 132
 SHOP_NPCS    = [83, 55]
 RECT_PT      = (135, 643)
-RECT_DIMS    = (20, 6)
+RECT_DIMS    = (20, 7)
 SHOP_PT      = (133, 643)
 
 def loop():
