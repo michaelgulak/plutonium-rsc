@@ -131,11 +131,11 @@ def thieve():
         food = get_inventory_item_by_id(ids=settings.food_ids)
         if food != None:
             use_item(food)
-            return 2000
+            return 1000
         else:
             raise RuntimeError("Invalid state, thieving without food")
 
-    if in_radius_of(550, 612, 15):
+    if in_rect(554, 609, 4, 8):
         door = get_object_from_coords(550, 612)
         if door != None and door.id == 64:
             at_object(door)
