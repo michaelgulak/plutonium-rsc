@@ -1,0 +1,238 @@
+# Hero thiever by RLN
+
+# Make sure you have at least 28 hp or you will die.
+
+# Script block should look like this:
+
+# [script]
+# name            = "hero.py"
+# progress_report = "20m"
+#
+# [script.settings]
+# food_ids  = [142, 335, 333, 330] # wine and cake
+# food_count = 5
+# sleep = true
+
+import time
+
+LOOT_IDS = [10, 161, 619, 38, 612, 152]
+
+kill_wait      = 0
+thieve_timeout = 0
+move_x         = -1
+move_z         = -1
+init           = True
+kept_items     = []
+loot_bank_map  = {}
+
+if settings.sleep:
+    kept_items.append(SLEEPING_BAG)
+
+def set_kept_items():
+    global kept_items
+
+    for i in range(get_total_inventory_count()):
+        item = get_inventory_item_at_index(i)
+        if item != None and item.equipped:
+            kept_items.append(item.id)
+    
+    for id_ in settings.food_ids:
+        kept_items.append(id_)
+
+def get_adjacent_coord():
+    if is_reachable(get_x()+1, get_z()):
+        return (get_x()+1, get_z())
+    elif is_reachable(get_x(), get_z()+1):
+        return (get_x(), get_z()+1)
+    elif is_reachable(get_x()-1, get_z()):
+        return (get_x()-1, get_z())
+    else:
+        return (get_x(), get_z()-1)
+
+def deposit_food():
+    total_count = 0
+    for id_ in settings.food_ids:
+        count = get_inventory_count_by_id(id_)
+
+        if total_count+count > settings.food_count:
+            if count > 0:
+                to_deposit = count - (settings.food_count - total_count)
+                deposit(id_, to_deposit)
+                return 1000
+        else:
+            total_count += count
+    
+    return 1000
+
+def withdraw_food(num):
+    item_to_withdraw = None
+    for id_ in settings.food_ids:
+        bcount = get_bank_count(id_)
+        if bcount >= num:
+            withdraw(id_, num)
+            return 1000
+    
+    log("Out of food")
+    stop_script()
+    set_autologin(False)
+    logout()
+    return 1000
+
+def bank():
+    jug = get_inventory_item_by_id(140)
+    if jug != None:
+        drop_item(jug)
+        return 1000
+
+    if in_rect(554, 609, 4, 8): # in bank
+        if not is_bank_open():
+            return open_bank()
+        else:
+            loot_item = get_inventory_item_except(kept_items)
+                            
+            if loot_item != None:
+                count = get_inventory_count_by_id(loot_item.id)
+                deposit(loot_item.id, count)
+                return 1000
+            
+            food_count = get_inventory_count_by_id(ids=settings.food_ids)
+
+            if food_count > settings.food_count:
+                return deposit_food()
+            elif food_count < settings.food_count:
+                return withdraw_food(settings.food_count-food_count)
+            else:
+                for id_ in LOOT_IDS:
+                    loot_bank_map[str(id_)] = get_bank_count(id_)
+
+                close_bank()
+                return 1000
+    else:
+        if in_radius_of(550, 612, 15):
+            door = get_object_from_coords(550, 612)
+            if door != None and door.id == 64:
+                at_object(door)
+                return 1300
+
+        walk_path_to(551, 612)
+        return 3000
+
+    return 1000
+
+
+def thieve():
+    global thieve_timeout, move_x, move_z
+
+    jug = get_inventory_item_by_id(140)
+    if jug != None:
+        drop_item(jug)
+        return 1000
+
+    if get_current_stat(3) <= 27:
+        food = get_inventory_item_by_id(ids=settings.food_ids)
+        if food != None:
+            use_item(food)
+            return 2000
+        else:
+            raise RuntimeError("Invalid state, thieving without food")
+
+    if in_radius_of(550, 612, 15):
+        door = get_object_from_coords(550, 612)
+        if door != None and door.id == 64:
+            at_object(door)
+            return 1300
+
+    if thieve_timeout != 0 and time.time() <= thieve_timeout:
+        return 250
+
+    if move_x != -1:
+        if get_x() == move_x and get_z() == move_z:
+            move_x = -1
+            move_z = -1
+        else:
+            walk_to(move_x, move_z)
+            return 700
+    
+    if settings.sleep and get_fatigue() > 95:
+        use_sleeping_bag()
+        return 2000
+
+    hero = get_nearest_npc_by_id(324)
+    if hero != None:
+        if hero.in_combat():
+            return 250
+
+        thieve_npc(hero)
+        thieve_timeout = time.time() + 5
+        return 800
+    else:
+        if get_x() != 548 or get_z() != 600:
+            walk_path_to(548, 600)
+            return 2000
+
+    return 1000
+
+def loop():
+    global init
+
+    if init:
+        set_kept_items()
+        init = False
+
+    if in_combat():
+        walk_to(get_x(), get_z())
+        return 600
+
+    if kill_wait != 0:
+        if time.time() - kill_wait > 5:
+            stop_script()
+            stop_account()
+            return 5000
+        
+        return 650
+
+    if get_combat_style() != 3:
+        set_combat_style(3)
+        return 1000
+    
+    if is_bank_open() \
+        or get_total_inventory_count() == 30 \
+        or get_inventory_count_by_id(ids=settings.food_ids) == 0:
+
+        return bank()
+    
+    return thieve()
+
+def on_server_message(msg):
+    global thieve_timeout, move_x, move_z
+
+    if msg.startswith("You pick the") or msg.startswith("I can't get"):
+        thieve_timeout = 0
+    elif msg.startswith("You fail to"):
+        thieve_timeout = 0
+    elif msg.startswith("@cya@You have been standing"):
+        move_x, move_z = get_adjacent_coord()
+
+def on_progress_report():
+    prog_report = {"Thieving Level": get_max_stat(17),
+                   "Thieving XP":    get_experience(17)}
+
+    for id_ in LOOT_IDS:
+        prog_report[get_item_name(id_)] = \
+            loot_bank_map[str(id_)] if str(id_) in loot_bank_map else 0
+
+    return prog_report
+
+def on_kill_signal():
+    global kill_wait
+
+    if is_sleeping():
+        stop_script()
+        stop_account()
+        return
+
+    kill_wait = time.time()
+    
+def on_death():
+    log("Died")
+    stop_script()

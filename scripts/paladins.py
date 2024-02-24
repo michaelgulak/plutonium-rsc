@@ -95,10 +95,6 @@ def bank():
     
 def thieve():
     global thieve_timeout, move_timer
-    
-    if get_fatigue() > 95:
-        use_sleeping_bag()
-        return 4000
 
     if get_current_stat(3) <= 27:
         food = get_inventory_item_by_id(ids=CAKE_IDS)
@@ -146,10 +142,14 @@ def thieve():
             move_timer = False
             return 1000
 
+        if get_fatigue() > 95:
+            use_sleeping_bag()
+            return 4000
+
         paladin = get_nearest_npc_by_id(323, in_combat=False)
         if paladin != None:
             thieve_npc(paladin)
-            thieve_timeout = time.time() + 3
+            thieve_timeout = time.time() + 5
             return 800
         
         return 700
@@ -186,7 +186,7 @@ def on_server_message(msg):
     if msg.startswith("You pick the") or msg.startswith("I can't get"):
         thieve_timeout = 0
     elif msg.startswith("You fail to"):
-        thieve_timeout = time.time() + 0.65
+        thieve_timeout = 0
     elif msg.startswith("@cya@You have been standing"):
         move_timer = True
 
