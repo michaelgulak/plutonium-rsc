@@ -65,7 +65,6 @@ def deposit_food():
     return 1000
 
 def withdraw_food(num):
-    item_to_withdraw = None
     for id_ in settings.food_ids:
         bcount = get_bank_count(id_)
         if bcount >= num:
