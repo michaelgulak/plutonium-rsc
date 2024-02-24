@@ -446,7 +446,7 @@ func (c *client) isGroundItemAt(id, x, z int) bool {
 	return false
 }
 
-func (c *client) getTradeItemCount(items [14]*tradeItem, length int, id int) int {
+func getTradeItemCount(items [14]*tradeItem, length int, id int) int {
 	count := 0
 	for i := 0; i < length; i++ {
 		v := items[i]
@@ -458,19 +458,19 @@ func (c *client) getTradeItemCount(items [14]*tradeItem, length int, id int) int
 }
 
 func (c *client) hasRecipientOffer(id, amount int) bool {
-	return c.getTradeItemCount(c.recipientTradeItems, c.recipientTradeCount, id) >= amount
+	return getTradeItemCount(c.recipientTradeItems, c.recipientTradeCount, id) >= amount
 }
 
 func (c *client) hasRecipientConfirm(id, amount int) bool {
-	return c.getTradeItemCount(c.recipientConfirmItems, c.recipientConfirmItemCount, id) >= amount
+	return getTradeItemCount(c.recipientConfirmItems, c.recipientConfirmItemCount, id) >= amount
 }
 
 func (c *client) hasTradeOffer(id, amount int) bool {
-	return c.getTradeItemCount(c.myTradeItems, c.myTradeCount, id) >= amount
+	return getTradeItemCount(c.myTradeItems, c.myTradeCount, id) >= amount
 }
 
 func (c *client) hasTradeConfirm(id, amount int) bool {
-	return c.getTradeItemCount(c.myTradeConfirmItems, c.myTradeConfirmItemCount, id) >= amount
+	return getTradeItemCount(c.myTradeConfirmItems, c.myTradeConfirmItemCount, id) >= amount
 }
 
 func (c *client) isObjectAt(x, z int) bool {
