@@ -29,7 +29,7 @@ const (
 	supportBankNotes = false
 	skillCount       = 18
 	readWriteTimeout = 10
-	botVersion       = "1.3.3"
+	botVersion       = "1.3.4"
 )
 
 var (
@@ -499,7 +499,7 @@ clientLoop:
 			account:          acc,
 			localWorld:       newLocalWorld(),
 			scriptKillSignal: make(chan struct{}, 1),
-			idleChan:         make(chan struct{}, 1),
+			idleChan:         make(chan struct{}),
 			script:           acc.script,
 		}
 
@@ -570,7 +570,11 @@ out:
 				break out
 			}
 
-			c.packetChan <- message
+			select {
+			case <-c.closed:
+				break out
+			case c.packetChan <- message:
+			}
 		}
 	}
 	c.conn.Close()
@@ -606,10 +610,18 @@ loop:
 			sleepFatigue := atomic.LoadInt32(&c.sleepingFatigue)
 			if c.script != nil && c.script.fatigueTricking && sleepFatigue < 100 {
 				drainTicker()
-				c.captchaChan <- buf
+				select {
+				case <-c.closed:
+					break loop
+				case c.captchaChan <- buf:
+				}
 			} else if sleepFatigue == 0 {
 				drainTicker()
-				c.captchaChan <- buf
+				select {
+				case <-c.closed:
+					break loop
+				case c.captchaChan <- buf:
+				}
 			} else {
 				if c.account.debug {
 					fmt.Printf("[%s] Sleep fatigue at %d\n", c.user, sleepFatigue)
@@ -621,19 +633,26 @@ loop:
 
 func (c *client) idleHandler() {
 	t := time.NewTimer(time.Second * 5)
+
+	defer func() {
+		if !t.Stop() {
+			<-t.C
+		}
+	}()
+
 	for {
 		select {
 		case <-c.closed:
-			if !t.Stop() {
-				<-t.C
-			}
 			return
 		case <-t.C:
 			diff := time.Now().Unix() - atomic.LoadInt64(&c.lastSentPacketTime)
 
 			if diff >= 5 {
-				c.idleChan <- struct{}{}
-
+				select {
+				case <-c.closed:
+					return
+				case c.idleChan <- struct{}{}:
+				}
 				t.Reset(5 * time.Second)
 			} else {
 				t.Reset(time.Duration(5-diff) * time.Second)
@@ -2051,7 +2070,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			fmt.Printf("[%s] Woke up\n", c.user)
 		}
 		if c.firstWakeupReceived {
-			c.cancelSleep <- struct{}{}
+			select {
+			case <-c.closed:
+			case c.cancelSleep <- struct{}{}:
+			}
 		} else {
 			c.firstWakeupReceived = true
 		}
@@ -2384,7 +2406,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		if c.account.debug {
 			fmt.Printf("[%s] Sleep word incorrect\n", c.user)
 		}
-		c.cancelSleep <- struct{}{}
+		select {
+		case <-c.closed:
+		case c.cancelSleep <- struct{}{}:
+		}
 	case 36: // telegrab bubble
 	case 222: // welcome box
 	case 19: // server configs
