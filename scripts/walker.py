@@ -51,7 +51,16 @@ def loop():
                     return 800
         
         if not path.complete():
-            path.walk()
+            if not path.walk():
+                path = calculate_path_to(settings.target_x, settings.target_z)
+                if path == None:
+                    log("Failed to repath")
+                    stop_script()
+                    set_autologin(False)
+                    logout()
+                    return 1000
+
+                return 100
             return 800
         else:
             path = None
