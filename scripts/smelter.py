@@ -141,10 +141,13 @@ def smelt():
 
 def loop():
     prim_count = get_inventory_count_by_id(bar.prim_ore_id)
-    sec_count = get_inventory_count_by_id(bar.sec_ore_id)
+    sec_count = -1
+    if bar.sec_ore_id != -1:
+        sec_count = get_inventory_count_by_id(bar.sec_ore_id)
 
     if is_bank_open() \
-        or (prim_count == 0 or sec_count // bar.sec_ore_ratio != prim_count):
+        or (prim_count == 0 \
+            or (sec_count != -1 and sec_count // bar.sec_ore_ratio != prim_count)):
         
         return bank()
 
