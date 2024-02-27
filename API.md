@@ -149,7 +149,7 @@ def loop():
     if path != None:
         path.process()
         if not path.complete():
-            path.walk():
+            path.walk()
             return 600
         else:
             path = None
