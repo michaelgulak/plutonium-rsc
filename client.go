@@ -29,7 +29,7 @@ const (
 	supportBankNotes = false
 	skillCount       = 18
 	readWriteTimeout = 10
-	botVersion       = "1.3.4"
+	botVersion       = "1.3.5"
 )
 
 var (
@@ -1800,8 +1800,11 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		playerCount := p.readShort()
 	next:
 		for i := 0; playerCount > i; i++ {
-			serverIndex := p.readShort()
-			player := c.playersServer[serverIndex]
+			serverIndex := int(int16(p.readShort()))
+			var player *player
+			if serverIndex != -1 {
+				player = c.playersServer[serverIndex]
+			}
 			updateType := p.readByte()
 
 			switch updateType {
@@ -1966,8 +1969,11 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 	case 104: // npc appearances
 		nUpdates := p.readShort()
 		for i := 0; i < nUpdates; i++ {
-			sender := p.readShort()
-			npc := c.npcsServer[sender]
+			sender := int(int16(p.readShort()))
+			var npc *npc
+			if sender != -1 {
+				npc = c.npcsServer[sender]
+			}
 			updateType := p.readByte()
 			switch updateType {
 			case 1: // npc chat
