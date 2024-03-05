@@ -2,7 +2,6 @@
 
 CAKE_IDS = [335,333,330]
 
-click_timeout = 0
 cake_stolen   = 0
 
 def bank():

@@ -44,7 +44,14 @@ def collect_coins():
     if path != None:
         path.process()
         if not path.complete():
-            path.walk()
+            if not path.walk():
+                path = calculate_path_to(124, 647)
+                if path == None:
+                    stop_script()
+                    set_autologin(False)
+                    logout()
+                    log("Could not path to Lumbridge 2, stopping")
+
             return 1000
         else:
             path = None
