@@ -49,6 +49,7 @@ type script struct {
 	onWallObjectSpawned   *py.Function
 	onWallObjectDespawned *py.Function
 	onKillSignal          *py.Function
+	onLoad                *py.Function
 
 	bankOptionMenuTimeout time.Time
 }
@@ -307,6 +308,15 @@ func (s *script) callOnKillSignal() {
 	if err != nil {
 		py.TracebackDump(err)
 		fmt.Printf("[%s] Error in on_kill_signal handler: %s\n", s.c.user, err)
+		os.Exit(1)
+	}
+}
+
+func (s *script) callOnLoad() {
+	_, err := s.onLoad.M__call__(nil, nil)
+	if err != nil {
+		py.TracebackDump(err)
+		fmt.Printf("[%s] Error in on_wall_object_despawned handler: %s\n", s.c.user, err)
 		os.Exit(1)
 	}
 }
@@ -607,6 +617,9 @@ func (s *script) addHooks(module *py.Module, c *client) {
 	}
 	if onKillSignal, ok := module.Globals["on_kill_signal"]; ok {
 		s.onKillSignal = onKillSignal.(*py.Function)
+	}
+	if onLoad, ok := module.Globals["on_load"]; ok {
+		s.onLoad = onLoad.(*py.Function)
 	}
 }
 

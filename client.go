@@ -29,7 +29,7 @@ const (
 	supportBankNotes = false
 	skillCount       = 18
 	readWriteTimeout = 10
-	botVersion       = "1.3.6"
+	botVersion       = "1.3.7"
 )
 
 var (
@@ -2080,7 +2080,6 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			}
 		} else {
 			c.firstWakeupReceived = true
-			c.loading = false
 		}
 		c.sleeping = false
 	case 129: // combat style changed
@@ -2341,7 +2340,12 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			c.ignoreList[i].arg1 = p.readString()
 			c.ignoreList[i].old = p.readString()
 		}
-
+		if c.loading {
+			c.loading = false
+			if c.script != nil && c.script.onLoad != nil {
+				c.script.callOnLoad()
+			}
+		}
 	case 183: // can't logout response packet
 		if c.account.debug {
 			fmt.Printf("[%s] Logout Request: Cannot logout\n", c.user)
