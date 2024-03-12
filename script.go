@@ -316,7 +316,7 @@ func (s *script) callOnLoad() {
 	_, err := s.onLoad.M__call__(nil, nil)
 	if err != nil {
 		py.TracebackDump(err)
-		fmt.Printf("[%s] Error in on_wall_object_despawned handler: %s\n", s.c.user, err)
+		fmt.Printf("[%s] Error in on_load handler: %s\n", s.c.user, err)
 		os.Exit(1)
 	}
 }
