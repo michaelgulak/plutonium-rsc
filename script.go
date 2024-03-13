@@ -1023,6 +1023,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["get_ground_item_count"] = py.MustNewMethod("get_ground_item_count", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.groundItemCount), nil
 	}, py.METH_STATIC, "")
+	module.Globals["get_ground_item_at_index"] = py.MustNewMethod("get_ground_item_at_index", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return c.groundItems[args[0].(py.Int)], nil
+	}, py.METH_STATIC, "")
 	module.Globals["get_ground_items"] = py.MustNewMethod("get_ground_items", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		objs := make([]py.Object, c.groundItemCount)
 		for i := 0; i < c.groundItemCount; i++ {

@@ -177,8 +177,9 @@ The same as `calculate_path_to` except it takes starting coordinates.
 
 Contains the following fields: `id`, `x`, `z`.
 
-###### get_ground_items()
 ###### get_ground_item_count()
+###### get_ground_item_at_index(index)
+###### get_ground_items()
 ###### get_nearest_ground_item_by_id(id OR ids=[...], reachable=True, x=216, z=636, radius=10)
 
 `reachable`, `x`, `z`, and `radius` are optional. `x` and `z` are used as the start point for the radius. Otherwise they're unused.
