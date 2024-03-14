@@ -65,8 +65,9 @@ type serverSettings struct {
 }
 
 type logSettings struct {
-	Directory       string `toml:"directory"`
-	ProgressReports string `toml:"progress_reports"`
+	Directory                string `toml:"directory"`
+	ProgressReports          string `toml:"progress_reports"`
+	OverwriteProgressReports bool   `toml:"overwrite_progress_reports"`
 }
 
 type config struct {

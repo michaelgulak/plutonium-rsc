@@ -6,7 +6,7 @@ Plutonium was built from the ground up using Go. Scripts for it are written in p
 
 ## Building Plutonium
 
-Make sure you have a new version of [Go](https://go.dev/) installed, along with git. On Linux, open a terminal, or on Windows open a command prompt. Then clone this repo with 
+Make sure you have at least version 1.18 of [Go](https://go.dev/) installed, along with git. On Linux, open a terminal, or on Windows open a command prompt. Then clone this repo with 
 
 ```bash
 git clone https://gitlab.com/open-runescape-classic/plutonium
@@ -74,6 +74,10 @@ Alternatively, you can run a single account file like this:
 ```bash
 ./bot -f /path/to/account_file.toml
 ```
+
+## Overwrite Progress Reports
+
+If you want progress report files to be overwritten every time they're generated you can set `overwrite_progress_reports` to `true` in `settings.toml`.
 
 ## Create accounts
 

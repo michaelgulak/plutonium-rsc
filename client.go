@@ -29,7 +29,7 @@ const (
 	supportBankNotes = false
 	skillCount       = 18
 	readWriteTimeout = 10
-	botVersion       = "1.3.8"
+	botVersion       = "1.3.9"
 )
 
 var (

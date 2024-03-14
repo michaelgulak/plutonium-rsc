@@ -143,6 +143,10 @@ func (s *script) callOnProgressReport() {
 		for _, row := range rows {
 			table.Append([]string{row.key, row.value})
 		}
+		if settings.LogSettings.OverwriteProgressReports {
+			s.c.account.progressFile.Truncate(0)
+			s.c.account.progressFile.Seek(0, 0)
+		}
 		table.Render()
 	}
 }

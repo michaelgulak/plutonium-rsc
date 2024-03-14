@@ -24,5 +24,6 @@ client_version = 10009
 directory = "scripts"
 
 [logs]
-directory        = "logs"
-progress_reports = "progress_reports"
+directory                  = "logs"
+progress_reports           = "progress_reports"
+overwrite_progress_reports = false
