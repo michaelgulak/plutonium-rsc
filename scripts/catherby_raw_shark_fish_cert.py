@@ -11,8 +11,11 @@ KEPT_ITEMS = [1263, 379, 631, 545]
 
 move_timer = False
 fish_timeout = 0
+talk_timeout = 0
 
 def cert():
+    global talk_timeout
+
     if in_radius_of(427, 485, 10):
         door = get_wall_object_from_coords(427, 485)
         if door != None and door.id == 2:
@@ -28,12 +31,17 @@ def cert():
                 idx = get_option_menu_index(opt)
                 if idx != -1:
                     answer(idx)
-                    return 1200
+                    talk_timeout = time.time() + 5
+                    return 2000
         else:
+            if talk_timeout != 0 and time.time() < talk_timeout:
+                return 250
+
             owen = get_nearest_npc_by_id(299)
             if owen != None:
                 talk_to_npc(owen)
-                return 1200
+                talk_timeout = 0
+                return 400
 
     return 5000
 
