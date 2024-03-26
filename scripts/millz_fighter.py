@@ -42,10 +42,12 @@ start_hits_level = 0
 
 loot = {}
 spawn_map = {}
+path = None
+destination = [0, 0]
 
 def loop():
     global INIT, NEAREST_BANK, START_X, START_Z, start_attack_xp, start_defense_xp, start_strength_xp, start_hits_xp
-    global start_attack_level, start_defense_level, start_strength_level, start_hits_level, loot, spawn_map
+    global start_attack_level, start_defense_level, start_strength_level, start_hits_level, loot, spawn_map, path, destination
     
     if INIT is False:
         #log("Initialising")
@@ -70,9 +72,36 @@ def loop():
         set_combat_style(settings.fight_mode)
         return 1000
 
-
     if settings.eat is True and millz_common.use_food():
         return 1500
+    
+    # Not using START_X, START_Z here as we want to be able to open a bank door etc while pathing out of our grind area.
+    if settings.open_doors is True:
+        door = get_nearest_object_by_id(64, x=get_x(), z=get_z(), reachable=True, radius=8)
+        if door != None:
+            log("Opening bank style door")
+            at_object(door)
+            return 1500
+        
+        wall_door = get_nearest_wall_object_by_id(2, x=get_x(), z=get_z(), reachable=True, radius=8)
+        if wall_door != None:
+            log("Opening normal style door")
+            at_wall_object(wall_door)
+            return 1500
+        
+    if path != None:
+        path.process()
+        if not path.complete():
+            if not path.walk() and destination[0] != 0:
+                path = calculate_path_to(destination[0], destination[1])
+                if path == None:
+                    stop_script()
+                    set_autologin(False)
+                    logout()
+                    log("Could not path to " + str(destination[0]) + ", " + str(destination[1]) + ". Stopping.")
+            return 1000
+        else:
+            path = None
 
     if get_hp_percent() < 20:
         log("Critically low on health, pausing")
@@ -80,25 +109,15 @@ def loop():
 
     if in_combat():
         return 500
-        
-    # Not using START_X, START_Z here as we want to be able to open a bank door etc while pathing out of our grind area.
-    if settings.open_doors is True:
-        door = get_nearest_object_by_id(64, x=get_x(), z=get_z(), reachable=True, radius=10)
-        if door != None:
-            log("Opening bank style door")
-            at_object(door)
-            return 1500
-        
-        wall_door = get_nearest_wall_object_by_id(2, x=get_x(), z=get_z(), reachable=True, radius=10)
-        if wall_door != None:
-            log("Opening normal style door")
-            at_wall_object(wall_door)
-            return 1500
-        
-        
+
     if settings.bank is True and (is_bank_open() or (settings.eat is True and settings.food_count > 0 and millz_common.food_count() == 0) or get_total_inventory_count() == 30):
         if distance_to(NEAREST_BANK.x, NEAREST_BANK.y) > 5:
-            walk_path_to(NEAREST_BANK.x, NEAREST_BANK.y)
+            # walk_path_to(NEAREST_BANK.x, NEAREST_BANK.y)
+            destination = [NEAREST_BANK.x, NEAREST_BANK.y]
+            path = calculate_path_to(NEAREST_BANK.x, NEAREST_BANK.y)
+            if path == None:
+                log("Failed to path to bank")
+                stop_script()
             return 3000
         
         if not is_bank_open():
@@ -132,7 +151,12 @@ def loop():
     
     if distance_to(START_X, START_Z) >= settings.walkback:
         # log("Walking to fight location " + str(distance_to(START_X, START_Z)) + "yds away")
-        walk_path_to(START_X, START_Z)
+        #walk_path_to(START_X, START_Z)
+        destination = [START_X, START_Z]
+        path = calculate_path_to(START_X, START_Z)
+        if path == None:
+            log("Failed to path to fighting location")
+            stop_script()
         return 4000
 
     if settings.loot is True:
@@ -140,7 +164,6 @@ def loop():
         if ground_item != None:
             pickup_item(ground_item)
             return 1000
-
 
     npc = get_nearest_npc_by_id(ids=settings.npc_ids, in_combat=False, reachable=True, x=START_X, z=START_Z, radius=settings.walkback)
     if npc != None:
