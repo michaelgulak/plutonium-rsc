@@ -1,8 +1,11 @@
 # Fishing guild raw shark fisher & certer by Millz (Adapted from RLN's Catherby)
 
-# No script settings required.
-
 # Will walk to, and enter the fishing guild. Doesn't handle gates, but moves from catherby etc.
+
+# [Optional] Set master like below, if bot receives a trade request from the master character, bot will trade over its certs.
+
+# [script.settings]
+# master = "Millz"
 
 import time
 import millz_common
@@ -22,6 +25,8 @@ destination = [0, 0]
 init = False
 start_time = time.time()
 start_fish_xp = 0
+
+perform_trade = False
 
 def enter_fishing_guild():
     global path
@@ -52,7 +57,9 @@ def enter_fishing_guild():
         path = calculate_path_to(586, 524)
         if path == None:
             log("Failed to path to fishing guild")
+            set_autologin(False)
             stop_script()
+            logout()
         return 1000
         
     return 1000
@@ -124,12 +131,50 @@ def fish():
     return 5000  
 
 def loop():
-    global init, start_fish_xp
+    global init, start_fish_xp, perform_trade
+
+    set_autologin(True)
     
     if init is False:
         init = True
         start_fish_xp = get_experience(10)
         
+    
+    if hasattr(settings, "master") and perform_trade:
+        if get_inventory_count_by_id(631) == 0:
+            log("No certs left to trade")
+            perform_trade = False
+            return 600
+        
+        if is_trade_confirm_screen():
+            log("Confirm Trade")
+            confirm_trade()
+            return 1000
+
+        if is_trade_offer_screen():
+            if has_my_offer(631, get_inventory_count_by_id(631)):
+                if not is_trade_confirm_accepted():
+                    log("Accept trade offer")
+                    accept_trade_offer()
+                    return 1000
+
+                log("Waiting for master to accept")
+                return 1000
+            else:
+                log("Offer item")
+                trade_offer_item(get_inventory_count_by_id(631), get_inventory_item_by_id(631))
+                return 1000
+        else:
+            player = get_player_by_name(settings.master)
+            if player != None:
+                log("Trading master")
+                trade_player(player)
+                return 1000
+            
+        perform_trade = False  
+        return 600
+                
+
     if not millz_common.in_fishing_guild(get_x(), get_z()):
         return enter_fishing_guild()
     
@@ -145,12 +190,14 @@ def loop():
     return fish()
 
 def on_server_message(msg):
-    global fish_timeout, move_timer
+    global fish_timeout, move_timer, perform_trade
 
     if msg.startswith("You fail") or msg.startswith("You catch"):
         fish_timeout = 0
     elif msg.startswith("@cya@You have been standing"):
         move_timer = True
+    elif "decline" in msg:
+        perform_trade = False
 
 def on_progress_report():
     gained_fish_xp = get_experience(10) - start_fish_xp
@@ -160,3 +207,13 @@ def on_progress_report():
             "Fishing XP Next Level:": millz_common.exp_until_next_level(get_experience(10)), \
             "Fishing XP/HR": millz_common.xp_per_hour(gained_fish_xp, start_time) 
             }
+
+def on_trade_request(name):
+    global perform_trade
+
+    log("Trade request from: " + name)
+
+    if hasattr(settings, "master"):
+        master = settings.master
+        if master != None and master is name:
+            perform_trade = True
