@@ -67,7 +67,7 @@ If you want to run just one instance of a bot for any reason, for example to ski
 ./bot -u myuser -p mypass -s scripts/skip_tutorial.py
 ```
 
-You can't specify script settings with this method.
+You can't specify script settings with this method. Use the `-l` flag in order to set autologin to true when running the bot this way.
 
 Alternatively, you can run a single account file like this:
 
