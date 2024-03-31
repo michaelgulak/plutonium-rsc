@@ -9,9 +9,7 @@ def loop():
 
     if get_max_stat(17) >= 5:
         log("achieved 5 thieving, stopping")
-        stop_script()
-        set_autologin(False)
-        logout()
+        stop_account()
         return 2000
 
     if in_combat():
