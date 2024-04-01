@@ -57,7 +57,7 @@ def cook():
         bed = get_object_from_coords(226, 1386)
         if bed != None:
             at_object(bed)
-            return 600
+            return 1200
     
     junk = get_inventory_item_except(COOK_KEPT_ITEMS)
     if junk != None:
@@ -212,7 +212,11 @@ def init_script():
             trading = True
 def loop():
     global init, trading
-        
+    
+    if not is_friend(settings.partner):
+        add_friend(settings.partner)
+        return 800
+            
     if ROLE_COOK:        
         if init:
             init_script()
@@ -229,7 +233,13 @@ def loop():
         else:
             trading = True
             return trade_from_mule()
-            
+
+def on_private_message(msg, from_name):
+    global trading
+    
+    if ROLE_COOK and from_name == settings.partner and msg == "Banking":
+        trading = False
+        
 def on_server_message(msg):
     global cook_timeout, shark_cooked, trading, trade_timeout
     
@@ -246,6 +256,7 @@ def on_server_message(msg):
         else:
             if get_inventory_count_by_id(RAW_SHARK) < 12:
                 trading = False
+                send_private_message(settings.partner, "Banking")
     
 def per_hour(gained, start_time_seconds):
     elapsed_time = time.time() - start_time_seconds
