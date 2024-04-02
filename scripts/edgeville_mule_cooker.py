@@ -175,6 +175,11 @@ def trade_from_mule():
     return 1000
 
 def trade_from_cook():
+    junk = get_inventory_item_except(COOK_KEPT_ITEMS)
+    if junk != None:
+        drop_item(junk)
+        return 800
+    
     if not is_trade_offer_screen() and not is_trade_confirm_screen():
         return trade_partner()
     
