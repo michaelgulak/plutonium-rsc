@@ -10,7 +10,7 @@ class Food:
         return [food.id for food in foods]
        
 FOODS = [
-    Food("Shark", 564, 20),
+    Food("Shark", 546, 20),
     Food("Swordfish", 370, 14),
     Food("Lobster", 373, 12),
     Food("Tuna", 367, 10),
