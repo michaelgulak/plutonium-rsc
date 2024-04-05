@@ -29,7 +29,7 @@ const (
 	supportBankNotes = false
 	skillCount       = 18
 	readWriteTimeout = 10
-	botVersion       = "1.3.9"
+	botVersion       = "1.3.10"
 )
 
 var (
@@ -143,6 +143,7 @@ type client struct {
 	pathX                     [8000]int16
 	pathZ                     [8000]int16
 	pathFindSource            [96][96]int16
+	systemUpdate              bool
 
 	blackhole bool
 }
@@ -2419,6 +2420,12 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		select {
 		case <-c.closed:
 		case c.cancelSleep <- struct{}{}:
+		}
+	case 52: // system update
+		c.systemUpdate = true
+		seconds := int(float64(p.readShort()) / 50 * 32)
+		if c.script != nil && c.script.onSystemUpdate != nil {
+			c.script.callOnSystemUpdate(seconds)
 		}
 	case 36: // telegrab bubble
 	case 222: // welcome box

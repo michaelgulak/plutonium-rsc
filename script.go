@@ -50,6 +50,7 @@ type script struct {
 	onWallObjectDespawned *py.Function
 	onKillSignal          *py.Function
 	onLoad                *py.Function
+	onSystemUpdate        *py.Function
 
 	bankOptionMenuTimeout time.Time
 }
@@ -325,6 +326,15 @@ func (s *script) callOnLoad() {
 	}
 }
 
+func (s *script) callOnSystemUpdate(seconds int) {
+	_, err := s.onSystemUpdate.M__call__(py.Tuple([]py.Object{py.Int(seconds)}), nil)
+	if err != nil {
+		py.TracebackDump(err)
+		fmt.Printf("[%s] Error in on_system_update handler: %s\n", s.c.user, err)
+		os.Exit(1)
+	}
+}
+
 func (n *npc) Type() *py.Type {
 	return &py.Type{
 		ObjectType: py.ObjectType,
@@ -517,13 +527,13 @@ func (n *longPath) Type() *py.Type {
 					return py.None, nil
 				}
 				pt := n.points[n.currentPt]
-				if pt.x == n.c.x && pt.y == n.c.z {
+				if pt.x == n.script.c.x && pt.y == n.script.c.z {
 					n.currentPt++
 				}
 				return py.None, nil
 			}, py.METH_CLASS, ""),
 			"set_nearest": py.MustNewMethod("set_nearest", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-				x, z := n.c.x, n.c.z
+				x, z := n.script.c.x, n.script.c.z
 				minIdx := 0
 				minDist := math.MaxInt
 				for i, p := range n.points {
@@ -543,7 +553,7 @@ func (n *longPath) Type() *py.Type {
 					return py.None, nil
 				}
 				pt := n.points[n.currentPt]
-				return py.Bool(n.c.walkTo(pt.x, pt.y, pt.x, pt.y, false, false)), nil
+				return py.Bool(n.script.c.walkTo(pt.x, pt.y, pt.x, pt.y, false, false)), nil
 			}, py.METH_CLASS, ""),
 		},
 	}
@@ -624,6 +634,9 @@ func (s *script) addHooks(module *py.Module, c *client) {
 	}
 	if onLoad, ok := module.Globals["on_load"]; ok {
 		s.onLoad = onLoad.(*py.Function)
+	}
+	if onSystemUpdate, ok := module.Globals["on_system_update"]; ok {
+		s.onSystemUpdate = onSystemUpdate.(*py.Function)
 	}
 }
 
@@ -2130,5 +2143,8 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["send_appearance_update"] = py.MustNewMethod("send_appearance_update", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.sendAppearanceUpdate(int(args[0].(py.Int)), int(args[1].(py.Int)), int(args[2].(py.Int)), int(args[3].(py.Int)), int(args[4].(py.Int)), int(args[5].(py.Int)), int(args[6].(py.Int)))
 		return py.None, nil
+	}, py.METH_STATIC, "")
+	module.Globals["is_system_update"] = py.MustNewMethod("is_system_update", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return py.Bool(c.systemUpdate), nil
 	}, py.METH_STATIC, "")
 }

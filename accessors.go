@@ -595,7 +595,7 @@ func (c *client) generateLongPath(startX, startZ, x, z, depth int) *longPath {
 
 	coordsAwayThreshold := 10
 
-	lp := &longPath{points: []*point{}, c: c, length: path.waypoints.Len()}
+	lp := &longPath{points: []*point{}, script: c.script, length: path.waypoints.Len()}
 
 	if path.waypoints.Len() <= coordsAwayThreshold {
 		lp.points = append(lp.points, path.waypoints.Back().Value.(*point))

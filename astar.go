@@ -87,7 +87,7 @@ type longPath struct {
 	points    []*point
 	currentPt int
 	length    int
-	c         *client
+	script    *script
 }
 
 func abs(a int) int {
