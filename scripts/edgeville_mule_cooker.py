@@ -155,6 +155,10 @@ def trade_from_mule():
             at_object(ladder)
             return 600
 
+    if get_x() != 226 or get_z() != 1384:
+        walk_to(226, 1384)
+        return 600
+    
     if not is_trade_offer_screen() and not is_trade_confirm_screen():
         return trade_partner()
     
