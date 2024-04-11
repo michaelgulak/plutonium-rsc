@@ -20,29 +20,33 @@ FOODS = [
 ]
 
 class Bank:
-    def __init__(self, name, x, y):
+    def __init__(self, name, x, z, north_x, west_z, width, height):
         self.name = name
         self.x = x
-        self.y = y
+        self.z = z
+        self.north_x = north_x
+        self.west_z = west_z
+        self.width = width
+        self.height = height
         
         
 BANKS = [
-    Bank("Al Kharid", 87, 695),
-    Bank("Ardougne North", 580, 573),
-    Bank("Ardougne South", 550, 612),
-    Bank("Catherby", 440, 496),
-    Bank("Draynor", 220, 635),
-    Bank("Edgeville", 215, 450),
-    Bank("Falador East", 285, 570),
-    Bank("Falador West", 330, 555),
-    Bank("Seers Village", 500, 453),
-    Bank("Varrock East", 102, 511),
-    Bank("Varrock West", 150, 505),
-    Bank("Yanille", 587, 752)
+    Bank("Al Kharid", 87, 695, 93, 689, 7, 12),
+    Bank("Ardougne North", 580, 573, 585, 572, 8, 4),
+    Bank("Ardougne South", 550, 612, 554, 609, 4, 8),
+    Bank("Catherby", 440, 496, 443, 491, 7, 6),
+    Bank("Draynor", 220, 635, 223, 634, 8, 5),
+    Bank("Edgeville", 215, 450, 220, 448, 9, 6),
+    Bank("Falador East", 285, 570, 286, 564, 7, 10),
+    Bank("Falador West", 330, 555, 334, 549, 7, 9),
+    Bank("Seers Village", 500, 453, 504, 447, 7, 7),
+    Bank("Varrock East", 102, 511, 106, 510, 9, 6),
+    Bank("Varrock West", 150, 505, 153, 498, 7, 10),
+    Bank("Yanille", 587, 752, 590, 750, 6, 7)
 ]
 
 
-def get_nearest_bank(from_x, from_y):
+def get_nearest_bank(from_x, from_z):
     
     min_dist = float('inf')
     nearest = None
@@ -50,7 +54,7 @@ def get_nearest_bank(from_x, from_y):
     log("Finding closest bank.")
     
     for bank in BANKS:
-        path = calculate_path(from_x, from_y, bank.x, bank.y)
+        path = calculate_path(from_x, from_z, bank.x, bank.z)
         if path is not None:
             length = path.length()
             # log("Bank: " + bank.name + " - Distance: " + str(length))
@@ -76,6 +80,14 @@ def get_bank_by_name(bank_name):
         
     log("Selected bank: " + selected_bank.name)
     return selected_bank
+
+
+def is_in_bank():
+    for bank in BANKS:
+        if in_rect(bank.north_x, bank.west_z, bank.width, bank.height):
+            return True
+    
+    return False
 
 
 def food_count():
