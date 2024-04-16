@@ -8,6 +8,7 @@ import (
 	"io"
 	"math"
 	"os"
+	"path/filepath"
 )
 
 var (
@@ -208,7 +209,7 @@ func (w *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, 
 }
 
 func (w *world) loadWorld() {
-	archiveFile := settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.Landscape
+	archiveFile := filepath.Join(settings.executablePath, settings.DataSettings.Directory, settings.DataSettings.Landscape)
 	tileArchive, err := zip.OpenReader(archiveFile)
 	if err != nil {
 		fmt.Println(err)
@@ -239,7 +240,7 @@ func (w *world) loadWorld() {
 			}
 		}
 	}
-	objectLocStr := settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.SceneryLocs
+	objectLocStr := filepath.Join(settings.executablePath, settings.DataSettings.Directory, settings.DataSettings.SceneryLocs)
 	f, err := os.Open(objectLocStr)
 	if err != nil {
 		fmt.Println(err)

@@ -738,6 +738,31 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		height := int(args[5].(py.Int))
 		return py.Bool(inRect(x1, z1, x2, z2, width, height)), nil
 	}, py.METH_STATIC, "")
+	module.Globals["point_in_polygon"] = py.MustNewMethod("point_in_polygon", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		x := args[0].(py.Int)
+		z := args[1].(py.Int)
+		poly := []py.Object(args[2].(*py.List).Items)
+
+		if len(poly) < 6 {
+			return py.None, errors.New("point_in_polygon supplied poly should have at least 6 elements")
+		}
+
+		inside := false
+		length := len(poly) / 2
+
+		for i, j := 0, length-1; i < length; i, j = i+1, i {
+			xi, zi := poly[i*2+0].(py.Int), poly[i*2+1].(py.Int)
+			xj, zj := poly[j*2+0].(py.Int), poly[j*2+1].(py.Int)
+
+			intersect := ((zi > z) != (zj > z)) && (x < (xj-xi)*(z-zi)/(zj-zi)+xi)
+
+			if intersect {
+				inside = !inside
+			}
+
+		}
+		return py.Bool(inside), nil
+	}, py.METH_STATIC, "")
 	module.Globals["open_bank"] = py.MustNewMethod("open_bank", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		if c.optionMenuVisible {
 			c.answer(0)

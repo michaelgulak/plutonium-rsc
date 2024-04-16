@@ -29,7 +29,8 @@ const (
 	supportBankNotes = false
 	skillCount       = 18
 	readWriteTimeout = 10
-	botVersion       = "1.3.10"
+	maxPacketSize    = 30000
+	botVersion       = "1.4.0"
 )
 
 var (
@@ -42,23 +43,18 @@ var (
 
 type client struct {
 	*RSCPacket
-	conn                net.Conn
-	user                string
-	pass                string
-	packetChan          chan *RSCPacket
-	lastSentPacketTime  int64
-	closed              chan struct{}
-	closedLock          *sync.Mutex
-	sleepChan           chan []byte
-	captchaChan         chan []byte
-	cancelSleep         chan struct{}
-	firstWakeupReceived bool
-	world               *world
-	lenBuf              [2]byte
-	account             *account
-	localWorld          *localWorld
-	scriptKillSignal    chan struct{}
-	idleChan            chan struct{}
+	conn               net.Conn
+	user               string
+	pass               string
+	packetChan         chan *RSCPacket
+	lastSentPacketTime int64
+	closed             chan struct{}
+	closedLock         *sync.Mutex
+	captchaBuf         []byte
+	world              *world
+	account            *account
+	localWorld         *localWorld
+	scriptKillSignal   chan struct{}
 
 	script *script
 
@@ -102,7 +98,7 @@ type client struct {
 	prayers                   [50]bool
 	fatigue                   int
 	accurateFatigue           float64
-	sleepingFatigue           int32
+	sleepingFatigue           int
 	sleeping                  bool
 	combatStyle               int
 	optionMenuVisible         bool
@@ -433,7 +429,7 @@ func (b *bot) loadAccounts(user, pass, acctFile, scriptPath string, autologin bo
 
 func (b *bot) checkOCR() {
 	if settings.OcrSettings.OcrType == "local" {
-		_, err := os.Stat(settings.executablePath + string(os.PathSeparator) + settings.OcrSettings.OcrFileName)
+		_, err := os.Stat(filepath.Join(settings.executablePath, settings.OcrSettings.OcrFileName))
 		if os.IsNotExist(err) {
 			fmt.Printf("[BOT] OCR not found: %s\n", err)
 			os.Exit(1)
@@ -472,7 +468,7 @@ func (b *bot) runAccounts() {
 
 func (acc *account) mustCreateProgressFile() *os.File {
 	var err error
-	acc.progressFile, err = os.Create(settings.executablePath + string(os.PathSeparator) + settings.LogSettings.Directory + string(os.PathSeparator) + settings.LogSettings.ProgressReports + string(os.PathSeparator) + acc.username + ".log")
+	acc.progressFile, err = os.Create(filepath.Join(settings.executablePath, settings.LogSettings.Directory, settings.LogSettings.ProgressReports, acc.username+".log"))
 	if err != nil {
 		fmt.Printf("[%s] Error creating progress report file: %s\n", acc.username, err)
 		os.Exit(1)
@@ -493,14 +489,10 @@ clientLoop:
 			closed:           make(chan struct{}),
 			closedLock:       &sync.Mutex{},
 			packetChan:       make(chan *RSCPacket, 32),
-			sleepChan:        make(chan []byte, 1),
-			captchaChan:      make(chan []byte, 1),
-			cancelSleep:      make(chan struct{}),
 			loading:          true,
 			account:          acc,
 			localWorld:       newLocalWorld(),
 			scriptKillSignal: make(chan struct{}, 1),
-			idleChan:         make(chan struct{}),
 			script:           acc.script,
 		}
 
@@ -534,8 +526,6 @@ clientLoop:
 		c.init()
 
 		go c.readHandler()
-		go c.ocrHandler()
-		go c.idleHandler()
 
 		runCount++
 		c.writeProgressHeader(runCount)
@@ -581,91 +571,11 @@ out:
 	c.conn.Close()
 }
 
-func (c *client) ocrHandler() {
-	t := time.NewTicker(time.Duration(math.MaxInt))
-	t.Stop()
-	var buf []byte
-
-	drainTicker := func() {
-		t.Stop()
-		select {
-		case <-t.C:
-		default:
-		}
-	}
-loop:
-	for {
-		select {
-		case <-c.closed:
-			drainTicker()
-			break loop
-		case <-c.cancelSleep:
-			drainTicker()
-			if c.account.debug {
-				fmt.Printf("[%s] Cancelled sleep\n", c.user)
-			}
-		case buf = <-c.sleepChan:
-			drainTicker()
-			t = time.NewTicker(600 * time.Millisecond)
-		case <-t.C:
-			sleepFatigue := atomic.LoadInt32(&c.sleepingFatigue)
-			if c.script != nil && c.script.fatigueTricking && sleepFatigue < 100 {
-				drainTicker()
-				select {
-				case <-c.closed:
-					break loop
-				case c.captchaChan <- buf:
-				}
-			} else if sleepFatigue == 0 {
-				drainTicker()
-				select {
-				case <-c.closed:
-					break loop
-				case c.captchaChan <- buf:
-				}
-			} else {
-				if c.account.debug {
-					fmt.Printf("[%s] Sleep fatigue at %d\n", c.user, sleepFatigue)
-				}
-			}
-		}
-	}
-}
-
-func (c *client) idleHandler() {
-	t := time.NewTimer(time.Second * 5)
-
-	defer func() {
-		if !t.Stop() {
-			<-t.C
-		}
-	}()
-
-	for {
-		select {
-		case <-c.closed:
-			return
-		case <-t.C:
-			diff := time.Now().Unix() - atomic.LoadInt64(&c.lastSentPacketTime)
-
-			if diff >= 5 {
-				select {
-				case <-c.closed:
-					return
-				case c.idleChan <- struct{}{}:
-				}
-				t.Reset(5 * time.Second)
-			} else {
-				t.Reset(time.Duration(5-diff) * time.Second)
-			}
-		}
-	}
-}
-
 func (c *client) eventLoop(b *bot) bool {
 	var (
 		progressTimer = time.NewTimer(c.account.progressDur - time.Since(c.account.lastProgressReport))
-		scriptTimer   = time.NewTimer(500 * time.Millisecond)
+		scriptTimer   = time.NewTimer(100 * time.Millisecond)
+		idleTimer     = time.NewTimer(5 * time.Second)
 		localClosing  = b.closing
 	)
 
@@ -676,6 +586,9 @@ func (c *client) eventLoop(b *bot) bool {
 		if !scriptTimer.Stop() {
 			<-scriptTimer.C
 		}
+		if !idleTimer.Stop() {
+			<-idleTimer.C
+		}
 	}()
 
 loop:
@@ -683,9 +596,17 @@ loop:
 		select {
 		case <-c.closed:
 			break loop
-		case <-c.idleChan:
-			c.createPacket(67)
-			c.sendPacket()
+		case <-idleTimer.C:
+			diff := time.Now().Unix() - atomic.LoadInt64(&c.lastSentPacketTime)
+
+			if diff >= 5 {
+				c.createPacket(67)
+				c.sendPacket()
+
+				idleTimer.Reset(5 * time.Second)
+			} else {
+				idleTimer.Reset(time.Duration(5-diff) * time.Second)
+			}
 		case packet := <-c.packetChan:
 			opcode := packet.readByteAsInt()
 			c.handlePacket(packet, opcode, len(packet.buf)-1)
@@ -696,8 +617,6 @@ loop:
 				c.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(c.account.progressDur).Format(time.RFC1123))
 			}
 			progressTimer.Reset(c.account.progressDur)
-		case buf := <-c.captchaChan:
-			c.doCaptcha(buf)
 		case <-c.scriptKillSignal:
 			c.close()
 			fmt.Printf("[%s] Script kill signal received, terminating\n", c.user)
@@ -707,7 +626,7 @@ loop:
 				if !c.sleeping && !c.loading {
 					scriptTimer.Reset(time.Duration(c.script.loop()) * time.Millisecond)
 				} else {
-					scriptTimer.Reset(500 * time.Millisecond)
+					scriptTimer.Reset(50 * time.Millisecond)
 				}
 			} else {
 				scriptTimer.Reset(time.Duration(math.MaxInt))
@@ -716,6 +635,7 @@ loop:
 			if c.script != nil && c.script.running {
 				if c.script.onKillSignal != nil {
 					c.script.callOnKillSignal()
+					fmt.Printf("[%s] Waiting for script to clean up before terminating\n", c.user)
 					localClosing = nil
 					go func() {
 						time.Sleep(15 * time.Second)
@@ -764,8 +684,9 @@ func (c *client) close() {
 }
 
 func loadDefs() {
+	dataDir := filepath.Join(settings.executablePath, settings.DataSettings.Directory)
 	// tile defs
-	f1, err := os.Open(settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.TileDefs)
+	f1, err := os.Open(filepath.Join(dataDir, settings.DataSettings.TileDefs))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -779,7 +700,7 @@ func loadDefs() {
 	}
 
 	// door defs
-	f2, err := os.Open(settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.DoorDefs)
+	f2, err := os.Open(filepath.Join(dataDir, settings.DataSettings.DoorDefs))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -793,7 +714,7 @@ func loadDefs() {
 	}
 
 	// object defs
-	f3, err := os.Open(settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.ObjectDefs)
+	f3, err := os.Open(filepath.Join(dataDir, settings.DataSettings.ObjectDefs))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -807,7 +728,7 @@ func loadDefs() {
 	}
 
 	// item defs
-	f4, err := os.Open(settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.ItemDefs)
+	f4, err := os.Open(filepath.Join(dataDir, settings.DataSettings.ItemDefs))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -821,7 +742,7 @@ func loadDefs() {
 	}
 
 	// word hashes
-	f5, err := os.Open(settings.executablePath + string(os.PathSeparator) + settings.DataSettings.Directory + string(os.PathSeparator) + settings.DataSettings.WordHashes)
+	f5, err := os.Open(filepath.Join(dataDir, settings.DataSettings.WordHashes))
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -979,7 +900,7 @@ func (c *client) doCaptcha(buf []byte) {
 		}
 		num := rand.Intn(math.MaxInt)
 		randName := hex.EncodeToString([]byte{byte(num >> 24), byte(num >> 16), byte(num >> 8), byte(num)}) + ".bmp"
-		path := settings.OcrSettings.Directory + string(os.PathSeparator) + randName
+		path := filepath.Join(settings.executablePath, settings.OcrSettings.Directory, randName)
 		f, err := os.Create(path)
 		if err != nil {
 			fmt.Printf("[%s] Error creating sleep bmp file: %s\n", c.user, err)
@@ -992,7 +913,7 @@ func (c *client) doCaptcha(buf []byte) {
 			os.Remove(path)
 			return
 		}
-		cmd := exec.Command(settings.executablePath+string(os.PathSeparator)+settings.OcrSettings.OcrFileName, path)
+		cmd := exec.Command(filepath.Join(settings.executablePath, settings.OcrSettings.OcrFileName), path)
 		bs, err := cmd.CombinedOutput()
 		if err != nil {
 			fmt.Printf("[%s] Error getting sleepword from external ocr: %s\n", c.user, err)
@@ -1212,15 +1133,25 @@ func (c *client) sendPacket() error {
 func (c *client) readPacket() (*RSCPacket, error) {
 	var length int
 	lengthPacketRead := 0
+	lenBuf := make([]byte, 2)
 	for lengthPacketRead < 2 {
 		c.conn.SetReadDeadline(time.Now().Add(time.Second * readWriteTimeout))
-		n, err := c.conn.Read(c.lenBuf[lengthPacketRead:])
+		n, err := c.conn.Read(lenBuf[lengthPacketRead:])
 		if err != nil {
 			return nil, err
 		}
 		lengthPacketRead += n
 	}
-	length = ((int(c.lenBuf[0]) << 8) | int(c.lenBuf[1])) - 2
+	length = ((int(lenBuf[0]) << 8) | int(lenBuf[1])) - 2
+
+	if length > maxPacketSize {
+		return nil, fmt.Errorf("packet size too large: %d", length)
+	}
+
+	if length < 0 {
+		return nil, fmt.Errorf("negative packet length")
+	}
+
 	readLength := 0
 
 	buf := make([]byte, length)
@@ -1958,13 +1889,19 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		if c.account.debug {
 			fmt.Printf("[%s] Got sleep image\n", c.user)
 		}
-		if !c.sleeping {
-			atomic.StoreInt32(&c.sleepingFatigue, int32(c.fatigue))
+		resleep := false
+		if c.sleeping {
+			resleep = true
+		} else {
+			c.sleepingFatigue = c.fatigue
 		}
 		c.sleeping = true
-		bs := p.readBytes(length)
-
-		c.sleepChan <- bs
+		c.captchaBuf = p.readBytes(length)
+		if resleep {
+			if c.sleepingFatigue == 0 || (c.script != nil && c.script.fatigueTricking && c.sleepingFatigue < 100) {
+				c.doCaptcha(c.captchaBuf)
+			}
+		}
 	case 104: // npc appearances
 		nUpdates := p.readShort()
 		for i := 0; i < nUpdates; i++ {
@@ -2058,7 +1995,13 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		skill := p.readByteAsInt()
 		c.experience[skill] = p.readInt() / 4
 	case 244: // sleeping menu fatigue
-		atomic.StoreInt32(&c.sleepingFatigue, int32(p.readShort()))
+		c.sleepingFatigue = p.readShort()
+		if c.account.debug {
+			fmt.Printf("[%s] Sleep fatigue at %d\n", c.user, c.sleepingFatigue)
+		}
+		if c.sleepingFatigue == 0 || (c.script != nil && c.script.fatigueTricking && c.sleepingFatigue < 100) {
+			c.doCaptcha(c.captchaBuf)
+		}
 	case 115: // black hole
 		c.blackhole = p.readByte() != 0
 	case 123: // remove inventory item
@@ -2071,17 +2014,6 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			c.inventory[i].slot = i
 		}
 	case 84: // wake up
-		if c.account.debug && !c.firstWakeupReceived {
-			fmt.Printf("[%s] Woke up\n", c.user)
-		}
-		if c.firstWakeupReceived {
-			select {
-			case <-c.closed:
-			case c.cancelSleep <- struct{}{}:
-			}
-		} else {
-			c.firstWakeupReceived = true
-		}
 		c.sleeping = false
 	case 129: // combat style changed
 		c.combatStyle = p.readByteAsInt()
@@ -2416,10 +2348,6 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 	case 194: // sleep word incorrect
 		if c.account.debug {
 			fmt.Printf("[%s] Sleep word incorrect\n", c.user)
-		}
-		select {
-		case <-c.closed:
-		case c.cancelSleep <- struct{}{}:
 		}
 	case 52: // system update
 		c.systemUpdate = true

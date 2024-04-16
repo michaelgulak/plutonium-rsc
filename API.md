@@ -50,6 +50,10 @@ Checks whether the player is in a rectangular area. `area_x` and `area_z` are th
 
 Same as `in_rect` except instead of using the client coordinates it checks the supplied `point_x` and `point_z`.
 
+###### point_in_polygon(x, z, polygon)
+
+Checks whether a point is in the supplied polygon. `polygon` should be an array of ints in the format `[x1, z1, x2, z2, x3, z3, ...]`.
+
 ###### set_fatigue_tricking(True)
 ###### stop_script()
 ###### log(str)

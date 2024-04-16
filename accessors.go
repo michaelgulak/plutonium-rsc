@@ -223,19 +223,19 @@ func (c *client) getNearestNPCByID(inCombat, talking, reachable bool, x, z int, 
 		if !inIntArray(c.npcs[i].id, ids) {
 			continue
 		}
-		if !inCombat && c.npcs[i].inCombat() {
-			continue
-		}
-		if !talking && c.npcs[i].isTalking() {
-			continue
-		}
-		if radius != -1 && distance(c.npcs[i].x, c.npcs[i].z, x, z) > radius {
-			continue
-		}
-		if reachable && !c.isReachable(c.npcs[i].x, c.npcs[i].z) {
-			continue
-		}
 		if dist := distance(c.x, c.z, c.npcs[i].x, c.npcs[i].z); dist < min {
+			if !inCombat && c.npcs[i].inCombat() {
+				continue
+			}
+			if !talking && c.npcs[i].isTalking() {
+				continue
+			}
+			if radius != -1 && distance(c.npcs[i].x, c.npcs[i].z, x, z) > radius {
+				continue
+			}
+			if reachable && !c.isReachable(c.npcs[i].x, c.npcs[i].z) {
+				continue
+			}
 			minNPC = c.npcs[i]
 			min = dist
 		}
@@ -252,19 +252,19 @@ func (c *client) getNearestNPCByIDInRect(inCombat bool, talking bool, reachable 
 		if !inIntArray(c.npcs[i].id, ids) {
 			continue
 		}
-		if !inCombat && c.npcs[i].inCombat() {
-			continue
-		}
-		if !talking && c.npcs[i].isTalking() {
-			continue
-		}
-		if !inRect(c.npcs[i].x, c.npcs[i].z, x, z, width, height) {
-			continue
-		}
-		if reachable && !c.isReachable(c.npcs[i].x, c.npcs[i].z) {
-			continue
-		}
 		if dist := distance(c.x, c.z, c.npcs[i].x, c.npcs[i].z); dist < min {
+			if !inCombat && c.npcs[i].inCombat() {
+				continue
+			}
+			if !talking && c.npcs[i].isTalking() {
+				continue
+			}
+			if !inRect(c.npcs[i].x, c.npcs[i].z, x, z, width, height) {
+				continue
+			}
+			if reachable && !c.isReachable(c.npcs[i].x, c.npcs[i].z) {
+				continue
+			}
 			minNPC = c.npcs[i]
 			min = dist
 		}
@@ -281,13 +281,13 @@ func (c *client) getNearestObjectByIDInRect(reachable bool, x, z, width, height 
 		if !inIntArray(c.objects[i].id, ids) {
 			continue
 		}
-		if !inRect(c.objects[i].x, c.objects[i].z, x, z, width, height) {
-			continue
-		}
-		if reachable && !c.isObjectReachable(c.objects[i]) {
-			continue
-		}
 		if dist := distance(c.x, c.z, c.objects[i].x, c.objects[i].z); dist < min {
+			if !inRect(c.objects[i].x, c.objects[i].z, x, z, width, height) {
+				continue
+			}
+			if reachable && !c.isObjectReachable(c.objects[i]) {
+				continue
+			}
 			minObj = c.objects[i]
 			min = dist
 		}
@@ -304,13 +304,13 @@ func (c *client) getNearestWallObjectByIDInRect(reachable bool, x, z, width, hei
 		if !inIntArray(c.wallObjects[i].id, ids) {
 			continue
 		}
-		if !inRect(c.wallObjects[i].x, c.wallObjects[i].z, x, z, width, height) {
-			continue
-		}
-		if reachable && !c.isWallObjectReachable(c.wallObjects[i]) {
-			continue
-		}
 		if dist := distance(c.x, c.z, c.wallObjects[i].x, c.wallObjects[i].z); dist < min {
+			if !inRect(c.wallObjects[i].x, c.wallObjects[i].z, x, z, width, height) {
+				continue
+			}
+			if reachable && !c.isWallObjectReachable(c.wallObjects[i]) {
+				continue
+			}
 			minObj = c.wallObjects[i]
 			min = dist
 		}
@@ -327,13 +327,13 @@ func (c *client) getNearestGroundItemByIDInRect(reachable bool, x, z, width, hei
 		if !inIntArray(c.groundItems[i].id, ids) {
 			continue
 		}
-		if !inRect(c.groundItems[i].x, c.groundItems[i].z, x, z, width, height) {
-			continue
-		}
-		if reachable && !c.isGroundItemReachable(c.groundItems[i]) {
-			continue
-		}
 		if dist := distance(c.x, c.z, c.groundItems[i].x, c.groundItems[i].z); dist < min {
+			if !inRect(c.groundItems[i].x, c.groundItems[i].z, x, z, width, height) {
+				continue
+			}
+			if reachable && !c.isGroundItemReachable(c.groundItems[i]) {
+				continue
+			}
 			minObj = c.groundItems[i]
 			min = dist
 		}
@@ -350,13 +350,13 @@ func (c *client) getNearestGroundItemByID(x, z int, radius int, reachable bool, 
 		if !inIntArray(c.groundItems[i].id, ids) {
 			continue
 		}
-		if radius != -1 && distance(c.groundItems[i].x, c.groundItems[i].z, x, z) > radius {
-			continue
-		}
-		if reachable && !c.isGroundItemReachable(c.groundItems[i]) {
-			continue
-		}
 		if dist := distance(c.x, c.z, c.groundItems[i].x, c.groundItems[i].z); dist < min {
+			if radius != -1 && distance(c.groundItems[i].x, c.groundItems[i].z, x, z) > radius {
+				continue
+			}
+			if reachable && !c.isGroundItemReachable(c.groundItems[i]) {
+				continue
+			}
 			minItem = c.groundItems[i]
 			min = dist
 		}
@@ -373,13 +373,13 @@ func (c *client) getNearestObjectByID(x, z int, radius int, reachable bool, ids 
 		if !inIntArray(c.objects[i].id, ids) {
 			continue
 		}
-		if radius != -1 && distance(c.objects[i].x, c.objects[i].z, x, z) > radius {
-			continue
-		}
-		if reachable && !c.isObjectReachable(c.objects[i]) {
-			continue
-		}
 		if dist := distance(c.x, c.z, c.objects[i].x, c.objects[i].z); dist < min {
+			if radius != -1 && distance(c.objects[i].x, c.objects[i].z, x, z) > radius {
+				continue
+			}
+			if reachable && !c.isObjectReachable(c.objects[i]) {
+				continue
+			}
 			minObj = c.objects[i]
 			min = dist
 		}
@@ -396,13 +396,13 @@ func (c *client) getNearestWallObjectByID(x, z int, radius int, reachable bool, 
 		if !inIntArray(c.wallObjects[i].id, ids) {
 			continue
 		}
-		if radius != -1 && distance(c.wallObjects[i].x, c.wallObjects[i].z, x, z) > radius {
-			continue
-		}
-		if reachable && !c.isWallObjectReachable(c.wallObjects[i]) {
-			continue
-		}
 		if dist := distance(c.x, c.z, c.wallObjects[i].x, c.wallObjects[i].z); dist < min {
+			if radius != -1 && distance(c.wallObjects[i].x, c.wallObjects[i].z, x, z) > radius {
+				continue
+			}
+			if reachable && !c.isWallObjectReachable(c.wallObjects[i]) {
+				continue
+			}
 			minObj = c.wallObjects[i]
 			min = dist
 		}

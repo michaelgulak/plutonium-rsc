@@ -89,7 +89,7 @@ func parseConfig(filePath string) {
 	}
 	ex = filepath.Dir(ex)
 	if filePath == "settings.toml" {
-		filePath = ex + string(os.PathSeparator) + filePath
+		filePath = filepath.Join(ex, filePath)
 	}
 
 	f, err := os.Open(filePath)
@@ -132,7 +132,7 @@ func loadAccount(path string) (*account, error) {
 		acct.debug = acctFile.Get("account.debug").(bool)
 	}
 	if acctFile.Has("script") {
-		acct.script.path = settings.executablePath + string(os.PathSeparator) + settings.ScriptSettings.Directory + string(os.PathSeparator) + acctFile.Get("script.name").(string)
+		acct.script.path = filepath.Join(settings.executablePath, settings.ScriptSettings.Directory, acctFile.Get("script.name").(string))
 		acct.script.pathDir = filepath.Dir(acct.script.path)
 		if acctFile.Has("script.progress_report") {
 			str := acctFile.Get("script.progress_report").(string)
@@ -215,7 +215,7 @@ func loadAccount(path string) (*account, error) {
 }
 
 func loadAccounts() ([]*account, error) {
-	files, err := os.ReadDir(settings.executablePath + string(os.PathSeparator) + settings.AccountSettings.Directory)
+	files, err := os.ReadDir(filepath.Join(settings.executablePath, settings.AccountSettings.Directory))
 	if err != nil {
 		return nil, err
 	}
@@ -224,7 +224,7 @@ func loadAccounts() ([]*account, error) {
 		if !strings.HasSuffix(f.Name(), ".toml") {
 			continue
 		}
-		acct, err := loadAccount(settings.executablePath + string(os.PathSeparator) + settings.AccountSettings.Directory + string(os.PathSeparator) + f.Name())
+		acct, err := loadAccount(filepath.Join(settings.executablePath, settings.AccountSettings.Directory, f.Name()))
 		if err != nil {
 			return nil, err
 		}

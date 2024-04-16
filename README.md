@@ -81,7 +81,7 @@ If you want progress report files to be overwritten every time they're generated
 
 ## Create accounts
 
-Plutonium can automatically create accounts for you based on a text file. Note that there are rate limits for creating accounts. You may have to take a Very Pesky Note that it might need to be done over multiple days.
+Plutonium can automatically create accounts for you based on a text file. Note that there are rate limits for creating accounts.
 
 Run the bot with this command:
 
