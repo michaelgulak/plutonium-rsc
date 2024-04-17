@@ -263,24 +263,25 @@ def exp_until_next_level(exp):
     return "0"
 
 
-def point_inside_polygon(x, y, polygon):
-    n = len(polygon)
-    inside = False
-    p1x, p1y = polygon[0]
-    for i in range(n + 1):
-        p2x, p2y = polygon[i % n]
-        if y > min(p1y, p2y):
-            if y <= max(p1y, p2y):
-                if x <= max(p1x, p2x):
-                    if p1y != p2y:
-                        xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-                    if p1x == p2x or x <= xinters:
-                        inside = not inside
-        p1x, p1y = p2x, p2y
-    return inside
-    
-polygon_fishing_guild = [(583, 523), (595, 523), (605, 513), (605, 501), (600, 496), (593, 491), (583, 490)]
-
+#def point_inside_polygon(x, y, polygon):
+#    n = len(polygon)
+#    inside = False
+#    p1x, p1y = polygon[0]
+#    for i in range(n + 1):
+#        p2x, p2y = polygon[i % n]
+#        if y > min(p1y, p2y):
+#            if y <= max(p1y, p2y):
+#                if x <= max(p1x, p2x):
+#                    if p1y != p2y:
+#                        xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
+#                    if p1x == p2x or x <= xinters:
+#                        inside = not inside
+#        p1x, p1y = p2x, p2y
+#    return inside
+#    
+#polygon_fishing_guild = [(583, 523), (595, 523), (605, 513), (605, 501), (600, 496), (593, 491), (583, 490)]
+polygon_fishing_guild = [583, 523, 595, 523, 605, 513, 605, 501, 600, 496, 593, 491, 583, 490]
 
 def in_fishing_guild(x, z):
-    return point_inside_polygon(x, z, polygon_fishing_guild)
+    return point_in_polygon(x, z, polygon_fishing_guild)
+    # return point_inside_polygon(x, z, polygon_fishing_guild)

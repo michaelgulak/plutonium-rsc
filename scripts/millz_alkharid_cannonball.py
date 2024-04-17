@@ -26,6 +26,14 @@ def in_bank():
     return in_rect(93,689,7,12)
 
 
+def use_item_on_object_nowalk(item, obj):
+    create_packet(115)
+    write_short(obj.x)
+    write_short(obj.z)
+    write_short(item.slot)
+    send_packet()
+
+
 def mule():
     global perform_trade, steel_bar_count, start_steel_bar_count
 
@@ -37,21 +45,21 @@ def mule():
         if is_trade_confirm_screen():
             #log("Confirm Trade")
             confirm_trade()
-            return 1000
+            return 800
 
         if is_trade_offer_screen():
             if has_my_offer(STEEL_BAR, 12):
                 if not is_trade_confirm_accepted():
                     #log("Accept trade offer")
                     accept_trade_offer()
-                    return 1000
+                    return 800
 
                 #log("Waiting for master to accept")
                 return 1000
             else:
                 #log("Offer item")
                 trade_offer_item(12, get_inventory_item_by_id(STEEL_BAR))
-                return 1000
+                return 800
         else:
             player = get_player_by_name(settings.master)
             if player != None:
@@ -67,20 +75,20 @@ def mule():
     if door != None and door.id == 64:
         #log("Opening bank door")
         at_object(door)
-        return 1500
+        return 1000
     
     # Walk to trade waiting spot
     if get_inventory_count_by_id(STEEL_BAR) >= 24:
         #log("Returning to trading spot")
         walk_path_to(82, 679)
-        return 1200
+        return 1000
 
     # Withdraw bars from bank
     if get_inventory_count_by_id(STEEL_BAR) < 12:
         #log("Banking")
         if not in_bank():
             walk_path_to(88,695)
-            return 1200
+            return 1000
         else:
             if not is_bank_open():
                 return open_bank()
@@ -109,7 +117,6 @@ def smelt():
         init = True
         start_cannonball_count = get_inventory_count_by_id(CANNONBALL)
 
-
     if move_timer:
         if get_x() != 83 or get_z() != 679:
             walk_to(83, 679)
@@ -131,14 +138,14 @@ def smelt():
         if is_trade_confirm_screen():
             #log("Confirm Trade")
             confirm_trade()
-            return 2000
+            return 800
 
         if is_trade_offer_screen():
             if has_recipient_offer(STEEL_BAR, 12):
                 if not is_trade_confirm_accepted():
                     #log("Accept trade offer")
                     accept_trade_offer()
-                    return 1000
+                    return 800
 
                 #log("Waiting for mule to offer")
                 return 1000
@@ -147,27 +154,31 @@ def smelt():
             if player != None:
                 #log("Trading mule")
                 trade_player(player)
-                return 1000
+                return 800
             else:
                 #log("Can't find mule?")
                 perform_trade = False
-                return 2000
+                return 1000
             
         #log("No bars, we need to trade for more...")
         return 600
 
     else:
         if smelt_timeout != 0 and time.time() <= smelt_timeout:
-            return 250
+            return 50
+        
+        if get_x() != 84 or get_z() != 679:
+            walk_to(84, 679)
+            return 600
     
         # Smelt
         furnace = get_object_from_coords(85,679)
         bar = get_inventory_item_by_id(STEEL_BAR)
         if furnace != None:
             #log("Smelting...")
-            use_item_on_object(bar, furnace)
+            use_item_on_object_nowalk(bar, furnace)
             smelt_timeout = time.time() + 5
-            return 1200
+            return 400
 
         return 1200
 

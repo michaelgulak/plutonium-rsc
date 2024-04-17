@@ -3,9 +3,11 @@
 # Will walk to, and enter the fishing guild. Doesn't handle gates, but moves from catherby etc.
 
 # [Optional] Set master like below, if bot receives a trade request from the master character, bot will trade over its certs.
+# [Optional] Set walk_to_guild to true if the bot isn't already at the fishing guild and you'd like to make it walk there. Disable after for better stability.
 
 # [script.settings]
 # master = "Millz"
+# walk_to_guild = false
 
 import time
 import millz_common
@@ -65,7 +67,7 @@ def enter_fishing_guild():
     return 1000
 
 def cert():
-    global talk_timeout
+    global talk_timeout, path, destination
 
     if is_option_menu():
         #log("Certing")
@@ -87,14 +89,23 @@ def cert():
             return 400
         else:
             #log("Walk to Padik")
-            walk_path_to(601, 506)
+            destination = [601, 506]
+            path = calculate_path_to(601, 506)
+            if path == None:
+                log("Failed to path to Padik (certer)")
+                set_autologin(False)
+                stop_script()
+                logout()
             return 600
 
     return 5000
 
 def fish():
-    global fish_timeout, move_timer
+    global fish_timeout, move_timer, path, destination
 
+    if fish_timeout != 0 and time.time() <= fish_timeout:
+        return 50
+    
     if move_timer:
         #log("Moving 5min timer")
         if get_x() != SPOT_X or get_z() != SPOT_Z + 2:
@@ -106,9 +117,6 @@ def fish():
     if get_fatigue() > 95:
         use_sleeping_bag()
         return 1000
-
-    if fish_timeout != 0 and time.time() <= fish_timeout:
-        return 250
     
     item_to_drop = get_inventory_item_except(KEPT_ITEMS)
     if item_to_drop != None:
@@ -117,7 +125,13 @@ def fish():
         
     if get_x() != SPOT_X or get_z() != SPOT_Z + 1:
         #log("Walking to fishing spot")
-        walk_path_to(SPOT_X, SPOT_Z + 1)
+        destination = [SPOT_X, SPOT_Z + 1]
+        path = calculate_path_to(SPOT_X, SPOT_Z + 1)
+        if path == None:
+            log("Failed to path to fishing spot")
+            set_autologin(False)
+            stop_script()
+            logout()
         return 600
     
     fish = get_object_from_coords(SPOT_X, SPOT_Z)
@@ -126,20 +140,18 @@ def fish():
         #log("Fishing")
         at_object2(fish)
         fish_timeout = time.time() + 5
-        return 900
+        return 500
 
     return 5000  
 
 def loop():
-    global init, start_fish_xp, perform_trade
-
-    set_autologin(True)
+    global init, start_fish_xp, perform_trade, path, destination
     
     if init is False:
         init = True
         start_fish_xp = get_experience(10)
-        
     
+     
     if hasattr(settings, "master") and perform_trade:
         if get_inventory_count_by_id(631) == 0:
             log("No certs left to trade")
@@ -174,15 +186,29 @@ def loop():
         perform_trade = False  
         return 600
                 
-
-    if not millz_common.in_fishing_guild(get_x(), get_z()):
+    if hasattr(settings, "walk_to_guild") and settings.walk_to_guild and not millz_common.in_fishing_guild(get_x(), get_z()):
         return enter_fishing_guild()
     
     if in_radius_of(603, 506, 8):
         door = get_wall_object_from_coords(603, 506)
         if door != None and door.id == 2:
+            log("Opening certer door")
             at_wall_object(door)
             return 700
+        
+    if path != None:
+        path.process()
+        if not path.complete():
+            if not path.walk() and destination[0] != 0:
+                path = calculate_path_to(destination[0], destination[1])
+                if path == None:
+                    stop_script()
+                    set_autologin(False)
+                    logout()
+                    log("Could not path to " + str(destination[0]) + ", " + str(destination[1]) + ". Stopping.")
+            return 1000
+        else:
+            path = None
             
     if get_inventory_count_by_id(545) >= 25:
         return cert()
