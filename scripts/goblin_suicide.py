@@ -1,13 +1,30 @@
 # Goblin Suicide by RLN
 
 # Kills goblins in Lumbridge and walks back if it dies.
-# This script only trains defense and stops at 40 defense.
+# This script only trains defence and stops at 40 defence.
+
+GOBLIN_POLYGON = [124, 641, 124, 622, 105, 622, 105, 629, 92, 629,
+                  92, 669, 105, 669, 105, 654]
+
+def get_nearest_npc_in_polygon(ids, polygon, in_combat):
+    min_dist = 999
+    min_npc = None
+    for i in range(get_npc_count()):
+        npc = get_npc_at_index(i)
+        if npc != None and npc.id in ids:
+            dist = distance_to(npc.x, npc.z)
+            if dist < min_dist:
+                if (not in_combat and npc.in_combat()) or \
+                    not point_in_polygon(npc.x, npc.z, polygon):
+                    continue
+                min_dist = dist
+                min_npc = npc
+    
+    return min_npc
 
 def loop():
     if get_max_stat(1) >= 40:
-        set_autologin(False)
-        stop_script()
-        logout()
+        stop_account()
         return 5000
 
     if get_combat_style() != 3:
@@ -17,7 +34,7 @@ def loop():
     if in_combat():
         return 650
     
-    if get_fatigue() > 95:
+    if get_fatigue() > 99:
         use_sleeping_bag()
         return 2000
 
@@ -27,16 +44,16 @@ def loop():
             equip_item(axe)
             return 2000
     
-    if not in_rect(108, 637, 16, 32):
+    if not point_in_polygon(get_x(), get_z(), GOBLIN_POLYGON):
         walk_path_to(99, 653)
-        return 5000
+        return 1200
     
-    goblin = get_nearest_npc_by_id_in_rect(62, in_combat=False, x=108, z=637, width=16, height=32)
+    goblin = get_nearest_npc_in_polygon([62], GOBLIN_POLYGON, False)
     if goblin != None:
         attack_npc(goblin)
         return 650
     
-    return 2000
+    return 800
 
 def on_progress_report():
     return {"Defense level": get_max_stat(1)}

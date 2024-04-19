@@ -67,39 +67,44 @@ def bank():
     item = get_inventory_item_except([bar.prim_ore_id, bar.sec_ore_id, SLEEPING_BAG])
     if item != None:
         deposit(item.id, get_inventory_count_by_id(item.id))
-        return 1000
+        return 1300
 
-    prim_bank_count = get_bank_count(bar.prim_ore_id)
-
+    
     prim_count = get_inventory_count_by_id(bar.prim_ore_id)
     if prim_count > bar.prim_withdraw:
         deposit(bar.prim_ore_id, prim_count - bar.prim_withdraw)
-        return 1000
-    elif prim_count < bar.prim_withdraw:
+        return 1300
+    
+    sec_count = -1
+    if bar.sec_ore_id != -1:
+        sec_count = get_inventory_count_by_id(bar.sec_ore_id)
+        if sec_count > bar.sec_withdraw:
+            deposit(bar.sec_ore_id, sec_count - bar.sec_withdraw)
+            return 1300
+
+    prim_bank_count = get_bank_count(bar.prim_ore_id)
+    if prim_count < bar.prim_withdraw:
         count = bar.prim_withdraw - prim_count
         if prim_bank_count < count:
             log("Out of primary ore")
             stop_account()
-            return 1000
+            return 1300
         withdraw(bar.prim_ore_id, count)
-        return 1000
+        return 1300
     
     sec_bank_count = -1
+    
     if bar.sec_ore_id != -1:
         sec_bank_count = get_bank_count(bar.sec_ore_id)
-
-        sec_count = get_inventory_count_by_id(bar.sec_ore_id)
-        if sec_count > bar.sec_withdraw:
-            deposit(bar.sec_ore_id, sec_count - bar.sec_withdraw)
-            return 1000
-        elif sec_count < bar.sec_withdraw:
+        
+        if sec_count < bar.sec_withdraw:
             count = bar.sec_withdraw - sec_count
             if sec_bank_count < count:
                 log("Out of secondary ore")
                 stop_account()
                 return 1000
             withdraw(bar.sec_ore_id, count)
-            return 1000
+            return 1300
 
     if bar.sec_ore_id != -1:
         ore_remaining = min([prim_bank_count, sec_bank_count // bar.sec_ore_ratio])
@@ -107,7 +112,7 @@ def bank():
         ore_remaining = prim_bank_count
 
     close_bank()
-    return 1000
+    return 1300
 
 def smelt():
     global smelt_timeout
