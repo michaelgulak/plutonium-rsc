@@ -20,7 +20,6 @@ import (
 	"runtime"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"time"
 )
@@ -29,8 +28,9 @@ const (
 	supportBankNotes = false
 	skillCount       = 18
 	readWriteTimeout = 10
+	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.4.0"
+	botVersion       = "1.4.1"
 )
 
 var (
@@ -597,7 +597,7 @@ loop:
 		case <-c.closed:
 			break loop
 		case <-idleTimer.C:
-			diff := time.Now().Unix() - atomic.LoadInt64(&c.lastSentPacketTime)
+			diff := time.Now().Unix() - c.lastSentPacketTime
 
 			if diff >= 5 {
 				c.createPacket(67)
@@ -611,12 +611,16 @@ loop:
 			opcode := packet.readByteAsInt()
 			c.handlePacket(packet, opcode, len(packet.buf)-1)
 		case <-progressTimer.C:
-			c.account.lastProgressReport = time.Now()
-			if c.script != nil && c.script.running && c.script.onProgressReport != nil && c.account.progressDur != time.Duration(math.MaxInt) {
-				c.script.callOnProgressReport()
-				c.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(c.account.progressDur).Format(time.RFC1123))
+			if !c.loading {
+				c.account.lastProgressReport = time.Now()
+				if c.script != nil && c.script.running && c.script.onProgressReport != nil && c.account.progressDur != time.Duration(math.MaxInt) {
+					c.script.callOnProgressReport()
+					c.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(c.account.progressDur).Format(time.RFC1123))
+				}
+				progressTimer.Reset(c.account.progressDur)
+			} else {
+				progressTimer.Reset(time.Second)
 			}
-			progressTimer.Reset(c.account.progressDur)
 		case <-c.scriptKillSignal:
 			c.close()
 			fmt.Printf("[%s] Script kill signal received, terminating\n", c.user)
@@ -783,7 +787,7 @@ func doAccountCreations(fileStr string) {
 		password = lineSplit[1]
 		email = lineSplit[2]
 	retry:
-		conn, err := net.Dial("tcp4", settings.ServerSettings.Address)
+		conn, err := net.DialTimeout("tcp4", settings.ServerSettings.Address, connectTimeout*time.Second)
 		if err != nil {
 			fmt.Printf("Error connecting in account creation: %s\n", err)
 			return
@@ -996,7 +1000,7 @@ func encodeCredential(s string) string {
 }
 
 func (c *client) login(b *bot) (bool, time.Duration, error) {
-	conn, err := net.Dial("tcp4", settings.ServerSettings.Address)
+	conn, err := net.DialTimeout("tcp4", settings.ServerSettings.Address, connectTimeout*time.Second)
 	if err != nil {
 		return false, time.Second * 15, fmt.Errorf("connection error: %s", err)
 	}
@@ -1126,7 +1130,7 @@ func (c *client) sendPacket() error {
 		wrote += n
 	}
 	c.RSCPacket.i = 0
-	atomic.StoreInt64(&c.lastSentPacketTime, time.Now().Unix())
+	c.lastSentPacketTime = time.Now().Unix()
 	return err
 }
 
@@ -1701,9 +1705,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 					count := 0
 					for i := 0; i < c.groundItemCount; i++ {
 						if c.groundItems[i].x == x && c.groundItems[i].z == z && c.groundItems[i].id == id {
-							if c.script != nil && c.script.onGroundItemDespawned != nil {
-								c.script.callOnGroundItemDespawned(c.groundItems[i])
-							}
+							id = -123
 						} else {
 							if i != count {
 								c.groundItems[count].id = c.groundItems[i].id
@@ -1723,6 +1725,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 						c.script.callOnGroundItemSpawned(c.groundItems[c.groundItemCount])
 					}
 					c.groundItemCount++
+
 				}
 			}
 		}

@@ -14,13 +14,19 @@ git clone https://gitlab.com/open-runescape-classic/plutonium
 
 Enter the directory it creates (type `cd plutonium` to get in the directory) and type `go build`. A binary named `bot` (or on Windows `bot.exe`) will now be in the directory.
 
-To check your Go version run:
+
+## Updating Plutonium
+
+To update Plutonium run these commands in the terminal or command prompt while your working directory is the `plutonium` directory (it will save your changes and replay them over the updated bot):
 
 ```bash
-go version
+git stash
+git pull
+git stash pop
+go build
 ```
 
-And ensure that it is at least version 1.18.
+This will only work if you cloned the repo first with git.
 
 ## Account Configuration
 

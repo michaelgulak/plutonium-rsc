@@ -993,6 +993,10 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		c.account.autologin = bool(args[0].(py.Bool))
 		return py.None, nil
 	}, py.METH_STATIC, "")
+	module.Globals["set_debug"] = py.MustNewMethod("set_debug", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		c.account.debug = bool(args[0].(py.Bool))
+		return py.None, nil
+	}, py.METH_STATIC, "")
 
 	// world
 

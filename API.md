@@ -17,6 +17,9 @@ Return a string dict from this function to generate a progress report.
 After this is called, the script has 15 seconds to clean up (ie. get out of combat) and call stop_account(), otherwise the bot will kill the account loop.
 
 ###### on_load()
+
+This event is called when the client is fully loaded in the game world. It gets called every time the bot logs into an account.
+
 ###### on_system_update(seconds)
 ###### on_server_message(msg)
 ###### on_trade_request(name)
