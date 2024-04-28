@@ -186,17 +186,17 @@ func (w *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, 
 			if groundOverlay > 0 && tileDefs[groundOverlay-1].ObjectType != 0 {
 				w.getRegion(bx, by).tiles[bx%48][by%48] |= 0x40
 			}
-			verticalWall := int(sectorTile.verticalWall)
+			verticalWall := byte(sectorTile.verticalWall)
 			if verticalWall > 0 && doorDefs[verticalWall-1].Unknown == 0 && doorDefs[verticalWall-1].DoorType != 0 {
 				w.getRegion(bx, by).tiles[bx%48][by%48] |= 1       // 1
 				w.getRegion(bx, by-1).tiles[bx%48][(by-1)%48] |= 4 // 4
 			}
-			horizontalWall := int(sectorTile.horizontalWall)
+			horizontalWall := byte(sectorTile.horizontalWall)
 			if horizontalWall > 0 && doorDefs[horizontalWall-1].Unknown == 0 && doorDefs[horizontalWall-1].DoorType != 0 {
 				w.getRegion(bx, by).tiles[bx%48][by%48] |= 2
 				w.getRegion(bx-1, by).tiles[(bx-1)%48][by%48] |= 8 // 8
 			}
-			diagonalWalls := int(sectorTile.diagonalWalls)
+			diagonalWalls := uint16(sectorTile.diagonalWalls)
 			if diagonalWalls > 0 && diagonalWalls < 12000 && doorDefs[diagonalWalls-1].Unknown == 0 && doorDefs[diagonalWalls-1].DoorType != 0 {
 				w.getRegion(bx, by).tiles[bx%48][by%48] |= 0x20
 			}
