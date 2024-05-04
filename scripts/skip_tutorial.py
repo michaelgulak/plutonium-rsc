@@ -47,9 +47,7 @@ def loop():
         return 2000
     else:
         log("skip tutorial complete")
-        stop_script()
-        set_autologin(False)
-        logout()
+        stop_account()
         return 10000
   
     return 5000

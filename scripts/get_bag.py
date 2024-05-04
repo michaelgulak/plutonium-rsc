@@ -24,9 +24,7 @@ def loop():
 
     if has_inventory_item(SLEEPING_BAG):
         log("finished objective")
-        stop_script()
-        set_autologin(False)
-        logout()
+        stop_account()
         return 10000
     
     coin_count = get_inventory_count_by_id(10)

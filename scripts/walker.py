@@ -55,9 +55,7 @@ def loop():
                 path = calculate_path_to(settings.target_x, settings.target_z)
                 if path == None:
                     log("Failed to repath")
-                    stop_script()
-                    set_autologin(False)
-                    logout()
+                    stop_account()
                     return 1000
 
                 return 100
@@ -69,17 +67,12 @@ def loop():
         path = calculate_path_to(settings.target_x, settings.target_z)
         if path == None:
             log("Failed to path")
-            stop_script()
-            set_autologin(False)
-            logout()
+            stop_account()
             return 1000
     else:
         path = None
         log("Walking complete!")
-        stop_script()
-        set_autologin(False)
-        logout()
-
-        return 250
+        stop_account()
+        return 1000
 
     return 1000

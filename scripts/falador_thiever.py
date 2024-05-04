@@ -54,9 +54,8 @@ def bank():
     
     bank_cake_count = get_bank_count(330)
     if bank_cake_count == 0:
-        stop_script()
-        set_autologin(False)
-        logout()
+        log("Out of cake")
+        stop_account()
         return 5000
 
     cake_count = get_inventory_count_by_id(330)

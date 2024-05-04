@@ -48,10 +48,8 @@ def collect_coins():
             if not path.walk():
                 path = calculate_path_to(124, 647)
                 if path == None:
-                    stop_script()
-                    set_autologin(False)
-                    logout()
                     log("Could not path to Lumbridge 2, stopping")
+                    stop_account()
 
             return 1000
         else:
@@ -60,10 +58,8 @@ def collect_coins():
     if not in_radius_of(120, 648, 15):
         path = calculate_path_to(124, 647)
         if path == None:
-            stop_script()
-            set_autologin(False)
-            logout()
             log("Could not path to Lumbridge, stopping")
+            stop_account()
             return 1000
 
         return 100
@@ -91,10 +87,8 @@ def walk_to_port_sarim():
             if not path.walk():
                 path = calculate_path_to(269, 651)
                 if path == None:
-                    stop_script()
-                    set_autologin(False)
-                    logout()
                     log("Could not path to Port Sarim 2, stopping")
+                    stop_account()
 
             return 1000
         else:
@@ -103,10 +97,8 @@ def walk_to_port_sarim():
     if not in_radius_of(269, 651, 10):
         path = calculate_path_to(269, 651)
         if path == None:
-            stop_script()
-            set_autologin(False)
-            logout()
             log("Could not path to Port Sarim, stopping")
+            stop_account()
             return 1000
     else:
         state = STATE_TAKE_BOAT_1
@@ -203,9 +195,7 @@ def walk_to_brim_boat():
     if not in_radius_of(467, 657, 10):
         path = calculate_path_to(467, 657)
         if path == None:
-            stop_script()
-            set_autologin(False)
-            logout()
+            stop_account()
             log("Could not path to Brimhaven dock, stopping")
             return 1000
     else:
@@ -219,10 +209,8 @@ def take_boat_2():
 
     if in_radius_of(538, 617, 10):
         if hasattr(settings, "stop_at_ardy") and settings.stop_at_ardy:
-            stop_script()
-            set_autologin(False)
-            logout()
             log("Made it to Ardougne")
+            stop_account()
             return 1000
             
         state = STATE_WALK_TO_CATHERBY_1
@@ -256,10 +244,8 @@ def walk_to_catherby_1():
     if not in_radius_of(555, 480, 10):
         path = calculate_path_to(555, 480)
         if path == None:
-            stop_script()
-            set_autologin(False)
-            logout()
             log("Could not path to Catherby 1, stopping")
+            stop_account()
             return 1000
     else:
         state = STATE_WALK_TO_CATHERBY_2
@@ -281,16 +267,12 @@ def walk_to_catherby_2():
     if not in_radius_of(438, 481, 10):
         path = calculate_path_to(438, 481)
         if path == None:
-            stop_script()
-            set_autologin(False)
-            logout()
             log("Could not path to Catherby 2, stopping")
+            stop_account()
             return 1000
     else:
-        stop_script()
-        set_autologin(False)
-        logout()
         log("Made it to Catherby")
+        stop_account()
         return 1000
     
     return 1000

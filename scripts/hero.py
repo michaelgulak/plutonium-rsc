@@ -72,9 +72,7 @@ def withdraw_food(num):
             return 1000
     
     log("Out of food")
-    stop_script()
-    set_autologin(False)
-    logout()
+    stop_account()
     return 1000
 
 def bank():
