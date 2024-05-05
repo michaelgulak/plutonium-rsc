@@ -84,8 +84,7 @@ def loop():
             move_x, move_z = (-1, -1)
             bag_timeout = 0
         else:
-            if (attach_timeout != 0 and t < attach_timeout) or \
-                (move_timeout != 0 and t < move_timeout):
+            if move_timeout != 0 and t < move_timeout:
                 return SLEEP_TIME
             
             walk_to(move_x, move_z)
