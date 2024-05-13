@@ -56,4 +56,4 @@ def loop():
     return 800
 
 def on_progress_report():
-    return {"Defense level": get_max_stat(1)}
+    return {"Defence level": get_max_stat(1)}

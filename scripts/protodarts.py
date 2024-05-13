@@ -105,7 +105,7 @@ def loop():
             return SLEEP_TIME
         
         feathers = get_inventory_item_by_id(FEATHERS)
-        if feathers == None:
+        if feathers == None or feathers.amount < 10:
             log("Out of feathers")
             stop_account()
             return 5000
