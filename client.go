@@ -30,7 +30,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.4.2"
+	botVersion       = "1.5.0"
 )
 
 var (
@@ -638,8 +638,8 @@ loop:
 		case <-localClosing:
 			if c.script != nil && c.script.running {
 				if c.script.onKillSignal != nil {
-					c.script.callOnKillSignal()
 					fmt.Printf("[%s] Waiting for script to clean up before terminating\n", c.user)
+					c.script.callOnKillSignal()
 					localClosing = nil
 					go func() {
 						time.Sleep(15 * time.Second)
@@ -1922,11 +1922,15 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 					if c.account.debug {
 						fmt.Printf("[%s] NPC Message[%d:%d]: %s\n", c.user, npc.id, recipient, message)
 					}
-					npc.messageTime = time.Now()
-					if len(message) >= 65 {
-						npc.lastMessageTimeout = time.Second * 4
+					if inIntArray(npc.id, bankersID) && strings.HasPrefix(message, "Certainly") {
+						npc.messageTime = time.Unix(0, 0)
 					} else {
-						npc.lastMessageTimeout = time.Second * 3
+						npc.messageTime = time.Now()
+						if len(message) >= 65 {
+							npc.lastMessageTimeout = time.Second * 4
+						} else {
+							npc.lastMessageTimeout = time.Second * 3
+						}
 					}
 					if recipient != -1 {
 						if player := c.playersServer[recipient]; player != nil {

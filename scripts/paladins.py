@@ -12,6 +12,7 @@ CAKE_IDS = [335,333,330]
 kill_wait = 0
 coins_banked = 0
 chaos_banked = 0
+cake_count = 0
 thieve_timeout = 0
 move_timer = False
 
@@ -26,7 +27,7 @@ def get_adjacent_coord():
         return (get_x(), get_z()-1)
 
 def bank():
-    global coins_banked, chaos_banked
+    global coins_banked, chaos_banked, cake_count
 
     if get_z() >= 1548:
         door = get_nearest_wall_object_by_id(97)
@@ -72,13 +73,11 @@ def bank():
     coin_count = get_inventory_count_by_id(10)
     if coin_count > 0:
         deposit(10, coin_count)
-        coins_banked += coin_count
         return 2000
     
     chaos_rune_count = get_inventory_count_by_id(41)
     if chaos_rune_count > 0:
         deposit(41, chaos_rune_count)
-        chaos_banked += chaos_rune_count
         return 2000
 
     empty_slots = get_empty_slots()
@@ -88,6 +87,10 @@ def bank():
     elif empty_slots > 2:
         withdraw(330, empty_slots-2)
         return 2000
+    
+    cake_count = get_bank_count(330)
+    chaos_banked = get_bank_count(41)
+    coins_banked = get_bank_count(10)
     
     close_bank()
     return 1000
@@ -132,7 +135,7 @@ def thieve():
 
         return 600
     else:
-        if thieve_timeout != 0 and time.time() <= thieve_timeout:
+        if thieve_timeout != 0 and time.time() < thieve_timeout:
             return 250
 
         if move_timer:
@@ -141,7 +144,7 @@ def thieve():
             move_timer = False
             return 1000
 
-        if get_fatigue() > 95:
+        if get_fatigue() > 99:
             use_sleeping_bag()
             return 4000
 
@@ -190,11 +193,12 @@ def on_server_message(msg):
         move_timer = True
 
 def on_progress_report():
-    return {"Thieving Level": get_max_stat(17), \
-            "Coins":          get_inventory_count_by_id(10), \
-            "Chaos":          get_inventory_count_by_id(41), \
-            "Coins banked":   coins_banked, \
-            "Chaos banked":   chaos_banked}
+    return {"Thieving Level": get_max_stat(17),
+            "Coins":          get_inventory_count_by_id(10),
+            "Chaos":          get_inventory_count_by_id(41),
+            "Coins banked":   coins_banked,
+            "Chaos banked":   chaos_banked,
+            "Cake left":      cake_count}
 
 def on_kill_signal():
     global kill_wait

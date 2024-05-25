@@ -2,7 +2,7 @@ module bot
 
 go 1.18
 
-require github.com/go-python/gpython v0.2.1-0.20231226230607-23c0aa29cc22
+require github.com/go-python/gpython v0.2.1-0.20240226151148-149d52cd50c5
 
 require (
 	github.com/olekukonko/tablewriter v0.0.5

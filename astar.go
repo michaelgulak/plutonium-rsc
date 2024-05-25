@@ -1,7 +1,6 @@
 package main
 
 import (
-	"container/list"
 	"math"
 )
 
@@ -78,7 +77,7 @@ type node struct {
 }
 
 type path struct {
-	waypoints *list.List
+	waypoints []*point
 	startX    int
 	startY    int
 }
@@ -153,7 +152,7 @@ func (p *astarPathFinder) buildPath() *path {
 		if endNode.parent == nil {
 			endNode = nil
 		} else {
-			p.path.addDirect(worldX, worldY)
+			p.path.addWaypoint(worldX, worldY)
 			endNode = p.costBoard[endNode.parent.x][endNode.parent.y]
 		}
 	}
@@ -461,15 +460,14 @@ func (n *node) update(a *astarPathFinder, node *node, cost int) {
 	n.parent = node.position
 }
 
-func newPath(startX, startY int) (z *path) {
-	z = &path{
-		startX: startX,
-		startY: startY,
+func newPath(startX, startY int) *path {
+	return &path{
+		startX:    startX,
+		startY:    startY,
+		waypoints: []*point{},
 	}
-	z.waypoints = list.New()
-	return
 }
 
-func (p *path) addDirect(x int, y int) {
-	p.waypoints.PushFront(&point{x, y})
+func (p *path) addWaypoint(x int, y int) {
+	p.waypoints = append(p.waypoints, &point{x, y})
 }

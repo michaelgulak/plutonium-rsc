@@ -841,6 +841,49 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 		return path, nil
 	}, py.METH_STATIC, "")
+	module.Globals["calculate_path_through"] = py.MustNewMethod("calculate_path_to", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		var (
+			l      *py.List
+			depth  = -1
+			startX = c.x
+			startZ = c.z
+		)
+		if l0, ok := kwargs["points"]; ok {
+			l = l0.(*py.List)
+		} else {
+			return py.None, errors.New("`points` kwarg must be supplied")
+		}
+		coords := make([]*point, l.Len())
+		for i, v := range l.Items {
+			v := v.(py.Tuple)
+			coords[i] = &point{
+				x: int(v[0].(py.Int)),
+				y: int(v[1].(py.Int)),
+			}
+		}
+		if depth0, ok := kwargs["depth"]; ok {
+			switch v := depth0.(type) {
+			case py.Int:
+				depth = int(v)
+			case py.Float:
+				depth = int(float64(v))
+			}
+		}
+		if startX0, ok := kwargs["start_x"]; ok {
+			startX = int(startX0.(py.Int))
+		}
+		if startZ0, ok := kwargs["start_z"]; ok {
+			startZ = int(startZ0.(py.Int))
+		}
+		path, startError, endError := c.generateLongPathThrough(startX, startZ, coords, depth)
+		if path == nil {
+			if s.c.account.debug {
+				fmt.Printf("[%s] Path not found from coords (%d, %d) to (%d, %d)\n", c.user, startError.x, startError.y, endError.x, endError.y)
+			}
+			return py.None, nil
+		}
+		return path, nil
+	}, py.METH_STATIC, "")
 	module.Globals["walk_path_to"] = py.MustNewMethod("walk_path_to", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x, z := int(args[0].(py.Int)), int(args[1].(py.Int))
 		pt := c.generateLongPathPoint(x, z, -1)

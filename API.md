@@ -180,6 +180,20 @@ def loop():
 
 The same as `calculate_path_to` except it takes starting coordinates.
 
+###### calculate_path_through(points=[(x1, z1), (x2, z2), ....], start_x=648, start_z=632, depth=32)
+
+This method must be used with kwargs. You may not pass normal arguments.
+
+Calculates paths from `start_x` and `start_z` or the client's current coordinates if they are not supplied, through all the points supplied. It then merges them into one path. Returns a path object and should be handled the same way as `calculate_path_to`. 
+
+`start_x` and `start_z` are optional. `depth` is also optional and if you supply it, it will be used between each set of coordinates. It is not the depth of the entire path. 
+
+Example: 
+
+```python
+path = calculate_path_through(points=[(447, 482), (445, 474)])
+```
+
 ## Ground items
 
 #### Ground Item Object

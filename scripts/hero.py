@@ -9,13 +9,14 @@
 # progress_report = "20m"
 #
 # [script.settings]
-# food_ids  = [142, 335, 333, 330] # wine and cake
+# food_ids  = [142, 330, 333, 335] # wine and cake
 # food_count = 5
 # sleep = true
 
 import time
 
 LOOT_IDS = [10, 161, 619, 38, 612, 152]
+REVERSED_FOOD_IDS = settings.food_ids[::-1]
 
 kill_wait      = 0
 thieve_timeout = 0
@@ -40,14 +41,17 @@ def set_kept_items():
         kept_items.append(id_)
 
 def get_adjacent_coord():
-    if is_reachable(get_x()+1, get_z()):
-        return (get_x()+1, get_z())
-    elif is_reachable(get_x(), get_z()+1):
-        return (get_x(), get_z()+1)
-    elif is_reachable(get_x()-1, get_z()):
-        return (get_x()-1, get_z())
-    else:
-        return (get_x(), get_z()-1)
+    cs = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+    mx = get_x()
+    mz = get_z()
+    for dx, dz in cs:
+        nx = mx + dx
+        nz = mz + dz
+        path = calculate_path_to(nx, nz, 1)
+        if path != None and path.length() == 1:
+            return (nx, nz)
+
+    return (None, None)
 
 def deposit_food():
     total_count = 0
@@ -126,13 +130,21 @@ def thieve():
         return 1000
 
     if get_current_stat(3) <= 27:
-        food = get_inventory_item_by_id(ids=settings.food_ids)
+        food = get_inventory_item_by_id(ids=REVERSED_FOOD_IDS)
         if food != None:
             use_item(food)
             return 1000
         else:
             raise RuntimeError("Invalid state, thieving without food")
 
+    #if 142 in settings.food_ids:
+    #    wine_count = get_inventory_count_by_id(142)
+    #    if wine_count > settings.food_count:
+    #        wine = get_inventory_item_by_id(142)
+    #        if wine != None:
+    #            drop_item(wine)
+    #            return 1200
+    
     if in_rect(554, 609, 4, 8):
         door = get_object_from_coords(550, 612)
         if door != None and door.id == 64:
@@ -142,15 +154,14 @@ def thieve():
     if thieve_timeout != 0 and time.time() <= thieve_timeout:
         return 250
 
-    if move_x != -1:
+    if move_x != -1 and move_x != None:
         if get_x() == move_x and get_z() == move_z:
-            move_x = -1
-            move_z = -1
+            move_x, move_z = (-1, -1)
         else:
             walk_to(move_x, move_z)
             return 700
     
-    if settings.sleep and get_fatigue() > 95:
+    if settings.sleep and get_fatigue() > 99:
         use_sleeping_bag()
         return 2000
 
@@ -215,8 +226,7 @@ def on_progress_report():
                    "Thieving XP":    get_experience(17)}
 
     for id_ in LOOT_IDS:
-        prog_report[get_item_name(id_)] = \
-            loot_bank_map[str(id_)] if str(id_) in loot_bank_map else 0
+        prog_report[get_item_name(id_)] = loot_bank_map.get(str(id_), 0)
 
     return prog_report
 
@@ -232,4 +242,4 @@ def on_kill_signal():
     
 def on_death():
     log("Died")
-    stop_script()
+    stop_account()

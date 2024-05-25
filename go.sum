@@ -1,5 +1,5 @@
-github.com/go-python/gpython v0.2.1-0.20231226230607-23c0aa29cc22 h1:dYSjiH05bhGUCkZImP1VGxedV4ZnIHFNa6hoJgjUj4Q=
-github.com/go-python/gpython v0.2.1-0.20231226230607-23c0aa29cc22/go.mod h1:fUN4z1X+GFaOwPOoHOAM8MOPnh1NJatWo/cDqGlZDEI=
+github.com/go-python/gpython v0.2.1-0.20240226151148-149d52cd50c5 h1:3mzhuvJEmq8sYHp9eF6+tMy/+HM6HQhi50mGv+ATz/A=
+github.com/go-python/gpython v0.2.1-0.20240226151148-149d52cd50c5/go.mod h1:fUN4z1X+GFaOwPOoHOAM8MOPnh1NJatWo/cDqGlZDEI=
 github.com/google/go-cmp v0.5.8 h1:e6P7q2lk1O+qJJb4BtCQXlK8vWEO8V1ZeuEdJNOqZyg=
 github.com/mattn/go-runewidth v0.0.9/go.mod h1:H031xJmbD/WCDINGzjvQ9THkh0rPKHF+m2gUSrubnMI=
 github.com/mattn/go-runewidth v0.0.13 h1:lTGmDsbAYt5DmK6OnoV7EuIF1wEIFAcxld6ypU4OSgU=

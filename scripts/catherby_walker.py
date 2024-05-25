@@ -195,8 +195,8 @@ def walk_to_brim_boat():
     if not in_radius_of(467, 657, 10):
         path = calculate_path_to(467, 657)
         if path == None:
-            stop_account()
             log("Could not path to Brimhaven dock, stopping")
+            stop_account()
             return 1000
     else:
         state = STATE_TAKE_BOAT_2
