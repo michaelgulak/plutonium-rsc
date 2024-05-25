@@ -841,7 +841,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 		return path, nil
 	}, py.METH_STATIC, "")
-	module.Globals["calculate_path_through"] = py.MustNewMethod("calculate_path_to", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["calculate_path_through"] = py.MustNewMethod("calculate_path_through", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var (
 			l      *py.List
 			depth  = -1
