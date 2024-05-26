@@ -26,8 +26,10 @@
 # 36 - Body-Rune
 # 825 - Soul-Rune
 
-move_timer = False
-stopped    = False
+move_x       = -1
+move_z       = -1
+stopped      = False
+soul_timeout = 0
 
 class Door:
     def __init__(self, id, x, z):
@@ -42,43 +44,39 @@ DOORS = [
 ]
 
 def loop():
-    global stopped, move_timer
-
-    if stopped:
-        logout()
-        return 1000
+    global stopped, move_x, move_z, soul_timeout
     
     if get_inventory_count_by_id(10) < 7:
         log("Out of money, stopping")
-        set_autologin(False)
-        logout()
-        stopped = True
+        stop_account()
         return 1000
 
-    if move_timer:
-        x, z = get_adjacent_coord()
-        walk_to(x, z)
-        move_timer = False
-        return 800
+    if move_x != -1:
+        if get_x() == move_x and get_z() == move_z:
+            move_x, move_z = (-1, -1)
+        else:
+            walk_to(move_x, move_z)
+            return 700
 
     if is_shop_open():
         for buy_id in settings.buy_ids:
-            buy_shop_item(buy_id, 100)
+            if buy_id == 825:
+                if get_shop_item_by_id(825).amount == 30:
+                    if not (soul_timeout != 0 and time.time() < soul_timeout):
+                        buy_shop_item(buy_id, 1)
+                        soul_timeout = time.time() + 1
+            else:
+                buy_shop_item(buy_id, 100)
 
         return 400
 
     if is_option_menu():
         answer(0)
-        if settings.npc_id == 793:
-            return 7000
-
         return 3000
     
     if settings.npc_id == 54 and get_my_player().combat_level < 21:
         log("A mugger can kill you at Aubury's before level 21, stopping")
-        set_autologin(False)
-        logout()
-        stopped = True
+        stop_account()
         return 1000
 
     for door in DOORS:
@@ -96,20 +94,23 @@ def loop():
     return 1000
 
 def get_adjacent_coord():
-    if is_reachable(get_x()+1, get_z()):
-        return (get_x()+1, get_z())
-    elif is_reachable(get_x(), get_z()+1):
-        return (get_x(), get_z()+1)
-    elif is_reachable(get_x()-1, get_z()):
-        return (get_x()-1, get_z())
-    else:
-        return (get_x(), get_z()-1)
+    cs = [(1, 0), (0, 1), (-1, 0), (0, -1)]
+    mx = get_x()
+    mz = get_z()
+    for dx, dz in cs:
+        nx = mx + dx
+        nz = mz + dz
+        path = calculate_path_to(nx, nz, 1)
+        if path != None and path.length() == 1:
+            return (nx, nz)
+
+    raise RuntimeError("no adjacent coordinate found")
 
 def on_server_message(msg):
-    global move_timer
+    global move_x, move_z
 
     if msg.startswith("@cya@You have been standing"):
-        move_timer = True
+        move_x, move_z = get_adjacent_coord()
 
 def on_progress_report():
     prog_report = {}

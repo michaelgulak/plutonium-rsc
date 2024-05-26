@@ -38,6 +38,7 @@ This event is called when the client is fully loaded in the game world. It gets 
 ###### on_object_despawned(object)
 ###### on_wall_object_spawned(wall_object)
 ###### on_wall_object_despawned(wall_object)
+###### on_fatigue_update(fatigue, accurate_fatigue)
 
 ## Base
 

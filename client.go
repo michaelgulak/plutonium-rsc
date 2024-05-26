@@ -30,7 +30,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.5.0"
+	botVersion       = "1.5.1"
 )
 
 var (
@@ -1866,6 +1866,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 	case 114: // fatigue
 		c.fatigue = p.readShort()
 		c.accurateFatigue = (float64(p.readShort()) / 750) * 100
+
+		if c.script != nil && c.script.onFatigueUpdate != nil {
+			c.script.callOnFatigueUpdate(c.fatigue, c.accurateFatigue)
+		}
 	case 53: // Update inventory
 		c.inventoryCount = p.readByteAsInt()
 

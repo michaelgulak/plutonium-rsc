@@ -1,6 +1,6 @@
 # Edgeville mule cooker by RLN
 #
-# Make sure you're using at least plutonium v1.3.7. You can check your 
+# Make sure you're using at least plutonium v1.5.1. You can check your 
 # version by running ./bot -v or .\bot.exe -v
 #
 # Start mule in Edgeville bank or upstairs in the Edgeville general store.
@@ -254,9 +254,6 @@ def on_server_message(msg):
     
     if msg.startswith("You accidentally"):
         cook_timeout = 0
-    elif msg.endswith("nicely cooked"):
-        cook_timeout = 0
-        shark_cooked += 1
     elif msg.endswith("successfully"):
         trade_timeout = 0
         if ROLE_COOK:
@@ -266,7 +263,14 @@ def on_server_message(msg):
             if get_inventory_count_by_id(RAW_SHARK) < 12:
                 trading = False
                 send_private_message(settings.partner, "Banking")
+
+def on_fatigue_update(fatigue, accurate_fatigue):
+    global cook_timeout, shark_cooked
     
+    cook_timeout = 0
+    if fatigue != 0:
+        shark_cooked += 1
+
 def per_hour(gained, start_time_seconds):
     elapsed_time = time.time() - start_time_seconds
     if elapsed_time == 0:

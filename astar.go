@@ -469,5 +469,5 @@ func newPath(startX, startY int) *path {
 }
 
 func (p *path) addWaypoint(x int, y int) {
-	p.waypoints = append(p.waypoints, &point{x, y})
+	p.waypoints = append([]*point{{x, y}}, p.waypoints...)
 }
