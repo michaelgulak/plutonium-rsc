@@ -8,6 +8,7 @@
 # [script.settings]
 # ore_type  = "iron"
 # powermine = false
+# pickup    = false
 #
 # ore_type can be set to copper, tin, or iron.
 
@@ -27,6 +28,10 @@ move_x                = -1
 move_z                = -1
 
 ore_banked = 0
+
+init = False
+start_time = 0
+start_mining_xp = 0
 
 class Rock:
     def __init__(self, id, x, z):
@@ -108,6 +113,17 @@ def mine():
     if click_timeout != 0 \
         and time.time() <= click_timeout:
         return 250
+        
+    if hasattr(settings, "pickup") and settings.pickup == True:
+        if settings.ore_type == "iron":
+            pickup_items = [151, 160, 159, 158, 157]
+        else:
+            pickup_items = [150, 202, 160, 159, 158, 157]
+            
+        ground_item = get_nearest_ground_item_by_id(ids=pickup_items, reachable=True, x=get_x(), z=get_z(), radius=3)
+        if ground_item != None:
+            pickup_item(ground_item)
+            return 1000
     
     for rock in rocks:
         if previous_rock == rock \
@@ -145,6 +161,13 @@ def bank():
         return 3000
 
 def loop():
+    global init, start_mining_xp, start_time
+    
+    if not init:
+        init = True
+        start_mining_xp = get_experience(14)
+        start_time = time.time()
+    
     if is_bank_open() \
         or ((get_total_inventory_count() == 30) \
             and not settings.powermine):
@@ -163,6 +186,13 @@ def get_adjacent_coord():
     else:
         return (get_x(), get_z()-1)
 
+def xp_per_hour(gained_xp, start_time_seconds):
+    if gained_xp == 0:
+        return "0"
+    elapsed_time = time.time() - start_time_seconds
+    gained_per_second = gained_xp / elapsed_time
+    return int(gained_per_second * 3600)
+
 def on_server_message(msg):
     global click_timeout, previous_rock_timeout, previous_rock, move_x, move_z
 
@@ -175,6 +205,21 @@ def on_server_message(msg):
     elif msg.startswith("@cya@You have been standing"):
         move_x, move_z = get_adjacent_coord()
 
+
 def on_progress_report():
-    return {"Mining Level": get_max_stat(14), \
-            "Ore Banked":   ore_banked}
+    mining_xp_gained = get_experience(14) - start_mining_xp
+    xp_to_max_level = 13034431 - get_experience(14)
+    xp_per_hr = xp_per_hour(mining_xp_gained, start_time)
+    
+    status_report = { "Mining Level": get_max_stat(14) }
+
+    if not settings.powermine:
+        status_report["Ore Banked"] = ore_banked
+
+    if xp_per_hr != 0:
+        status_report["Mining XP/HR"] = xp_per_hr
+
+        if get_max_stat(14) < 99:
+            status_report["Est time to 99 (days)"] = "%.2f" % (xp_to_max_level / xp_per_hr) / 24
+
+    return status_report

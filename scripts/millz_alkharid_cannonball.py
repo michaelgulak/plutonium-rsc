@@ -239,7 +239,7 @@ def on_progress_report():
 
         return {"Steel bars remaining": steel_bar_count, \
                 "Est time remaining (hrs)": remaining_time_estimate, \
-                "Bars per hour": bars_per_hour, \
+                "Bars per hour": "%.2f" % bars_per_hour, \
                 "Trade count": times_traded}
     else:
         
@@ -249,5 +249,5 @@ def on_progress_report():
         return {"Cannonballs (Total)": get_inventory_count_by_id(CANNONBALL), \
                 "Cannonballs (This Session)": balls_created, \
                 "Trade count": times_traded, \
-                "Balls per hour": balls_per_hour}
+                "Balls per hour": "%.2f" % balls_per_hour}
 

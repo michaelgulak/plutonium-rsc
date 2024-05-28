@@ -51,7 +51,7 @@ def get_nearest_bank(from_x, from_z):
     min_dist = float('inf')
     nearest = None
     
-    log("Finding closest bank.")
+    # log("Finding closest bank.")
     
     for bank in BANKS:
         path = calculate_path(from_x, from_z, bank.x, bank.z)
@@ -66,7 +66,7 @@ def get_nearest_bank(from_x, from_z):
         log("No Bank Found!")
         stop_script()
         
-    log("Nearest bank: " + nearest.name)
+    #log("Nearest bank: " + nearest.name)
     return nearest
 
 
@@ -78,7 +78,7 @@ def get_bank_by_name(bank_name):
         stop_script()
         return False
         
-    log("Selected bank: " + selected_bank.name)
+    #log("Selected bank: " + selected_bank.name)
     return selected_bank
 
 
@@ -88,6 +88,13 @@ def is_in_bank():
             return True
     
     return False
+
+def get_current_bank():
+    for bank in BANKS:
+        if in_rect(bank.north_x, bank.west_z, bank.width, bank.height):
+            return bank
+    
+    return None
 
 
 def food_count():
@@ -263,25 +270,26 @@ def exp_until_next_level(exp):
     return "0"
 
 
-#def point_inside_polygon(x, y, polygon):
-#    n = len(polygon)
-#    inside = False
-#    p1x, p1y = polygon[0]
-#    for i in range(n + 1):
-#        p2x, p2y = polygon[i % n]
-#        if y > min(p1y, p2y):
-#            if y <= max(p1y, p2y):
-#                if x <= max(p1x, p2x):
-#                    if p1y != p2y:
-#                        xinters = (y - p1y) * (p2x - p1x) / (p2y - p1y) + p1x
-#                    if p1x == p2x or x <= xinters:
-#                        inside = not inside
-#        p1x, p1y = p2x, p2y
-#    return inside
-#    
-#polygon_fishing_guild = [(583, 523), (595, 523), (605, 513), (605, 501), (600, 496), (593, 491), (583, 490)]
 polygon_fishing_guild = [583, 523, 595, 523, 605, 513, 605, 501, 600, 496, 593, 491, 583, 490]
 
 def in_fishing_guild(x, z):
     return point_in_polygon(x, z, polygon_fishing_guild)
-    # return point_inside_polygon(x, z, polygon_fishing_guild)
+
+
+def get_walkable_coordinate():
+    '''
+    Returns a coordinate next to us that's walkable for the 5 minute timer movement
+    '''
+    for i in range(-1, 2):
+        x = get_x() + i
+
+        for j in range(-1, 2):
+            z = get_z() + j
+
+            if i == 0 and j == 0:
+                continue
+
+            if is_reachable(x, z) and not is_object_at(x, z):
+                return [x, z]
+    return [get_x(), get_z()]
+
