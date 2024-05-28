@@ -1,6 +1,10 @@
 # This script requires the character to have a pick axe and sleeping bag in inventory.
 # It also requires mining level 60 (mining guild), and smithing 30 (smelt steel).
 
+# The script will mine iron until it has *bars_per_loop* number of ore at Varrock East mine.
+# It will then mine 2x *bars_per_loop* at the mining guild in Falador.
+# It will then smelt the bars at Falador to make steel bars, and go back to mining Iron.
+
 # [Mandatory] bars_per_loop                     is how many iron/coal it mines.
 # [Optional]  pickup                            if true, will pickup ore (i.e. from powerminers) in addition to mining.
 # [Optional]  trade_to_cannonball_smelter       is the name of a partner that's running millz_falador_cannonball.py. 

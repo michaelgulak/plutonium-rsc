@@ -291,12 +291,3 @@ def on_trade_request(name):
         master = settings.master
         if master != None and master is name:
             perform_trade = True
-
-def on_private_message(msg, from_name):
-    global DEBUG
-    
-    if "Millz" in from_name:
-        if msg == "1":
-            DEBUG = True
-        elif msg == "2":
-            DEBUG = False
