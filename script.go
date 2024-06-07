@@ -52,6 +52,7 @@ type script struct {
 	onLoad                *py.Function
 	onSystemUpdate        *py.Function
 	onFatigueUpdate       *py.Function
+	onSleepwordSent       *py.Function
 
 	bankOptionMenuTimeout time.Time
 }
@@ -318,6 +319,14 @@ func (s *script) callOnSystemUpdate(seconds int) {
 
 func (s *script) callOnFatigueUpdate(fatigue int, accurateFatigue float64) {
 	_, err := s.onFatigueUpdate.M__call__(py.Tuple([]py.Object{py.Int(fatigue), py.Float(accurateFatigue)}), nil)
+	if err != nil {
+		py.TracebackDump(err)
+		os.Exit(1)
+	}
+}
+
+func (s *script) callOnSleepwordSent() {
+	_, err := s.onSleepwordSent.M__call__(nil, nil)
 	if err != nil {
 		py.TracebackDump(err)
 		os.Exit(1)
@@ -628,6 +637,9 @@ func (s *script) addHooks(module *py.Module, c *client) {
 	}
 	if onFatigueUpdate, ok := module.Globals["on_fatigue_update"]; ok {
 		s.onFatigueUpdate = onFatigueUpdate.(*py.Function)
+	}
+	if onSleepwordSent, ok := module.Globals["on_sleepword_sent"]; ok {
+		s.onSleepwordSent = onSleepwordSent.(*py.Function)
 	}
 }
 

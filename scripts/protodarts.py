@@ -165,3 +165,10 @@ def on_progress_report():
             "Fletching xp":    fletching_xp,
             "Feathers left":   feathers_count,
             "Feathers/hr":     per_hour(feathers_diff, t_diff)}
+
+def on_sleepword_sent():
+    global anvil_timeout
+    
+    at_object_no_walk(ANVIL_X, ANVIL_Z)
+    anvil_timeout = time.time() + 20
+    

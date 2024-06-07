@@ -30,7 +30,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.5.1"
+	botVersion       = "1.5.2"
 )
 
 var (
@@ -965,6 +965,9 @@ func (c *client) doCaptcha(buf []byte) {
 	}
 
 	c.sendSleepWord(sleepWord)
+	if c.script != nil && c.script.onSleepwordSent != nil {
+		c.script.callOnSleepwordSent()
+	}
 }
 
 func readBytesRaw(conn net.Conn, length int) ([]byte, error) {
