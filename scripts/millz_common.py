@@ -154,7 +154,7 @@ def use_food():
 
 def xp_per_hour(gained_xp, start_time_seconds):
     if gained_xp == 0:
-        return "0"
+        return 0
     elapsed_time = time.time() - start_time_seconds
     gained_per_second = gained_xp / elapsed_time
     return int(gained_per_second * 3600)

@@ -188,7 +188,7 @@ def get_adjacent_coord():
 
 def xp_per_hour(gained_xp, start_time_seconds):
     if gained_xp == 0:
-        return "0"
+        return 0
     elapsed_time = time.time() - start_time_seconds
     gained_per_second = gained_xp / elapsed_time
     return int(gained_per_second * 3600)
@@ -219,7 +219,7 @@ def on_progress_report():
     if xp_per_hr != 0:
         status_report["Mining XP/HR"] = xp_per_hr
 
-        if get_max_stat(14) < 99:
+        if get_max_stat(14) < 99 and xp_to_max_level > 0:
             status_report["Est time to 99 (days)"] = "%.2f" % (xp_to_max_level / xp_per_hr) / 24
 
     return status_report
