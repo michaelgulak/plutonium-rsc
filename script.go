@@ -2186,7 +2186,11 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		return py.Bool(c.shopping), nil
 	}, py.METH_STATIC, "")
 	module.Globals["get_shop_item_by_id"] = py.MustNewMethod("get_shop_item_by_id", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-		return c.getShopItemByID(int(args[0].(py.Int))), nil
+		v := c.getShopItemByID(int(args[0].(py.Int)))
+		if v == nil {
+			return py.None, nil
+		}
+		return v, nil
 	}, py.METH_STATIC, "")
 	module.Globals["buy_shop_item"] = py.MustNewMethod("buy_shop_item", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.buyItem(int(args[0].(py.Int)), int(args[1].(py.Int)))
