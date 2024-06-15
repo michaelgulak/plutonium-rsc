@@ -111,10 +111,10 @@ def loop():
         return 500
 
     if settings.bank is True and (is_bank_open() or (settings.eat is True and settings.food_count > 0 and millz_common.food_count() == 0) or get_total_inventory_count() == 30):
-        if distance_to(NEAREST_BANK.x, NEAREST_BANK.y) > 5:
-            # walk_path_to(NEAREST_BANK.x, NEAREST_BANK.y)
-            destination = [NEAREST_BANK.x, NEAREST_BANK.y]
-            path = calculate_path_to(NEAREST_BANK.x, NEAREST_BANK.y)
+        if distance_to(NEAREST_BANK.x, NEAREST_BANK.z) > 5:
+            # walk_path_to(NEAREST_BANK.x, NEAREST_BANK.z)
+            destination = [NEAREST_BANK.x, NEAREST_BANK.z]
+            path = calculate_path_to(NEAREST_BANK.x, NEAREST_BANK.z)
             if path == None:
                 log("Failed to path to bank")
                 stop_script()
