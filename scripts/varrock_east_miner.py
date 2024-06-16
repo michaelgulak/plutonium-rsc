@@ -219,7 +219,7 @@ def on_progress_report():
     if xp_per_hr != 0:
         status_report["Mining XP/HR"] = xp_per_hr
 
-        if get_max_stat(14) < 99 and xp_to_max_level > 0 and xp_per_hr > 0:
+        if get_max_stat(14) < 99 and xp_to_max_level > 0:
             status_report["Est time to 99 (days)"] = "%.2f" % (xp_to_max_level / xp_per_hr) / 24
 
     return status_report
