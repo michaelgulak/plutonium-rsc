@@ -208,7 +208,6 @@ def on_server_message(msg):
 
 def on_progress_report():
     mining_xp_gained = get_experience(14) - start_mining_xp
-    xp_to_max_level = 13034431 - get_experience(14)
     xp_per_hr = xp_per_hour(mining_xp_gained, start_time)
     
     status_report = { "Mining Level": get_max_stat(14) }
@@ -218,8 +217,5 @@ def on_progress_report():
 
     if xp_per_hr != 0:
         status_report["Mining XP/HR"] = xp_per_hr
-
-        if get_max_stat(14) < 99 and xp_to_max_level > 0:
-            status_report["Est time to 99 (days)"] = "%.2f" % (xp_to_max_level / xp_per_hr) / 24
 
     return status_report
