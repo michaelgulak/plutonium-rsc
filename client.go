@@ -30,7 +30,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.5.4"
+	botVersion       = "1.5.5"
 )
 
 var (
@@ -1993,14 +1993,14 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			c.baseStats[i] = p.readByteAsInt()
 		}
 		for i := 0; i < skillCount; i++ {
-			c.experience[i] = p.readInt() / 4
+			c.experience[i] = int(uint32(p.readInt()) / 4)
 		}
 		c.questPoints = p.readByteAsInt()
 	case 159: // update stat and xp
 		skill := p.readByteAsInt()
 		c.currentStats[skill] = p.readByteAsInt()
 		c.baseStats[skill] = p.readByteAsInt()
-		c.experience[skill] = p.readInt() / 4
+		c.experience[skill] = int(uint32(p.readInt()) / 4)
 	case 153: // equipment stats
 		for i := 0; i < 5; i++ {
 			c.equipmentStats[i] = p.readByteAsInt()
