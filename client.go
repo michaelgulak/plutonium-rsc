@@ -2011,7 +2011,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		}
 	case 33: // update individual experience
 		skill := p.readByteAsInt()
-		c.experience[skill] = p.readInt() / 4
+		c.experience[skill] = int(uint32(p.readInt()) / 4)
 	case 244: // sleeping menu fatigue
 		c.sleepingFatigue = p.readShort()
 		if c.account.debug {
