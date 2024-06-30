@@ -64,7 +64,7 @@ def loop():
             path = None
 
     if get_x() != settings.target_x or get_z() != settings.target_z:
-        path = calculate_path_to(settings.target_x, settings.target_z)
+        path = calculate_path_to(settings.target_x, settings.target_z, skip_local=True)
         if path == None:
             log("Failed to path")
             stop_account()
