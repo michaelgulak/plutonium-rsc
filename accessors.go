@@ -538,7 +538,7 @@ func (c *client) generateLongPathPoint(x, z, depth int) *point {
 		return nil
 	}
 
-	p := newAstarPathFinder(c, &point{c.x, c.z}, &point{x, z}, depth)
+	p := newAstarPathFinder(c, &point{c.x, c.z}, &point{x, z}, depth, false)
 
 	path := p.findPath()
 
@@ -566,7 +566,7 @@ func (c *client) generateLongPathPoint(x, z, depth int) *point {
 	return pt
 }
 
-func (c *client) generateLongPath(startX, startZ, x, z, depth int) *longPath {
+func (c *client) generateLongPath(startX, startZ, x, z, depth int, skipLocal bool) *longPath {
 	var path *path
 	if depth == -1 {
 		depth = int(math.Pow(2, math.Ceil(math.Log2(float64(distance(startX, startZ, x, z))))))
@@ -574,7 +574,7 @@ func (c *client) generateLongPath(startX, startZ, x, z, depth int) *longPath {
 			if depth > 512 {
 				return nil
 			}
-			p := newAstarPathFinder(c, &point{startX, startZ}, &point{x, z}, depth)
+			p := newAstarPathFinder(c, &point{startX, startZ}, &point{x, z}, depth, skipLocal)
 			path = p.findPath()
 
 			if path != nil {
@@ -583,7 +583,7 @@ func (c *client) generateLongPath(startX, startZ, x, z, depth int) *longPath {
 			depth <<= 1
 		}
 	} else {
-		p := newAstarPathFinder(c, &point{startX, startZ}, &point{x, z}, depth)
+		p := newAstarPathFinder(c, &point{startX, startZ}, &point{x, z}, depth, skipLocal)
 		path = p.findPath()
 
 		if path == nil {
@@ -617,7 +617,7 @@ func (c *client) generateLongPath(startX, startZ, x, z, depth int) *longPath {
 	return lp
 }
 
-func (c *client) generateLongPathThrough(startX, startZ int, coords []*point, depth int) (*longPath, *point, *point) {
+func (c *client) generateLongPathThrough(startX, startZ int, coords []*point, depth int, skipLocal bool) (*longPath, *point, *point) {
 	totalPath := []*point{}
 	lastX, lastZ := startX, startZ
 	for _, v := range coords {
@@ -629,7 +629,7 @@ func (c *client) generateLongPathThrough(startX, startZ int, coords []*point, de
 				if depth > 512 {
 					return nil, &point{lastX, lastZ}, &point{x, z}
 				}
-				p := newAstarPathFinder(c, &point{lastX, lastZ}, &point{x, z}, depth)
+				p := newAstarPathFinder(c, &point{lastX, lastZ}, &point{x, z}, depth, skipLocal)
 				path = p.findPath()
 
 				if path != nil {
@@ -638,7 +638,7 @@ func (c *client) generateLongPathThrough(startX, startZ int, coords []*point, de
 				depth <<= 1
 			}
 		} else {
-			p := newAstarPathFinder(c, &point{lastX, lastZ}, &point{x, z}, depth)
+			p := newAstarPathFinder(c, &point{lastX, lastZ}, &point{x, z}, depth, skipLocal)
 			path = p.findPath()
 
 			if path == nil {

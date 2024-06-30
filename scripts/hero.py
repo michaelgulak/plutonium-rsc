@@ -186,6 +186,9 @@ def loop():
     if init:
         set_kept_items()
         init = False
+        if get_combat_style() != 3:
+            set_combat_style(3)
+            return 1000
 
     if in_combat():
         walk_to(get_x(), get_z())
@@ -198,10 +201,6 @@ def loop():
             return 5000
         
         return 650
-
-    if get_combat_style() != 3:
-        set_combat_style(3)
-        return 1000
     
     if is_bank_open() \
         or get_total_inventory_count() == 30 \

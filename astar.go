@@ -118,7 +118,7 @@ func calcDistance(one, two *point) int {
 	return shortL*diagCost + (longL-shortL)*basicCost
 }
 
-func newAstarPathFinder(c *client, start *point, end *point, depth int) *astarPathFinder {
+func newAstarPathFinder(c *client, start *point, end *point, depth int, skipLocal bool) *astarPathFinder {
 	p := &astarPathFinder{
 		costBoard:   nil,
 		openNodes:   []*node{},
@@ -129,7 +129,7 @@ func newAstarPathFinder(c *client, start *point, end *point, depth int) *astarPa
 		depth:       depth,
 		path:        newPath(start.x, start.y),
 	}
-	p.generateTraversalInfo(c, start, depth)
+	p.generateTraversalInfo(c, start, depth, skipLocal)
 
 	return p
 }
@@ -159,7 +159,7 @@ func (p *astarPathFinder) buildPath() *path {
 	return p.path
 }
 
-func (p *astarPathFinder) generateTraversalInfo(c *client, center *point, depth int) {
+func (p *astarPathFinder) generateTraversalInfo(c *client, center *point, depth int, skipLocal bool) {
 	if depth < 1 {
 		return
 	}
@@ -191,7 +191,12 @@ func (p *astarPathFinder) generateTraversalInfo(c *client, center *point, depth 
 					p.costBoard[curPosX+1][curPosY].westBlocked = true
 				}
 			}
-			tile := c.combinedTile(cdx, cdy)
+			var tile int32
+			if skipLocal {
+				tile = c.world.getTile(cdx, cdy)
+			} else {
+				tile = c.combinedTile(cdx, cdy)
+			}
 			if tile == math.MaxInt32 {
 				continue
 			}

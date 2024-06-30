@@ -143,11 +143,13 @@ The `walk` method returns false if the next tile is unreachable.
 
 The `set_nearest` method can be called on the path to set the path index to the nearest point to the player. This is useful if you calculate a path between two points and you're somewhere in between the two points because you stopped your script before the player reached the destination.
 
-###### calculate_path_to(x, z, depth)
+###### calculate_path_to(x, z, depth, skip_local=True)
 
 Calculates a path from the client's current coordinates to the specified coordinates. Returns a path object or `None` if a path was not found.
 
 The `depth` argument is optional. Use a depth for the A* algorithm for optimal use of this method. Otherwise it will test depths sequentially, wasting CPU.
+
+The `skip_local` argument is optional. Must use kwargs to use it. If set to true, will skip local blocked tiles and allow you to calculate a blocked path, for example.
 
 Correct usage is something like this:
 
@@ -177,17 +179,19 @@ def loop():
     return 1000
 ```
 
-###### calculate_path(start_x, start_z, x, z, depth)
+###### calculate_path(start_x, start_z, x, z, depth, skip_local=True)
 
 The same as `calculate_path_to` except it takes starting coordinates.
 
-###### calculate_path_through(points=[(x1, z1), (x2, z2), ....], start_x=648, start_z=632, depth=32)
+###### calculate_path_through(points=[(x1, z1), (x2, z2), ....], start_x=648, start_z=632, depth=32, skip_local=True)
 
 This method must be used with kwargs. You may not pass normal arguments.
 
 Calculates paths from `start_x` and `start_z` or the client's current coordinates if they are not supplied, through all the points supplied. It then merges them into one path. Returns a path object and should be handled the same way as `calculate_path_to`. 
 
 `start_x` and `start_z` are optional. `depth` is also optional and if you supply it, it will be used between each set of coordinates. It is not the depth of the entire path. 
+
+The `skip_local` argument is optional. Must use kwargs to use it. If set to true, will skip local blocked tiles and allow you to calculate a blocked path, for example.
 
 Example: 
 

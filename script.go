@@ -52,7 +52,7 @@ type script struct {
 	onLoad                *py.Function
 	onSystemUpdate        *py.Function
 	onFatigueUpdate       *py.Function
-	onSleepwordSent       *py.Function
+	onSleepWordSent       *py.Function
 
 	bankOptionMenuTimeout time.Time
 }
@@ -325,8 +325,8 @@ func (s *script) callOnFatigueUpdate(fatigue int, accurateFatigue float64) {
 	}
 }
 
-func (s *script) callOnSleepwordSent() {
-	_, err := s.onSleepwordSent.M__call__(nil, nil)
+func (s *script) callOnSleepWordSent() {
+	_, err := s.onSleepWordSent.M__call__(nil, nil)
 	if err != nil {
 		py.TracebackDump(err)
 		os.Exit(1)
@@ -639,7 +639,7 @@ func (s *script) addHooks(module *py.Module, c *client) {
 		s.onFatigueUpdate = onFatigueUpdate.(*py.Function)
 	}
 	if onSleepwordSent, ok := module.Globals["on_sleepword_sent"]; ok {
-		s.onSleepwordSent = onSleepwordSent.(*py.Function)
+		s.onSleepWordSent = onSleepwordSent.(*py.Function)
 	}
 }
 
@@ -807,6 +807,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		startX, startZ := int(args[0].(py.Int)), int(args[1].(py.Int))
 		x, z := int(args[2].(py.Int)), int(args[3].(py.Int))
 		depth := -1
+		skipLocal := false
 		if len(args) > 4 {
 			switch v := args[4].(type) {
 			case py.Int:
@@ -815,7 +816,10 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 				depth = int(float64(v))
 			}
 		}
-		path := c.generateLongPath(startX, startZ, x, z, depth)
+		if skipLocal0, ok := kwargs["skip_local"]; ok {
+			skipLocal = bool(skipLocal0.(py.Bool))
+		}
+		path := c.generateLongPath(startX, startZ, x, z, depth, skipLocal)
 		if path == nil {
 			if s.c.account.debug {
 				fmt.Printf("[%s] Path not found from (%d, %d) to (%d, %d)\n", c.user, startX, startZ, x, z)
@@ -827,6 +831,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["calculate_path_to"] = py.MustNewMethod("calculate_path_to", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x, z := int(args[0].(py.Int)), int(args[1].(py.Int))
 		depth := -1
+		skipLocal := false
 		if len(args) > 2 {
 			switch v := args[2].(type) {
 			case py.Int:
@@ -835,7 +840,10 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 				depth = int(float64(v))
 			}
 		}
-		path := c.generateLongPath(c.x, c.z, x, z, depth)
+		if skipLocal0, ok := kwargs["skip_local"]; ok {
+			skipLocal = bool(skipLocal0.(py.Bool))
+		}
+		path := c.generateLongPath(c.x, c.z, x, z, depth, skipLocal)
 		if path == nil {
 			if s.c.account.debug {
 				fmt.Printf("[%s] Path not found to (%d, %d)\n", c.user, x, z)
@@ -846,10 +854,11 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	}, py.METH_STATIC, "")
 	module.Globals["calculate_path_through"] = py.MustNewMethod("calculate_path_through", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var (
-			l      *py.List
-			depth  = -1
-			startX = c.x
-			startZ = c.z
+			l         *py.List
+			depth     = -1
+			startX    = c.x
+			startZ    = c.z
+			skipLocal = false
 		)
 		if l0, ok := kwargs["points"]; ok {
 			l = l0.(*py.List)
@@ -878,7 +887,10 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		if startZ0, ok := kwargs["start_z"]; ok {
 			startZ = int(startZ0.(py.Int))
 		}
-		path, startError, endError := c.generateLongPathThrough(startX, startZ, coords, depth)
+		if skipLocal0, ok := kwargs["skip_local"]; ok {
+			skipLocal = bool(skipLocal0.(py.Bool))
+		}
+		path, startError, endError := c.generateLongPathThrough(startX, startZ, coords, depth, skipLocal)
 		if path == nil {
 			if s.c.account.debug {
 				fmt.Printf("[%s] Path not found from coords (%d, %d) to (%d, %d)\n", c.user, startError.x, startError.y, endError.x, endError.y)

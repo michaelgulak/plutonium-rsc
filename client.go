@@ -30,7 +30,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.5.3"
+	botVersion       = "1.5.4"
 )
 
 var (
@@ -577,13 +577,21 @@ func (c *client) eventLoop(b *bot) bool {
 		scriptTimer   = time.NewTimer(100 * time.Millisecond)
 		idleTimer     = time.NewTimer(5 * time.Second)
 		localClosing  = b.closing
+		stopped       = false
 	)
+
+	if c.script == nil || !c.script.running {
+		if !scriptTimer.Stop() {
+			<-scriptTimer.C
+		}
+		stopped = true
+	}
 
 	defer func() {
 		if !progressTimer.Stop() {
 			<-progressTimer.C
 		}
-		if !scriptTimer.Stop() {
+		if !stopped && !scriptTimer.Stop() {
 			<-scriptTimer.C
 		}
 		if !idleTimer.Stop() {
@@ -626,14 +634,10 @@ loop:
 			fmt.Printf("[%s] Script kill signal received, terminating\n", c.user)
 			return true
 		case <-scriptTimer.C:
-			if c.script != nil && c.script.running {
-				if !c.sleeping && !c.loading {
-					scriptTimer.Reset(time.Duration(c.script.loop()) * time.Millisecond)
-				} else {
-					scriptTimer.Reset(50 * time.Millisecond)
-				}
+			if !c.sleeping && !c.loading {
+				scriptTimer.Reset(time.Duration(c.script.loop()) * time.Millisecond)
 			} else {
-				scriptTimer.Reset(time.Duration(math.MaxInt))
+				scriptTimer.Reset(50 * time.Millisecond)
 			}
 		case <-localClosing:
 			if c.script != nil && c.script.running {
@@ -965,8 +969,8 @@ func (c *client) doCaptcha(buf []byte) {
 	}
 
 	c.sendSleepWord(sleepWord)
-	if c.script != nil && c.script.onSleepwordSent != nil {
-		c.script.callOnSleepwordSent()
+	if c.script != nil && c.script.onSleepWordSent != nil {
+		c.script.callOnSleepWordSent()
 	}
 }
 
