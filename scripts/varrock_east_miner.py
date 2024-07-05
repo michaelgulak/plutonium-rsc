@@ -187,9 +187,9 @@ def get_adjacent_coord():
         return (get_x(), get_z()-1)
 
 def xp_per_hour(gained_xp, start_time_seconds):
-    if gained_xp == 0:
-        return 0
     elapsed_time = time.time() - start_time_seconds
+    if elapsed_time == 0:
+        return 0
     gained_per_second = gained_xp / elapsed_time
     return int(gained_per_second * 3600)
 
@@ -210,12 +210,12 @@ def on_progress_report():
     mining_xp_gained = get_experience(14) - start_mining_xp
     xp_per_hr = xp_per_hour(mining_xp_gained, start_time)
     
-    status_report = { "Mining Level": get_max_stat(14) }
+    prog_report = { "Mining Level": get_max_stat(14) }
 
     if not settings.powermine:
-        status_report["Ore Banked"] = ore_banked
+        prog_report["Ore Banked"] = ore_banked
 
     if xp_per_hr != 0:
-        status_report["Mining XP/HR"] = xp_per_hr
+        prog_report["Mining XP/HR"] = xp_per_hr
 
-    return status_report
+    return prog_report

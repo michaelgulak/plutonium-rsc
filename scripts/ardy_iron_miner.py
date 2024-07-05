@@ -201,12 +201,12 @@ def on_progress_report():
     mining_xp_gained = get_experience(14) - start_mining_xp
     xp_per_hr = xp_per_hour(mining_xp_gained, start_time)
     
-    status_report = { "Mining Level": get_max_stat(14) }
+    prog_report = { "Mining Level": get_max_stat(14) }
 
     if not settings.powermine:
-        status_report["Ore Banked"] = ore_banked
+        prog_report["Ore Banked"] = ore_banked
 
     if xp_per_hr != 0:
-        status_report["Mining XP/HR"] = xp_per_hr
+        prog_report["Mining XP/HR"] = xp_per_hr
 
-    return status_report
+    return prog_report
