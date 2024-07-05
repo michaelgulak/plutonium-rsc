@@ -535,7 +535,7 @@ func (n *longPath) Type() *py.Type {
 				minIdx := 0
 				minDist := math.MaxInt
 				for i, p := range n.points {
-					if dist := distance(x, z, p.x, p.y); dist < minDist {
+					if dist := distance(x, z, p.x, p.y); dist <= minDist {
 						minDist = dist
 						minIdx = i
 					}
