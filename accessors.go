@@ -620,10 +620,11 @@ func (c *client) generateLongPath(startX, startZ, x, z, depth int, skipLocal boo
 func (c *client) generateLongPathThrough(startX, startZ int, coords []*point, depth int, skipLocal bool) (*longPath, *point, *point) {
 	totalPath := []*point{}
 	lastX, lastZ := startX, startZ
+	initialDepth := depth
 	for _, v := range coords {
 		x, z := v.x, v.y
 		var path *path
-		if depth == -1 {
+		if initialDepth == -1 {
 			depth = int(math.Pow(2, math.Ceil(math.Log2(float64(distance(lastX, lastZ, x, z))))))
 			for {
 				if depth > 512 {
@@ -638,7 +639,7 @@ func (c *client) generateLongPathThrough(startX, startZ int, coords []*point, de
 				depth <<= 1
 			}
 		} else {
-			p := newAstarPathFinder(c, &point{lastX, lastZ}, &point{x, z}, depth, skipLocal)
+			p := newAstarPathFinder(c, &point{lastX, lastZ}, &point{x, z}, initialDepth, skipLocal)
 			path = p.findPath()
 
 			if path == nil {
