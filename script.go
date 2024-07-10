@@ -103,7 +103,7 @@ func (c *client) loadScript() error {
 			s.loopFn = loopFn.(*py.Function)
 		}
 
-		s.addHooks(s.module, c)
+		s.addHooks(s.module)
 
 		s.loaded = true
 		s.running = true
@@ -571,7 +571,7 @@ func (s *script) loop() int {
 	return int(res0)
 }
 
-func (s *script) addHooks(module *py.Module, c *client) {
+func (s *script) addHooks(module *py.Module) {
 	if onProgressReport, ok := module.Globals["on_progress_report"]; ok {
 		s.onProgressReport = onProgressReport.(*py.Function)
 	}
@@ -801,6 +801,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	}, py.METH_STATIC, "")
 	module.Globals["stop_script"] = py.MustNewMethod("stop_script", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		s.running = false
+		c.scriptStopSignal <- struct{}{}
 		return py.None, nil
 	}, py.METH_STATIC, "")
 	module.Globals["calculate_path"] = py.MustNewMethod("calculate_path", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {

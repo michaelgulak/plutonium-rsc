@@ -30,7 +30,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.5.7"
+	botVersion       = "1.5.8"
 )
 
 var (
@@ -55,6 +55,7 @@ type client struct {
 	account            *account
 	localWorld         *localWorld
 	scriptKillSignal   chan struct{}
+	scriptStopSignal   chan struct{}
 
 	script *script
 
@@ -493,6 +494,7 @@ clientLoop:
 			account:          acc,
 			localWorld:       newLocalWorld(),
 			scriptKillSignal: make(chan struct{}, 1),
+			scriptStopSignal: make(chan struct{}, 1),
 			script:           acc.script,
 		}
 
@@ -509,7 +511,7 @@ clientLoop:
 			break clientLoop
 		}
 
-		success, waitTime, err := c.login(b)
+		success, waitTime, err := c.login()
 		if err != nil {
 			fmt.Printf("[%s] Login error: %s\n", c.user, err)
 		}
@@ -633,6 +635,10 @@ loop:
 			c.close()
 			fmt.Printf("[%s] Script kill signal received, terminating\n", c.user)
 			return true
+		case <-c.scriptStopSignal:
+			if !scriptTimer.Stop() {
+				<-scriptTimer.C
+			}
 		case <-scriptTimer.C:
 			if !c.sleeping && !c.loading {
 				scriptTimer.Reset(time.Duration(c.script.loop()) * time.Millisecond)
@@ -1006,7 +1012,7 @@ func encodeCredential(s string) string {
 	return string(s1)
 }
 
-func (c *client) login(b *bot) (bool, time.Duration, error) {
+func (c *client) login() (bool, time.Duration, error) {
 	conn, err := net.DialTimeout("tcp4", settings.ServerSettings.Address, connectTimeout*time.Second)
 	if err != nil {
 		return false, time.Second * 15, fmt.Errorf("connection error: %s", err)

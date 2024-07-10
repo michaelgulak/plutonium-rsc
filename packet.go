@@ -155,6 +155,6 @@ func (p *RSCPacket) readHuffman() string {
 	count := p.readSmart08_16()
 	src := p.buf[p.i:len(p.buf)]
 	dest := make([]byte, count)
-	decodeHuffman(src, dest, 0, 0, -1, count)
+	decodeHuffman(src, dest, 0, 0, count)
 	return string(dest)
 }
