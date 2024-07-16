@@ -400,11 +400,11 @@ def on_trade_request(name):
     if time.time() > senttradetime + 2:
         senttrade = False
 
-    if not hasattr(settings, "giver"):
+    if role != "giver":
         partner_name = name
         partner_name_timeout = time.time() + 60
 
-    if not hasattr(settings, "giver") and not senttrade:
+    if role != "giver" and not senttrade:
         partner = get_player_by_name(partner_name)
         if partner != None:
             trade_player(partner)
