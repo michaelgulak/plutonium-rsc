@@ -64,7 +64,7 @@ def get_nearest_bank(from_x, from_z):
     
     if nearest is None:
         log("No Bank Found!")
-        stop_script()
+        stop_account()
         
     #log("Nearest bank: " + nearest.name)
     return nearest
@@ -121,7 +121,7 @@ def withdraw_food(count, stop_when_no_food):
             
     if stop_when_no_food:
         log("No food, stopping.")
-        stop_script()
+        stop_account()
         
     return False
         
@@ -267,7 +267,7 @@ def exp_until_next_level(exp):
         exp_required = experience_table[lvl]
         if exp_required > exp:
             return exp_required - exp
-    return "0"
+    return 0
 
 
 polygon_fishing_guild = [583, 523, 595, 523, 605, 513, 605, 501, 600, 496, 593, 491, 583, 490]
@@ -289,7 +289,7 @@ def get_walkable_coordinate():
             if i == 0 and j == 0:
                 continue
 
-            if is_reachable(x, z) and not is_object_at(x, z):
+            if is_reachable(x, z):
                 return [x, z]
     return [get_x(), get_z()]
 

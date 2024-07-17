@@ -185,8 +185,8 @@ def handle_banking(task):
             destination = [NEAREST_BANK.x, NEAREST_BANK.z]
             path = calculate_path_to(NEAREST_BANK.x, NEAREST_BANK.z)
             if path == None:
-                log("Failed to path to bank")
-                stop_script()
+                log("Failed to path to bank - stopping script")
+                stop_account()
     return 650
 
 
@@ -225,16 +225,19 @@ def smelt():
             destination = [311, 545]
             path = calculate_path_to(destination[0], destination[1])
             if path == None:
-                log("Failed to path to falador furnaces")
+                log("Failed to path to falador furnaces - stopping script")
                 set_autologin(False)
-                stop_script()
+                stop_account()
                 logout()
-            return 1000
+            return 650
     else:
         if is_trade_confirm_screen():
+            if is_trade_confirm_accepted():
+                return 650
+        
             debug_log("Confirm Trade")
             confirm_trade()
-            return 1000
+            return 650
 
         if is_trade_offer_screen():
             inventory_steel_count = get_inventory_count_by_id(STEEL_BAR)
@@ -247,21 +250,21 @@ def smelt():
                 if not is_trade_confirm_accepted():
                     debug_log("Accept trade offer")
                     accept_trade_offer()
-                    return 1000
+                    return 650
         
                 debug_log("Waiting for partner to accept")
-                return 1000
+                return 650
             else:
                 debug_log("Offer item")
                 trade_offer_item(trade_item_count, get_inventory_item_by_id(STEEL_BAR))
-                return 1000
+                return 650
         
         if hasattr(settings, "trade_to_cannonball_smelter") and get_inventory_count_by_id(STEEL_BAR) >= 9:
             player = get_player_by_name(settings.trade_to_cannonball_smelter)
             if player != None:
                 debug_log("Trading bars to partner %s" % settings.trade_to_cannonball_smelter)
                 trade_player(player)
-                return 1000
+                return 650
 
         debug_log("Smelt() -> Banking")
         return handle_banking("smelting")
@@ -296,9 +299,9 @@ def mine_iron():
         destination = [iron_coord.x, iron_coord.z]
         path = calculate_path_to(destination[0], destination[1])
         if path == None:
-            log("Failed to path to varrock east mine")
+            log("Failed to path to varrock east mine - stopping script")
             set_autologin(False)
-            stop_script()
+            stop_account()
             logout()
         return 3000
     
@@ -354,9 +357,9 @@ def mine_coal():
         destination = [274,565]
         path = calculate_path_to(274,565)
         if path == None:
-            log("Failed to path to mining guild")
+            log("Failed to path to mining guild - stopping script")
             set_autologin(False)
-            stop_script()
+            stop_account()
             logout()
 
     else:
@@ -459,11 +462,11 @@ def loop():
     return 1000
 
 def get_adjacent_coord():
-    if is_reachable(get_x()+1, get_z()) and not is_object_at(get_x()+1, get_z()):
+    if is_reachable(get_x()+1, get_z()):
         return (get_x()+1, get_z())
-    elif is_reachable(get_x(), get_z()+1) and not is_object_at(get_x(), get_z()+1):
+    elif is_reachable(get_x(), get_z()+1):
         return (get_x(), get_z()+1)
-    elif is_reachable(get_x()-1, get_z()) and not is_object_at(get_x()-1, get_z()):
+    elif is_reachable(get_x()-1, get_z()):
         return (get_x()-1, get_z())
     else:
         return (get_x(), get_z()-1)
