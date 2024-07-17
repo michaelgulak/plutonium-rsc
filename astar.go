@@ -171,13 +171,10 @@ func (p *astarPathFinder) generateTraversalInfo(c *client, center *point, depth 
 	for x := -depth; x <= depth; x++ {
 		for y := -depth; y <= depth; y++ {
 			cdx, cdy := center.x-x, center.y+y
-			if !withinWorld(cdx, cdy) {
-				continue
-			}
 			_, ok := c.world.pathWalkerMap[int32(cdx<<16)|int32(cdy)]
 			curPosX = x + depth
 			curPosY = y + depth
-			if ok {
+			if !withinWorld(cdx, cdy) || ok {
 				if y < depth {
 					p.costBoard[curPosX][curPosY+1].northBlocked = true
 				}
