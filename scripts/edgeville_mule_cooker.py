@@ -206,10 +206,10 @@ def trade_from_cook():
 def init_script():
     global trading, start_time, start_cooking_xp
     
-    start_time = time.time()
-    start_cooking_xp = get_experience(7)
+    if ROLE_COOK:    
+        start_time = time.time()
+        start_cooking_xp = get_experience(7)
     
-    if ROLE_COOK:
         if get_inventory_count_by_id(RAW_SHARK) == 12 and \
             get_inventory_count_by_id(COOKED_SHARK) == 0:
 
@@ -225,23 +225,23 @@ def loop():
     if not is_friend(settings.partner):
         add_friend(settings.partner)
         return 800
+    
+    if init:
+        init_script()
+        init = False
             
-    if ROLE_COOK:        
-        if init:
-            init_script()
-            init = False
-            
+    if ROLE_COOK:
         if get_inventory_count_by_id(RAW_SHARK) == 0 or trading:
             trading = True
             return trade_from_cook()
         else:
             return cook()
     else:
-        if not trading and get_inventory_count_by_id(RAW_SHARK) < 24:
-            return bank()
-        else:
+        if get_inventory_count_by_id(RAW_SHARK) >= 24 or trading:
             trading = True
             return trade_from_mule()
+        else:
+            return bank()
 
 def on_private_message(msg, from_name):
     global trading
