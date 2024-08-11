@@ -6,6 +6,8 @@
 
 `SLEEPING_BAG` id of sleeping bag
 
+`settings` dict with script settings
+
 ## Events
 
 ###### on_progress_report()
@@ -435,6 +437,7 @@ Contains the following fields: `id`, `amount`, `price`.
 Contains the following fields: `id`, `name`, `stage`.
 
 ###### get_quests()
+###### get_quest(idx)
 ###### is_quest_complete(id)
 ###### get_quest_points()
 

@@ -2231,6 +2231,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 		return py.NewListFromItems(objs), nil
 	}, py.METH_STATIC, "")
+	module.Globals["get_quest"] = py.MustNewMethod("get_quest", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return c.quests[int(args[0].(py.Int))], nil
+	}, py.METH_STATIC, "")
 	module.Globals["is_quest_complete"] = py.MustNewMethod("is_quest_complete", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.quests[int(args[0].(py.Int))].isComplete()), nil
 	}, py.METH_STATIC, "")
