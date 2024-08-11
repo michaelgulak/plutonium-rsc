@@ -30,7 +30,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.5.9"
+	botVersion       = "1.5.10"
 )
 
 var (
@@ -56,6 +56,7 @@ type client struct {
 	localWorld         *localWorld
 	scriptKillSignal   chan struct{}
 	scriptStopSignal   chan struct{}
+	scriptDCSignal     chan int
 
 	script *script
 
@@ -495,6 +496,7 @@ clientLoop:
 			localWorld:       newLocalWorld(),
 			scriptKillSignal: make(chan struct{}, 1),
 			scriptStopSignal: make(chan struct{}, 1),
+			scriptDCSignal:   make(chan int, 1),
 			script:           acc.script,
 		}
 
@@ -532,9 +534,18 @@ clientLoop:
 		runCount++
 		c.writeProgressHeader(runCount)
 
-		shouldBreak := c.eventLoop(b)
+		shouldBreak, waitTime := c.eventLoop(b)
 		if shouldBreak || !acc.autologin {
 			break
+		}
+
+		if waitTime != 0 {
+			select {
+			case <-time.After(waitTime):
+				continue clientLoop
+			case <-b.closing:
+				break clientLoop
+			}
 		}
 
 		select {
@@ -573,7 +584,7 @@ out:
 	c.conn.Close()
 }
 
-func (c *client) eventLoop(b *bot) bool {
+func (c *client) eventLoop(b *bot) (bool, time.Duration) {
 	var (
 		progressTimer = time.NewTimer(c.account.progressDur - time.Since(c.account.lastProgressReport))
 		scriptTimer   = time.NewTimer(100 * time.Millisecond)
@@ -634,11 +645,15 @@ loop:
 		case <-c.scriptKillSignal:
 			c.close()
 			fmt.Printf("[%s] Script kill signal received, terminating\n", c.user)
-			return true
+			return true, 0
 		case <-c.scriptStopSignal:
 			if !scriptTimer.Stop() {
 				<-scriptTimer.C
 			}
+		case waitTime := <-c.scriptDCSignal:
+			c.close()
+			fmt.Printf("[%s] Disconnecting for %d seconds\n", c.user, waitTime)
+			return false, time.Second * time.Duration(waitTime)
 		case <-scriptTimer.C:
 			if !c.sleeping && !c.loading {
 				scriptTimer.Reset(time.Duration(c.script.loop()) * time.Millisecond)
@@ -658,17 +673,17 @@ loop:
 				} else {
 					c.close()
 					fmt.Printf("[%s] No kill signal handler, terminating\n", c.user)
-					return true
+					return true, 0
 				}
 			} else {
 				c.close()
 				fmt.Printf("[%s] Script not running, terminating\n", c.user)
-				return true
+				return true, 0
 			}
 		}
 	}
 
-	return false
+	return false, 0
 }
 
 func (c *client) writeProgressHeader(runCount int) {

@@ -1,5 +1,6 @@
 /bot
 /bot.exe
+/bot.exe~
 /accounts/*.toml
 /logs/*.log
 /logs/progress_reports/*.log

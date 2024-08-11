@@ -95,7 +95,7 @@ Proper use is like this:
     if not is_bank_open():
         return open_bank()
 ```
-
+###### disconnect_for(seconds)
 ###### get_pid()
 ###### logout()
 ###### get_fatigue()

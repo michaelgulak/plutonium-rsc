@@ -1056,6 +1056,11 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		c.account.debug = bool(args[0].(py.Bool))
 		return py.None, nil
 	}, py.METH_STATIC, "")
+	module.Globals["disconnect_for"] = py.MustNewMethod("disconnect_for", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		waitTime := int(args[0].(py.Int))
+		c.scriptDCSignal <- waitTime
+		return py.None, nil
+	}, py.METH_STATIC, "")
 
 	// world
 
