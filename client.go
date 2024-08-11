@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"hash/fnv"
@@ -30,7 +31,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.5.10"
+	botVersion       = "1.5.11"
 )
 
 var (
@@ -539,17 +540,13 @@ clientLoop:
 			break
 		}
 
+		sleepTime := 5 * time.Second
 		if waitTime != 0 {
-			select {
-			case <-time.After(waitTime):
-				continue clientLoop
-			case <-b.closing:
-				break clientLoop
-			}
+			sleepTime = waitTime
 		}
 
 		select {
-		case <-time.After(5 * time.Second):
+		case <-time.After(sleepTime):
 			continue clientLoop
 		case <-b.closing:
 			break clientLoop
@@ -567,7 +564,7 @@ out:
 		default:
 			message, err := c.readPacket()
 			if err != nil {
-				if err != io.EOF {
+				if !errors.Is(err, io.EOF) && !errors.Is(err, net.ErrClosed) {
 					fmt.Printf("[%s] Read error: %s\n", c.user, err)
 				}
 				c.close()
@@ -651,6 +648,7 @@ loop:
 				<-scriptTimer.C
 			}
 		case waitTime := <-c.scriptDCSignal:
+			c.conn.Close()
 			c.close()
 			fmt.Printf("[%s] Disconnecting for %d seconds\n", c.user, waitTime)
 			return false, time.Second * time.Duration(waitTime)
