@@ -183,7 +183,7 @@ def loop():
     return 1000
 ```
 
-###### calculate_path(start_x, start_z, x, z, depth, skip_local=True)
+###### calculate_path(start_x, start_z, x, z, depth, skip_local=True, max_depth=512)
 
 The same as `calculate_path_to` except it takes starting coordinates.
 
