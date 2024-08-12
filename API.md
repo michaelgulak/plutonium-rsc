@@ -153,7 +153,7 @@ The `depth` argument is optional. Use a depth for the A* algorithm for optimal u
 
 The `skip_local` argument is optional. Must use kwargs to use it. If set to true, will skip local blocked tiles and allow you to calculate a blocked path, for example.
 
-The `max_depth` argument is optional. Valid values for it are `2, 4, 8, 16, 32, 64, 128, 256, 512`. Must use kwargs to use it. It's only useful if you didn't already set the depth. Using it is preferable because the algorithm won't use tons of memory testing depths on failed attempts if you want to calculate a relatively short blocked path.
+The `max_depth` argument is optional. Valid values for it are `1, 2, 4, 8, 16, 32, 64, 128, 256, 512`. Must use kwargs to use it. It's only useful if you didn't already set the depth. Using it is preferable because the algorithm won't use tons of memory testing depths on failed attempts if you want to calculate a relatively short blocked path.
 
 Correct usage is something like this:
 
@@ -187,7 +187,7 @@ def loop():
 
 The same as `calculate_path_to` except it takes starting coordinates.
 
-###### calculate_path_through(points=[(x1, z1), (x2, z2), ....], start_x=648, start_z=632, depth=32, skip_local=True)
+###### calculate_path_through(points=[(x1, z1), (x2, z2), ....], start_x=648, start_z=632, depth=32, skip_local=True, max_depth=512)
 
 This method must be used with kwargs. You may not pass normal arguments.
 
