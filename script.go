@@ -809,6 +809,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		x, z := int(args[2].(py.Int)), int(args[3].(py.Int))
 		depth := -1
 		skipLocal := false
+		maxDepth := 512
 		if len(args) > 4 {
 			switch v := args[4].(type) {
 			case py.Int:
@@ -820,7 +821,10 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		if skipLocal0, ok := kwargs["skip_local"]; ok {
 			skipLocal = bool(skipLocal0.(py.Bool))
 		}
-		path := c.generateLongPath(startX, startZ, x, z, depth, skipLocal)
+		if maxDepth0, ok := kwargs["max_depth"]; ok {
+			maxDepth = int(maxDepth0.(py.Int))
+		}
+		path := c.generateLongPath(startX, startZ, x, z, depth, skipLocal, maxDepth)
 		if path == nil {
 			if s.c.account.debug {
 				fmt.Printf("[%s] Path not found from (%d, %d) to (%d, %d)\n", c.user, startX, startZ, x, z)
@@ -833,6 +837,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		x, z := int(args[0].(py.Int)), int(args[1].(py.Int))
 		depth := -1
 		skipLocal := false
+		maxDepth := 512
 		if len(args) > 2 {
 			switch v := args[2].(type) {
 			case py.Int:
@@ -844,7 +849,10 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		if skipLocal0, ok := kwargs["skip_local"]; ok {
 			skipLocal = bool(skipLocal0.(py.Bool))
 		}
-		path := c.generateLongPath(c.x, c.z, x, z, depth, skipLocal)
+		if maxDepth0, ok := kwargs["max_depth"]; ok {
+			maxDepth = int(maxDepth0.(py.Int))
+		}
+		path := c.generateLongPath(c.x, c.z, x, z, depth, skipLocal, maxDepth)
 		if path == nil {
 			if s.c.account.debug {
 				fmt.Printf("[%s] Path not found to (%d, %d)\n", c.user, x, z)
@@ -860,6 +868,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 			startX    = c.x
 			startZ    = c.z
 			skipLocal = false
+			maxDepth  = 512
 		)
 		if l0, ok := kwargs["points"]; ok {
 			l = l0.(*py.List)
@@ -891,7 +900,10 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		if skipLocal0, ok := kwargs["skip_local"]; ok {
 			skipLocal = bool(skipLocal0.(py.Bool))
 		}
-		path, startError, endError := c.generateLongPathThrough(startX, startZ, coords, depth, skipLocal)
+		if maxDepth0, ok := kwargs["max_depth"]; ok {
+			maxDepth = int(maxDepth0.(py.Int))
+		}
+		path, startError, endError := c.generateLongPathThrough(startX, startZ, coords, depth, skipLocal, maxDepth)
 		if path == nil {
 			if s.c.account.debug {
 				fmt.Printf("[%s] Path not found from coords (%d, %d) to (%d, %d)\n", c.user, startError.x, startError.y, endError.x, endError.y)

@@ -145,13 +145,15 @@ The `walk` method returns false if the next tile is unreachable.
 
 The `set_nearest` method can be called on the path to set the path index to the nearest point to the player. This is useful if you calculate a path between two points and you're somewhere in between the two points because you stopped your script before the player reached the destination.
 
-###### calculate_path_to(x, z, depth, skip_local=True)
+###### calculate_path_to(x, z, depth, skip_local=True, max_depth=512)
 
 Calculates a path from the client's current coordinates to the specified coordinates. Returns a path object or `None` if a path was not found.
 
 The `depth` argument is optional. Use a depth for the A* algorithm for optimal use of this method. Otherwise it will test depths sequentially, wasting CPU.
 
 The `skip_local` argument is optional. Must use kwargs to use it. If set to true, will skip local blocked tiles and allow you to calculate a blocked path, for example.
+
+The `max_depth` argument is optional. Valid values for it are `2, 4, 8, 16, 32, 64, 128, 256, 512`. Must use kwargs to use it. It's only useful if you didn't already set the depth. Using it is preferable because the algorithm won't use tons of memory testing depths on failed attempts if you want to calculate a relatively short blocked path.
 
 Correct usage is something like this:
 
@@ -194,6 +196,8 @@ Calculates paths from `start_x` and `start_z` or the client's current coordinate
 `start_x` and `start_z` are optional. `depth` is also optional and if you supply it, it will be used between each set of coordinates. It is not the depth of the entire path. 
 
 The `skip_local` argument is optional. Must use kwargs to use it. If set to true, will skip local blocked tiles and allow you to calculate a blocked path, for example.
+
+The `max_depth` argument is optional. Valid values for it are `2, 4, 8, 16, 32, 64, 128, 256, 512`. Must use kwargs to use it. It's only useful if you didn't already set the depth. Using it is preferable because the algorithm won't use tons of memory testing depths on failed attempts if you want to calculate a relatively short blocked path. Remember that the `max_depth` applies only between points with `calculate_path_through`, not the entire path.
 
 Example: 
 
