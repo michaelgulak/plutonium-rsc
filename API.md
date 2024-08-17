@@ -60,6 +60,10 @@ Same as `in_rect` except instead of using the client coordinates it checks the s
 
 Checks whether a point is in the supplied polygon. `polygon` should be an array of ints in the format `[x1, z1, x2, z2, x3, z3, ...]`.
 
+###### at(x, z)
+
+Checks whether the client coords are equal to `x` and `z`.
+
 ###### set_fatigue_tricking(True)
 ###### stop_script()
 ###### log(str)

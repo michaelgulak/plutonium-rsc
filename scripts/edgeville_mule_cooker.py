@@ -53,7 +53,7 @@ trade_timeout    = 0
 def cook():
     global cook_timeout
     
-    if get_fatigue() > 99:
+    if get_fatigue() > 99 and not is_sleeping():
         bed = get_object_from_coords(226, 1386)
         if bed != None:
             at_object(bed)
@@ -159,12 +159,12 @@ def trade_from_mule():
         walk_to(226, 1384)
         return 600
     
-    if not is_trade_offer_screen() and not is_trade_confirm_screen():
-        return trade_partner()
-    
     if is_trade_confirm_screen():
         confirm_trade()
         return 800
+
+    if not is_trade_offer_screen():
+        return trade_partner()
     
     trade_count = min(12, get_inventory_count_by_id(RAW_SHARK))
     if trade_count == 0 or has_my_offer(RAW_SHARK, trade_count):
@@ -183,13 +183,13 @@ def trade_from_cook():
     if junk != None:
         drop_item(junk)
         return 800
-    
-    if not is_trade_offer_screen() and not is_trade_confirm_screen():
-        return trade_partner()
-    
+
     if is_trade_confirm_screen():
         confirm_trade()
         return 800
+    
+    if not is_trade_offer_screen():
+        return trade_partner()
     
     trade_count = min(12, get_inventory_count_by_id(COOKED_SHARK))
     if trade_count == 0 or has_my_offer(COOKED_SHARK, trade_count):
@@ -222,11 +222,11 @@ def init_script():
 def loop():
     global init, trading
     
-    if not is_friend(settings.partner):
-        add_friend(settings.partner)
-        return 800
-    
     if init:
+        if not is_friend(settings.partner):
+            add_friend(settings.partner)
+            return 1200
+        
         init_script()
         init = False
             
@@ -287,3 +287,6 @@ def on_progress_report():
             "Cooking xp":    cooking_xp,
             "Shark cooked":  shark_cooked,
             "Shark/hr":      per_hour(shark_cooked, start_time)}
+
+def on_sleepword_sent():
+    cook()

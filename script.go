@@ -766,6 +766,11 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 		return py.Bool(inside), nil
 	}, py.METH_STATIC, "")
+	module.Globals["at"] = py.MustNewMethod("at", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		x := int(args[0].(py.Int))
+		z := int(args[1].(py.Int))
+		return py.Bool(x == c.x && z == c.z), nil
+	}, py.METH_STATIC, "")
 	module.Globals["open_bank"] = py.MustNewMethod("open_bank", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		if c.optionMenuVisible {
 			c.answer(0)

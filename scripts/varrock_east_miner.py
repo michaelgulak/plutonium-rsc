@@ -14,8 +14,10 @@
 
 import time
 
-KEPT_ITEMS = [1263, 1262, 1261, 1260, 1259, 1258, 156]
-ORES       = [202, 151, 150]
+KEPT_ITEMS   = [1263, 1262, 1261, 1260, 1259, 1258, 156]
+ORES         = [202, 151, 150]
+PICKUP_IRON  = [151, 160, 159, 158, 157]
+PICKUP_OTHER = [150, 202, 160, 159, 158, 157]
 
 rocks = None
 coord = None
@@ -45,19 +47,19 @@ class Coord:
         self.z = z
 
 if settings.ore_type == "copper":
-    rocks = [Rock(101, 73, 547), \
-             Rock(101, 72, 549), \
-             Rock(101, 73, 549), \
+    rocks = [Rock(101, 73, 547),
+             Rock(101, 72, 549),
+             Rock(101, 73, 549),
              Rock(101, 74, 549)]
     coord = Coord(73, 548)
 elif settings.ore_type == "tin":
-    rocks = [Rock(105, 78, 545), \
-             Rock(105, 78, 546), \
+    rocks = [Rock(105, 78, 545),
+             Rock(105, 78, 546),
              Rock(105, 79, 546)]
     coord = Coord(79, 545)
 elif settings.ore_type == "iron":
-    rocks = [Rock(102, 75, 543), \
-             Rock(102, 76, 543), \
+    rocks = [Rock(102, 75, 543),
+             Rock(102, 76, 543),
              Rock(103, 76, 544)]
     coord = Coord(75, 544)
 
@@ -114,11 +116,11 @@ def mine():
         and time.time() <= click_timeout:
         return 250
         
-    if hasattr(settings, "pickup") and settings.pickup == True:
+    if hasattr(settings, "pickup") and settings.pickup:
         if settings.ore_type == "iron":
-            pickup_items = [151, 160, 159, 158, 157]
+            pickup_items = PICKUP_IRON
         else:
-            pickup_items = [150, 202, 160, 159, 158, 157]
+            pickup_items = PICKUP_OTHER
             
         ground_item = get_nearest_ground_item_by_id(ids=pickup_items, reachable=True, x=get_x(), z=get_z(), radius=3)
         if ground_item != None:
@@ -208,14 +210,11 @@ def on_server_message(msg):
 
 def on_progress_report():
     mining_xp_gained = get_experience(14) - start_mining_xp
-    xp_per_hr = xp_per_hour(mining_xp_gained, start_time)
     
-    prog_report = { "Mining Level": get_max_stat(14) }
+    prog_report = {"Mining Level": get_max_stat(14),
+                   "Mining XP/HR": xp_per_hour(mining_xp_gained, start_time)}
 
     if not settings.powermine:
         prog_report["Ore Banked"] = ore_banked
-
-    if xp_per_hr != 0:
-        prog_report["Mining XP/HR"] = xp_per_hr
 
     return prog_report

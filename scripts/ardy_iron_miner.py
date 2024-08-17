@@ -3,7 +3,7 @@
 # Script block should look like this:
 # [script]
 # name            = "ardy_iron_miner.py"
-# progress_report = "5m"
+# progress_report = "20m"
 #
 # [script.settings]
 # spot  = "north"
@@ -14,8 +14,9 @@
 
 import time
 
-KEPT_ITEMS = [1263, 1262, 1261, 1260, 1259, 1258, 156]
-ORE        = 151
+KEPT_ITEMS   = [1263, 1262, 1261, 1260, 1259, 1258, 156]
+PICKUP_IRON  = [151, 160, 159, 158, 157]
+ORE          = 151
 
 rocks = None
 coord = None
@@ -45,14 +46,14 @@ class Coord:
         self.z = z
 
 if settings.spot == "north":
-    rocks = [Rock(102, 618, 655), \
-             Rock(102, 617, 655), \
-             Rock(102, 616, 656), \
+    rocks = [Rock(102, 618, 655),
+             Rock(102, 617, 655),
+             Rock(102, 616, 656),
              Rock(102, 616, 657)]
     coord = Coord(617, 656)
 elif settings.spot == "south":
-    rocks = [Rock(102, 619, 657), \
-             Rock(102, 618, 658), \
+    rocks = [Rock(102, 619, 657),
+             Rock(102, 618, 658),
              Rock(102, 617, 658)]
     coord = Coord(618, 657)
 
@@ -104,14 +105,15 @@ def mine():
         use_sleeping_bag()
         return 3000
 
-    if click_timeout != 0 \
-        and time.time() <= click_timeout:
+    if click_timeout != 0 and time.time() <= click_timeout:
         return 250
-        
-    if hasattr(settings, "pickup") and settings.pickup == True:
-        pickup_items = [151, 160, 159, 158, 157]
-            
-        ground_item = get_nearest_ground_item_by_id(ids=pickup_items, reachable=True, x=coord.x, z=coord.z, radius=1)
+
+    if hasattr(settings, "pickup") and settings.pickup:
+        ground_item = get_nearest_ground_item_by_id(ids=PICKUP_IRON,\
+                                                    reachable=True,\
+                                                    x=coord.x,\
+                                                    z=coord.z,\
+                                                    radius=1)
         if ground_item != None:
             pickup_item(ground_item)
             return 1000
@@ -199,14 +201,11 @@ def on_server_message(msg):
             
 def on_progress_report():
     mining_xp_gained = get_experience(14) - start_mining_xp
-    xp_per_hr = xp_per_hour(mining_xp_gained, start_time)
     
-    prog_report = { "Mining Level": get_max_stat(14) }
+    prog_report = {"Mining Level": get_max_stat(14),
+                   "Mining XP/HR": xp_per_hour(mining_xp_gained, start_time)}
 
     if not settings.powermine:
         prog_report["Ore Banked"] = ore_banked
-
-    if xp_per_hr != 0:
-        prog_report["Mining XP/HR"] = xp_per_hr
 
     return prog_report

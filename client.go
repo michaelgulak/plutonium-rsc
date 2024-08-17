@@ -13,7 +13,6 @@ import (
 	"math"
 	"math/rand"
 	"net"
-	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -31,7 +30,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.5.13"
+	botVersion       = "1.6.0"
 )
 
 var (
@@ -949,26 +948,6 @@ func (c *client) doCaptcha(buf []byte) {
 		}
 		sleepWord = strings.Trim(string(bs), " \r\n\t")
 		os.Remove(path)
-	case "server":
-		bmpData := convertImage(buf)
-		if bmpData == nil {
-			return
-		}
-		body := bytes.NewReader(bmpData)
-		resp, err := http.Post(settings.OcrSettings.OcrEndpoint, "application/octet-stream", body)
-		if err != nil {
-			fmt.Printf("[%s] Sleep server error: %s\n", c.user, err)
-			return
-		}
-
-		scanner := bufio.NewScanner(resp.Body)
-
-		if scanner.Scan() {
-			sleepWord = scanner.Text()
-		} else {
-			fmt.Printf("[%s] Sleep server did not return a scannable line\n", c.user)
-			return
-		}
 	case "hash":
 		hasher := fnv.New32()
 		wrote := 0

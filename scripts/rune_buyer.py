@@ -1,6 +1,8 @@
 # Rune buyer by RLN
 
 # Note that if you have competition, how many runes you get will be determined by pid swaps.
+# For the time being this just logs out instead of moving for the 5 min move timer because
+# of the npc desync bug. Your progress reports might get spammed by log messages (intended).
 
 # Script block should look like this:
 # [script]
@@ -26,6 +28,11 @@
 # 36 - Body-Rune
 # 825 - Soul-Rune
 
+BUYING_SOULS = 825 in settings.buy_ids
+
+if BUYING_SOULS and settings.npc_id != 514:
+    raise RuntimeError("Trying to buy souls from someone other than magic store owner")
+
 move_x       = -1
 move_z       = -1
 stopped      = False
@@ -46,24 +53,26 @@ DOORS = [
 def loop():
     global stopped, move_x, move_z, soul_timeout
     
-    if get_inventory_count_by_id(10) < 7:
+    coin_count = get_inventory_count_by_id(10)
+    if (BUYING_SOULS and coin_count < 6000) or coin_count < 7:
         log("Out of money, stopping")
         stop_account()
         return 1000
 
-    if move_x != -1:
-        if get_x() == move_x and get_z() == move_z:
-            move_x, move_z = (-1, -1)
-        else:
-            walk_to(move_x, move_z)
-            return 700
+    # This is removed until the npc desync bug is fixed
+    #if move_x != -1:
+    #    if get_x() == move_x and get_z() == move_z:
+    #        move_x, move_z = (-1, -1)
+    #    else:
+    #        walk_to(move_x, move_z)
+    #        return 700
 
     if is_shop_open():
         for buy_id in settings.buy_ids:
             if buy_id == 825:
                 if get_shop_item_by_id(825).amount == 30:
                     if not (soul_timeout != 0 and time.time() < soul_timeout):
-                        buy_shop_item(buy_id, 1)
+                        buy_shop_item(825, 1)
                         soul_timeout = time.time() + 1
             else:
                 buy_shop_item(buy_id, 100)
@@ -113,7 +122,7 @@ def on_server_message(msg):
         move_x, move_z = get_adjacent_coord()
 
 def on_progress_report():
-    prog_report = {}
+    prog_report = { "Coins": get_inventory_count_by_id(10) }
     
     for buy_id in settings.buy_ids:
         prog_report[get_item_name(buy_id)] = get_inventory_count_by_id(buy_id)
