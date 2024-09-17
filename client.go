@@ -30,7 +30,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.6.0"
+	botVersion       = "1.6.1"
 )
 
 var (
@@ -647,9 +647,9 @@ loop:
 				<-scriptTimer.C
 			}
 		case waitTime := <-c.scriptDCSignal:
+			fmt.Printf("[%s] Disconnecting for %d seconds\n", c.user, waitTime)
 			c.conn.Close()
 			c.close()
-			fmt.Printf("[%s] Disconnecting for %d seconds\n", c.user, waitTime)
 			return false, time.Second * time.Duration(waitTime)
 		case <-scriptTimer.C:
 			if !c.sleeping && !c.loading {

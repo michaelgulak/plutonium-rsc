@@ -28,7 +28,7 @@ COOKED_FISH_IDS = [[350,352], [355,362], [367,370], [373], [551,553,555], [546]]
 
 SHRIMP_ANCHOVIES  = 0
 SARDINES_HERRING  = 1
-TUNA_SWORDIES     = 2
+TUNA_SWORDFISH    = 2
 LOBSTER           = 3
 MACKEREL_COD_BASS = 4
 SHARK             = 5
@@ -46,8 +46,8 @@ fish_banked  = {}
 fish_timeout = 0
 cook_timeout = 0
 move_timer = False
-init = False
-start_time = time.time()
+init = True
+start_time = 0
 start_fish_xp = 0
 start_cook_xp = 0
 
@@ -56,7 +56,7 @@ if settings.fish_type == "shrimp/anchovies":
 elif settings.fish_type == "sardines/herring":
     fishing_spot = FishingSpot((418,500), 2, RAW_FISH_IDS[SARDINES_HERRING], COOKED_FISH_IDS[SARDINES_HERRING], EQUIPMENT[SARDINES_HERRING])
 elif settings.fish_type == "tuna/swordfish":
-    fishing_spot = FishingSpot((409,504), 1, RAW_FISH_IDS[TUNA_SWORDIES], COOKED_FISH_IDS[TUNA_SWORDIES], EQUIPMENT[TUNA_SWORDIES])
+    fishing_spot = FishingSpot((409,504), 1, RAW_FISH_IDS[TUNA_SWORDFISH], COOKED_FISH_IDS[TUNA_SWORDFISH], EQUIPMENT[TUNA_SWORDFISH])
 elif settings.fish_type == "lobster":
     fishing_spot = FishingSpot((409,504), 2, RAW_FISH_IDS[LOBSTER], COOKED_FISH_IDS[LOBSTER], EQUIPMENT[LOBSTER])
 elif settings.fish_type == "mackarel/cod/bass":
@@ -67,13 +67,13 @@ else:
     raise RuntimeError("Unknown fish type")
 
 def fish():
-    global init, fish_timeout, move_timer, start_fish_xp, start_cook_xp
+    global init, fish_timeout, move_timer, start_fish_xp, start_cook_xp, start_time
     
-    if init is False:
-        init = True
+    if init:
         start_fish_xp = get_experience(10)
         start_cook_xp = get_experience(7)
-
+        start_time = time.time()
+        init = False
 
     if move_timer:
         if get_x() != fishing_spot.coord[0] or get_z() != fishing_spot.coord[1] - 2:
@@ -192,16 +192,18 @@ def bank():
 
 
 def loop():
-    if get_fatigue() > 95:
+    if get_fatigue() > 99:
         use_sleeping_bag()
         return 5000
     
-    if settings.cook_and_bank and (is_bank_open() \
-        or get_total_inventory_count() == 30):
+    if settings.cook_and_bank \
+        and (is_bank_open() or get_total_inventory_count() == 30):
+
         return cook()
     
-    if settings.raw_bank and (is_bank_open() \
-        or get_total_inventory_count() == 30):
+    if settings.raw_bank \
+        and (is_bank_open() or get_total_inventory_count() == 30):
+
         return bank()
         
     return fish()
@@ -216,7 +218,7 @@ def xp_per_hour(gained_xp, start_time_seconds):
     
     
 def on_server_message(msg):
-    global fish_timeout, cook_timeout, move_timer, start_time, start_fish_xp, start_cook_xp
+    global fish_timeout, cook_timeout, move_timer
 
     if msg.startswith("You accidentally") or msg.endswith("nicely cooked"):
         cook_timeout = 0
@@ -224,10 +226,6 @@ def on_server_message(msg):
         fish_timeout = 0
     elif msg.startswith("@cya@You have been standing"):
         move_timer = True
-    elif "advanced" in msg:
-        start_time = time.time()
-        start_fish_xp = get_experience(10)
-        start_cook_xp = get_experience(7)
 
 def on_progress_report():
     gained_fish_xp = get_experience(10) - start_fish_xp

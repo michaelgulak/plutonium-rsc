@@ -201,7 +201,7 @@ Calculates paths from `start_x` and `start_z` or the client's current coordinate
 
 The `skip_local` argument is optional. Must use kwargs to use it. If set to true, will skip local blocked tiles and allow you to calculate a blocked path, for example.
 
-The `max_depth` argument is optional. Valid values for it are `1,2, 4, 8, 16, 32, 64, 128, 256, 512`. Must use kwargs to use it. It's only useful if you didn't already set the depth. Using it is preferable because the algorithm won't use tons of memory testing depths on failed attempts if you want to calculate a relatively short blocked path. Remember that the `max_depth` applies only between points with `calculate_path_through`, not the entire path.
+The `max_depth` argument is optional. Valid values for it are `1, 2, 4, 8, 16, 32, 64, 128, 256, 512`. Must use kwargs to use it. It's only useful if you didn't already set the depth. Using it is preferable because the algorithm won't use tons of memory testing depths on failed attempts if you want to calculate a relatively short blocked path. Remember that the `max_depth` applies only between points with `calculate_path_through`, not the entire path.
 
 Example: 
 
@@ -445,7 +445,7 @@ Contains the following fields: `id`, `amount`, `price`.
 Contains the following fields: `id`, `name`, `stage`.
 
 ###### get_quests()
-###### get_quest(idx)
+###### get_quest(id)
 ###### is_quest_complete(id)
 ###### get_quest_points()
 

@@ -1,6 +1,6 @@
 # Plutonium Scripting
 
-Scripts are written in python. Many accessor methods are provided to scripts in order to control the bot.
+Scripts are written in python. Many methods are provided to scripts in order to control the bot.
 
 ## Script layout
 
@@ -62,7 +62,7 @@ Note the usage of the `settings` object.
 
 ## Progress reports
 
-Within the `[script]` block of the `account.toml` file you are allowed to define a `progress_report` field with a duration. This duration is waited upon to call a function `on_progress_report` that should return a string dict. For example with a config like this:
+Within the `[script]` block of the `account.toml` file you are allowed to define a `progress_report` field with a duration. This duration is waited upon to call a function named `on_progress_report` that should return a string dict. For example with a config like this:
 
 ```toml
 [script]
@@ -70,11 +70,11 @@ name = "seers_yews.py"
 progress_report = "20m"
 ```
 
-It would call the `on_progress_report` function every 20 minutes, generating a report in `logs/progress_reports`. An `on_progress_report` function may look like this:
+Would cause the bot to call the `on_progress_report` function every 20 minutes, generating a report in `logs/progress_reports`. An `on_progress_report` function may look like this:
 
 ```python
 def on_progress_report():
-    return {"Woodcutting Level": get_max_stat(8), \
+    return {"Woodcutting Level": get_max_stat(8),
             "Logs Banked": logs_banked}
 ```
 
@@ -99,4 +99,4 @@ Here I will document the limitations I know about gpython.
 
 #### Dicts
 
-Dicts can only have string keys. You can do `mydict[str(myint)] = myvalue` then access it the same way for every case. It's just a minor annoyance.
+Dicts can only have string keys. You can do `mydict[str(myint)] = myvalue` then access it the same way.

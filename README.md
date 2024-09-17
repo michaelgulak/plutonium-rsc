@@ -85,28 +85,6 @@ Alternatively, you can run a single account file like this:
 
 If you want progress report files to be overwritten every time they're generated you can set `overwrite_progress_reports` to `true` in `settings.toml`.
 
-## Create accounts
-
-Plutonium can automatically create accounts for you based on a text file. Note that there are rate limits for creating accounts.
-
-Run the bot with this command:
-
-```bash
-./bot -r /path/to/registration_file.txt
-```
-
-Where the registration file should have a new account for every line. For example:
-
-```
-myuser1:mypass:email@example.com
-myuser2:mypass:email@example.com
-myuser3:mypass:email@example.com
-myuser4:mypass:email@example.com
-myuser5:mypass:email@example.com
-```
-
-After creation you may want to run the `skip_tutorial.py` script on the accounts, followed by `get_bag.py` to get a sleeping bag.
-
 ## Memory
 
 Each bot instance should use 10-20x less memory than an APOS client.
