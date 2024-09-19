@@ -1086,6 +1086,11 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		z := int(args[1].(py.Int))
 		return py.Bool(c.walkTo(x, z, x, z, false, false)), nil
 	}, py.METH_STATIC, "")
+	module.Globals["walk_to_entity"] = py.MustNewMethod("walk_to_entity", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		x := int(args[0].(py.Int))
+		z := int(args[1].(py.Int))
+		return py.Bool(c.walkTo(x, z, x, z, true, false)), nil
+	}, py.METH_STATIC, "")
 	module.Globals["is_reachable"] = py.MustNewMethod("is_reachable", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.isReachable(int(args[0].(py.Int)), int(args[1].(py.Int)))), nil
 	}, py.METH_STATIC, "")

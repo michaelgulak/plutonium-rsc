@@ -1,6 +1,6 @@
 # Plutonium
 
-Plutonium is a shell bot written for the [Open RSC](https://rsc.vet/) Uranium server that runs on Linux, Windows, MacOS, etc. Being a shell bot means that it runs without any graphics whatsoever, and thus has a much smaller memory and cpu footprint than other bots. Plutonium also makes it easy to run several accounts at once. One thing to take note of is that Open RSC servers have a max player per ip limit that they change sometimes. So the most bots per ip you can run on Uranium is around 10 at any given time.
+Plutonium is a shell bot written for the [Open RSC](https://rsc.vet/) Uranium server that runs on Linux, Windows, MacOS, etc. Being a shell bot means that it runs without any graphics whatsoever, and thus has a much smaller memory and cpu footprint than other bots. Plutonium also makes it easy to run several accounts at once. One thing to consider is that Open RSC servers have a max player per ip limit that the admins change sometimes. The most bots per ip you can run on Uranium is around 10 at any given time. There is also a registration limit of around 3 accounts per day so you may need to spend a few days creating accounts in order to reach the maximum of 10.
 
 Plutonium was built from the ground up using Go. Scripts for it are written in python via [gpython](https://github.com/go-python/gpython). Some code is taken from the Open RSC server (in particular, the pathfinding and chat message code).
 
@@ -87,12 +87,12 @@ If you want progress report files to be overwritten every time they're generated
 
 ## Memory
 
-Each bot instance should use 10-20x less memory than an APOS client.
+A Plutonium process running 10 accounts uses around 25mb memory.
 
-If you see your memory going up, you're probably using walk_path_to from too large of a distance. Consider using calculate_path_to.
+If you see your memory going up, you're probably calling `calculate_path_to` without a `depth` or `max_depth`.
 
 If you happen to notice that the VIRT memory allocated is high, it is due to [Go reserving a lot of virtual memory for allocations](https://go.dev/doc/faq#Why_does_my_Go_process_use_so_much_virtual_memory). Check the RES memory of htop to see the real memory footprint.
 
 ## Scripts
 
-Documentation can be found [here](https://gitlab.com/open-runescape-classic/plutonium/-/blob/main/SCRIPTING.md), and API documentation can be found [here](https://gitlab.com/open-runescape-classic/plutonium/-/blob/main/API.md).
+General scripting documentation/features can be found [here](https://gitlab.com/open-runescape-classic/plutonium/-/blob/main/SCRIPTING.md), and API documentation can be found [here](https://gitlab.com/open-runescape-classic/plutonium/-/blob/main/API.md).

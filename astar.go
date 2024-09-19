@@ -77,7 +77,7 @@ type node struct {
 }
 
 type path struct {
-	waypoints []*point
+	waypoints Deque
 	startX    int
 	startY    int
 }
@@ -466,10 +466,10 @@ func newPath(startX, startY int) *path {
 	return &path{
 		startX:    startX,
 		startY:    startY,
-		waypoints: []*point{},
+		waypoints: NewDeque(),
 	}
 }
 
 func (p *path) addWaypoint(x int, y int) {
-	p.waypoints = append([]*point{{x, y}}, p.waypoints...)
+	p.waypoints.PushFront(&point{x, y})
 }

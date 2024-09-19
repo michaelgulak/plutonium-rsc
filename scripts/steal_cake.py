@@ -71,12 +71,11 @@ def thieve():
     return 1000
 
 def loop():
-    if is_bank_open() \
-        or get_total_inventory_count() == 30:
+    if is_bank_open() or get_total_inventory_count() == 30:
         return bank()
     
     return thieve()
 
 def on_progress_report():
-    return {"Thieving Level": get_max_stat(17), \
+    return {"Thieving Level": get_max_stat(17),
             "Cake Stolen":    cake_stolen}

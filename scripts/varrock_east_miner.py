@@ -122,7 +122,11 @@ def mine():
         else:
             pickup_items = PICKUP_OTHER
             
-        ground_item = get_nearest_ground_item_by_id(ids=pickup_items, reachable=True, x=get_x(), z=get_z(), radius=3)
+        ground_item = get_nearest_ground_item_by_id(ids=pickup_items, \
+                                                    reachable=True, \
+                                                    x=get_x(), \
+                                                    z=get_z(), \
+                                                    radius=3)
         if ground_item != None:
             pickup_item(ground_item)
             return 1000

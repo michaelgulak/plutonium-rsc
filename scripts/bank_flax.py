@@ -40,7 +40,10 @@ def bank():
             close_bank()
             return 1200        
 
-        deposit(675, get_inventory_count_by_id(675))
+        item = get_inventory_item_at_index(0)
+        if item != None:
+            deposit(item.id, get_inventory_count_by_id(item.id))
+        
         return 1200
 
     return 1000

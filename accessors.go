@@ -546,15 +546,16 @@ func (c *client) generateLongPathPoint(x, z, depth int) *point {
 		return nil
 	}
 
-	path.waypoints = append(path.waypoints, &point{x, z})
+	path.waypoints.PushBack(&point{x, z})
 
 	coordsAwayThreshold := 10
 	var pt *point
-	if len(path.waypoints) <= coordsAwayThreshold {
-		pt = path.waypoints[len(path.waypoints)-1]
+	if path.waypoints.Len() <= coordsAwayThreshold {
+		pt = path.waypoints.PopBack()
 	} else {
 		count := 1
-		for _, p := range path.waypoints {
+		for !path.waypoints.Empty() {
+			p := path.waypoints.PopFront()
 			if count == coordsAwayThreshold {
 				pt = p
 				break
@@ -591,26 +592,27 @@ func (c *client) generateLongPath(startX, startZ, x, z, depth int, skipLocal boo
 		}
 	}
 
-	path.waypoints = append(path.waypoints, &point{x, z})
+	path.waypoints.PushBack(&point{x, z})
 
 	coordsAwayThreshold := 10
 
-	lp := &longPath{points: []*point{}, script: c.script, length: len(path.waypoints)}
+	lp := &longPath{points: []*point{}, script: c.script, length: path.waypoints.Len()}
 
-	if len(path.waypoints) <= coordsAwayThreshold {
-		pt := path.waypoints[len(path.waypoints)-1]
+	if path.waypoints.Len() <= coordsAwayThreshold {
+		pt := path.waypoints.PopBack()
 		lp.points = append(lp.points, pt)
 	} else {
 		count := 1
-		for _, p := range path.waypoints {
+		var p *point
+		for !path.waypoints.Empty() {
+			p = path.waypoints.PopFront()
 			if count%coordsAwayThreshold == 0 {
 				lp.points = append(lp.points, p)
 			}
 			count++
 		}
 		if (count-1)%coordsAwayThreshold != 0 {
-			pt := path.waypoints[len(path.waypoints)-1]
-			lp.points = append(lp.points, pt)
+			lp.points = append(lp.points, p)
 		}
 	}
 
@@ -647,9 +649,9 @@ func (c *client) generateLongPathThrough(startX, startZ int, coords []*point, de
 			}
 		}
 
-		path.waypoints = append(path.waypoints, &point{x, z})
+		path.waypoints.PushBack(&point{x, z})
 
-		totalPath = append(totalPath, path.waypoints...)
+		totalPath = append(totalPath, path.waypoints.DequeueMany(path.waypoints.Len())...)
 
 		lastX = x
 		lastZ = z

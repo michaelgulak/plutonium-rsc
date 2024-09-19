@@ -75,6 +75,7 @@ Prints to the console with user prefix.
 Prints to the console if the debug flag is set to true.
 
 ###### walk_to(x, z)
+###### walk_to_entity(x, z)
 ###### walk_path_to(x, z)
 
 Calculates a path to the specified coordinates and walks to the first point.

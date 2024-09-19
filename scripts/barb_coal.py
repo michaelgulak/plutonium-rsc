@@ -21,7 +21,6 @@ def bank_next_item():
             coal_banked = get_bank_count(item_to_bank.id) + inv_count
         deposit(item_to_bank.id, inv_count)
 
-    
     return 2000
 
 def bank():
@@ -47,7 +46,7 @@ def bank():
 def mine():
     global click_timeout
 
-    if get_fatigue() >= 95:
+    if get_fatigue() > 99:
         use_sleeping_bag()
         return 3000
     
@@ -61,8 +60,7 @@ def mine():
         walk_path_to(226, 504)
         return 5000
     
-    if click_timeout != 0 \
-        and time.time() <= click_timeout:
+    if click_timeout != 0 and time.time() < click_timeout:
         return 250
     
     obj = get_nearest_object_by_id(110)
@@ -74,9 +72,7 @@ def mine():
     return 700
 
 def loop():
-    if is_bank_open() \
-        or get_total_inventory_count() == 30:
-
+    if is_bank_open() or get_total_inventory_count() == 30:
         return bank()
     
     return mine()
@@ -90,5 +86,5 @@ def on_server_message(msg):
         click_timeout = 0
 
 def on_progress_report():
-    return {"Mining Level": get_max_stat(14), \
+    return {"Mining Level": get_max_stat(14),
             "Coal Banked":  coal_banked}
