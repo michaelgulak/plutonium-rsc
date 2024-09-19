@@ -553,15 +553,8 @@ func (c *client) generateLongPathPoint(x, z, depth int) *point {
 	if path.waypoints.Len() <= coordsAwayThreshold {
 		pt = path.waypoints.PopBack()
 	} else {
-		count := 1
-		for !path.waypoints.Empty() {
-			p := path.waypoints.PopFront()
-			if count == coordsAwayThreshold {
-				pt = p
-				break
-			}
-			count++
-		}
+		pts := path.waypoints.DequeueMany(coordsAwayThreshold)
+		pt = pts[coordsAwayThreshold-1]
 	}
 
 	return pt
@@ -602,17 +595,12 @@ func (c *client) generateLongPath(startX, startZ, x, z, depth int, skipLocal boo
 		pt := path.waypoints.PopBack()
 		lp.points = append(lp.points, pt)
 	} else {
-		count := 1
-		var p *point
-		for !path.waypoints.Empty() {
-			p = path.waypoints.PopFront()
-			if count%coordsAwayThreshold == 0 {
-				lp.points = append(lp.points, p)
-			}
-			count++
+		for path.waypoints.Len() >= coordsAwayThreshold {
+			pts := path.waypoints.DequeueMany(coordsAwayThreshold)
+			lp.points = append(lp.points, pts[coordsAwayThreshold-1])
 		}
-		if (count-1)%coordsAwayThreshold != 0 {
-			lp.points = append(lp.points, p)
+		if path.waypoints.Len() > 0 {
+			lp.points = append(lp.points, path.waypoints.PopBack())
 		}
 	}
 
