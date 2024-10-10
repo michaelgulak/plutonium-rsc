@@ -7,9 +7,12 @@ import (
 	"time"
 )
 
-var (
-	bankersID     = []int{95, 224, 268, 485, 540, 617}
+const (
 	sleepingBagID = 1263
+)
+
+var (
+	bankersID = []int{95, 224, 268, 485, 540, 617}
 )
 
 func (c *client) getInventoryCountByID(ids ...int) int {
@@ -551,7 +554,7 @@ func (c *client) generateLongPathPoint(x, z, depth int) *point {
 	coordsAwayThreshold := 10
 	var pt *point
 	if path.waypoints.Len() <= coordsAwayThreshold {
-		pt = path.waypoints.PopBack()
+		pt = path.waypoints.Back()
 	} else {
 		pts := path.waypoints.DequeueMany(coordsAwayThreshold)
 		pt = pts[coordsAwayThreshold-1]
@@ -592,15 +595,14 @@ func (c *client) generateLongPath(startX, startZ, x, z, depth int, skipLocal boo
 	lp := &longPath{points: []*point{}, script: c.script, length: path.waypoints.Len()}
 
 	if path.waypoints.Len() <= coordsAwayThreshold {
-		pt := path.waypoints.PopBack()
-		lp.points = append(lp.points, pt)
+		lp.points = append(lp.points, path.waypoints.Back())
 	} else {
 		for path.waypoints.Len() >= coordsAwayThreshold {
 			pts := path.waypoints.DequeueMany(coordsAwayThreshold)
 			lp.points = append(lp.points, pts[coordsAwayThreshold-1])
 		}
 		if path.waypoints.Len() > 0 {
-			lp.points = append(lp.points, path.waypoints.PopBack())
+			lp.points = append(lp.points, path.waypoints.Back())
 		}
 	}
 

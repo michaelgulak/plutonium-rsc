@@ -1,8 +1,11 @@
 # Ardougne cake thieving script by RLN
 
+# Start with sleeping bag near stall in ardy.
+# Optionally bring armour.
+
 CAKE_IDS = [335,333,330]
 
-cake_stolen   = 0
+cake_stolen = 0
 
 def bank():
     global cake_stolen

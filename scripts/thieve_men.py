@@ -1,6 +1,8 @@
 # Man thieving script by RLN
 
 # Thieves men until 5 thieving then stops.
+# The Ardougne and various men have different ids than the ones in
+# Lumbridge, so you will need to edit the id if it doesn't work.
 
 def loop():
     if get_combat_style() != 3:

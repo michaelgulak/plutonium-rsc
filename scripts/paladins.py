@@ -3,7 +3,9 @@
 # Start near or inside paladin room.
 
 # This script only uses cake.
-# Make sure you are at least 28 hp or you will die.
+# Make sure you are at least 28 hp or this script won't work.
+# Make sure you have cake in your bank and armour in your inventory 
+# equipped with a sleeping bag.
 
 import time
 

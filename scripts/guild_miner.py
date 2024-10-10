@@ -1,5 +1,7 @@
 # Mining guild script by RLN that mines mith ore and coal.
- 
+
+# Make sure you start it with a pickaxe and sleeping bag.
+
 COAL       = 155
 MITH       = 153
 COAL_ROCKS = [110, 111]

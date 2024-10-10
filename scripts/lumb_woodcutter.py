@@ -1,6 +1,7 @@
 # Lumbridge woodcutter by RLN
 
 # This script cuts trees between lumbridge and draynor.
+# Start with axe and sleeping bag.
 
 import time
 

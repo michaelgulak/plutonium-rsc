@@ -1,8 +1,8 @@
 # Prototype dart fletcher by RLN
 #
-# Have feathers, sleeping bag, and a hammer in inventory and start 
-# beside the desert anvil. Set the fatigue_trick setting to true at
-# high fletching levels to speed up xp gains. If your inventory is full
+# Have feathers, sleeping bag, technicla plans, and a hammer in inventory
+# and start beside the desert anvil. Set the fatigue_trick setting to true
+# at high fletching levels to speed up xp gains. If your inventory is full
 # it will drop your last item (gnomeball support).
 #
 # [script]

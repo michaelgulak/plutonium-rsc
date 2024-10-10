@@ -46,6 +46,7 @@ type dataSettings struct {
 	DoorDefs    string `toml:"door_defs"`
 	ObjectDefs  string `toml:"object_defs"`
 	WordHashes  string `toml:"word_hashes"`
+	RSAKeyFile  string `toml:"rsa_key_file"`
 }
 
 type accountSettings struct {

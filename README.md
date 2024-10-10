@@ -2,11 +2,11 @@
 
 Plutonium is a shell bot written for the [Open RSC](https://rsc.vet/) Uranium server that runs on Linux, Windows, MacOS, etc. Being a shell bot means that it runs without any graphics whatsoever, and thus has a much smaller memory and cpu footprint than other bots. Plutonium also makes it easy to run several accounts at once. One thing to consider is that Open RSC servers have a max player per ip limit that the admins change sometimes. The most bots per ip you can run on Uranium is around 10 at any given time. There is also a registration limit of around 3 accounts per day so you may need to spend a few days creating accounts in order to reach the maximum of 10.
 
-Plutonium was built from the ground up using Go. Scripts for it are written in python via [gpython](https://github.com/go-python/gpython). Some code is taken from the Open RSC server (in particular, the pathfinding and chat message code).
+Plutonium is written in Go. Scripts for it are written in Python 3.4 via [gpython](https://github.com/go-python/gpython). Some code is taken from the Open RSC server (in particular, the pathfinding and chat message code).
 
 ## Building Plutonium
 
-Make sure you have at least version 1.18 of [Go](https://go.dev/) installed, along with git. On Linux, open a terminal, or on Windows open a command prompt. Then clone this repo with 
+You must build Plutonium. Make sure you have at least version 1.18 of [Go](https://go.dev/) installed, along with [git](https://git-scm.com/). On Linux, open a terminal, or on Windows open a command prompt. Then clone this repo with 
 
 ```bash
 git clone https://gitlab.com/open-runescape-classic/plutonium
@@ -57,6 +57,8 @@ Feel free to change the `debug` field to `false` if you're running several accou
 
 Note that the progress report field can contain values that `time.ParseDuration` in Go can parse. Check [here](https://pkg.go.dev/time#ParseDuration) for the list of possible suffixes.
 
+When you set `progress_report` in an account file while the script you're running is designed to generate progress reports, progress reports will be written to `logs/progress_reports` every interval you set.
+
 ## Run Plutonium
 
 On Linux, open up a terminal, or on Windows, open up a command prompt. Note that for the rest of the README if a command for the bot is shown as `./bot`, then on Windows you would replace that with `.\bot.exe`.
@@ -80,6 +82,8 @@ Alternatively, you can run a single account file like this:
 ```bash
 ./bot -f /path/to/account_file.toml
 ```
+
+After you create your account and run `skip_tutorial.py` on it, you may want to run `get_bag.py` to get a sleeping bag.
 
 ## Overwrite Progress Reports
 

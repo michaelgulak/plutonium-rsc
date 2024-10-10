@@ -1,5 +1,7 @@
 # Barbarian Village coal miner by RLN
 #
+# Must have sleeping bag and pickaxe in inventory.
+#
 # No settings needed
 
 import time

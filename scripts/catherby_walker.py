@@ -1,13 +1,14 @@
 # Catherby/Ardougne walker by RLN
+#
 # You can get to Catherby/Ardougne as a level 3 with this script.
 # This script can be run with or without script settings. If you want 
 # to walk to ardy then set stop_at_ardy = true.
-
+#
 # Script block should look like this:
-
+#
 # [script]
 # name = "catherby_walker.py"
-
+#
 # [script.settings]
 # stop_at_ardy = false
 

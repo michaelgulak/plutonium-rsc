@@ -4,29 +4,12 @@ import (
 	"math"
 )
 
-var (
-	wallNorth     int32 = 1 << 0
-	wallEast      int32 = 1 << 1
-	wallSouth     int32 = 1 << 2
-	wallWest      int32 = 1 << 3
-	fullBlockA    int32 = 1 << 4
-	fullBlockB    int32 = 1 << 5
-	fullBlockC    int32 = 1 << 6
-	wallNorthEast       = wallNorth | wallEast
-	wallNorthWest       = wallNorth | wallWest
-	wallSouthEast       = wallSouth | wallEast
-	wallSouthWest       = wallSouth | wallWest
-	fullBlock           = fullBlockA | fullBlockB | fullBlockC
-	westBlocked         = fullBlock | wallWest
-	southBlocked        = fullBlock | wallSouth
-	northBlocked        = fullBlock | wallNorth
-	eastBlocked         = fullBlock | wallEast
-)
-
-type adjacentDirection int
-
 const (
-	_south adjacentDirection = iota
+	initState = iota
+	openState
+	closedState
+
+	_south = iota
 	_southWest
 	_west
 	_northWest
@@ -34,18 +17,10 @@ const (
 	_northEast
 	_east
 	_southEast
+
+	basicCost = 10
+	diagCost  = 14
 )
-
-type nodeState int
-
-const (
-	initState nodeState = iota
-	openState
-	closedState
-)
-
-const basicCost = 10
-const diagCost = 14
 
 type astarPathFinder struct {
 	depth       int
@@ -67,7 +42,7 @@ type node struct {
 	fCost        int
 	gCost        int
 	hCost        int
-	state        nodeState
+	state        int
 	southBlocked bool
 	northBlocked bool
 	westBlocked  bool
@@ -135,12 +110,10 @@ func newAstarPathFinder(c *client, start *point, end *point, depth int, skipLoca
 }
 
 func newNode(x int, y int) *node {
-	n := &node{
+	return &node{
 		position: &point{x, y},
 		state:    initState,
 	}
-
-	return n
 }
 
 func (p *astarPathFinder) buildPath() *path {
@@ -229,8 +202,10 @@ func (p *astarPathFinder) generateTraversalInfo(c *client, center *point, depth 
 }
 
 func (p *astarPathFinder) findNextNode() *node {
-	minimum := math.MaxInt
-	minNode := (*node)(nil)
+	var (
+		minimum = math.MaxInt
+		minNode *node
+	)
 	for _, node := range p.openNodes {
 		if node.hCost < minimum {
 			minimum = node.hCost
@@ -283,7 +258,7 @@ func (n *node) calcHCost() {
 	n.hCost = n.fCost + n.gCost
 }
 
-func (n *node) getNeighbor(p *astarPathFinder, dir adjacentDirection) *node {
+func (n *node) getNeighbor(p *astarPathFinder, dir int) *node {
 	switch dir {
 	case _south:
 		if n.position.y < 2*p.depth {
@@ -293,8 +268,7 @@ func (n *node) getNeighbor(p *astarPathFinder, dir adjacentDirection) *node {
 		}
 	case _southWest:
 		if n.position.y < 2*p.depth && n.position.x > 0 {
-			n1 := p.costBoard[n.position.x-1][n.position.y+1]
-			return n1
+			return p.costBoard[n.position.x-1][n.position.y+1]
 		} else {
 			return nil
 		}
@@ -306,8 +280,7 @@ func (n *node) getNeighbor(p *astarPathFinder, dir adjacentDirection) *node {
 		}
 	case _northWest:
 		if n.position.y > 0 && n.position.x > 0 {
-			n1 := p.costBoard[n.position.x-1][n.position.y-1]
-			return n1
+			return p.costBoard[n.position.x-1][n.position.y-1]
 		} else {
 			return nil
 		}
@@ -319,8 +292,7 @@ func (n *node) getNeighbor(p *astarPathFinder, dir adjacentDirection) *node {
 		}
 	case _northEast:
 		if n.position.y > 0 && n.position.x < 2*p.depth {
-			n1 := p.costBoard[n.position.x+1][n.position.y-1]
-			return n1
+			return p.costBoard[n.position.x+1][n.position.y-1]
 		} else {
 			return nil
 		}
@@ -332,8 +304,7 @@ func (n *node) getNeighbor(p *astarPathFinder, dir adjacentDirection) *node {
 		}
 	case _southEast:
 		if n.position.y < 2*p.depth && n.position.x < 2*p.depth {
-			n1 := p.costBoard[n.position.x+1][n.position.y+1]
-			return n1
+			return p.costBoard[n.position.x+1][n.position.y+1]
 		} else {
 			return nil
 		}
@@ -355,7 +326,7 @@ func (n *node) selectNode(p *astarPathFinder) {
 		idx := findIndex(n, p.openNodes)
 		p.openNodes = append(p.openNodes[:idx], p.openNodes[idx+1:]...)
 	}
-	n.setState(closedState)
+	n.state = closedState
 	p.closedNodes = append(p.closedNodes, n)
 	neighbor := (*node)(nil)
 	neighbor = n.getNeighbor(p, _south)
@@ -392,9 +363,11 @@ func (n *node) selectNode(p *astarPathFinder) {
 	}
 }
 
-func diagBlocked(a *astarPathFinder, n *node, dir adjacentDirection) bool {
-	neighbor1 := (*node)(nil)
-	neighbor2 := (*node)(nil)
+func diagBlocked(a *astarPathFinder, n *node, dir int) bool {
+	var (
+		neighbor1 *node
+		neighbor2 *node
+	)
 	if dir == _southWest {
 		neighbor1 = n.getNeighbor(a, _west)
 		if neighbor1 != nil {
@@ -439,13 +412,9 @@ func diagBlocked(a *astarPathFinder, n *node, dir adjacentDirection) bool {
 	return true
 }
 
-func (n *node) setState(state nodeState) {
-	n.state = state
-}
-
 func (n *node) update(a *astarPathFinder, node *node, cost int) {
 	if n.state == initState {
-		n.setState(openState)
+		n.state = openState
 		n.fCost = node.fCost + cost
 		n.calcGCost(a)
 		a.openNodes = append(a.openNodes, n)

@@ -1,6 +1,7 @@
 # Hero thiever by RLN
 
-# Make sure you have at least 28 hp or you will die.
+# Make sure you have at least 28 hp or this script won't work.
+# Start with armour equipped and optionally sleeping bag.
 
 # Script block should look like this:
 

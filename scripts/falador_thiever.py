@@ -1,6 +1,7 @@
 # Falador Thiever by RLN
 
 # Pickpockets guards in Falador at different spots. Only uses cake.
+# Must have cake in bank and sleeping bag in inventory (armour optional).
 
 # Script block should look like this:
 

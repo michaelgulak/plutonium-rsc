@@ -7,8 +7,8 @@ var (
 		'\u2030', '\u0160', '\u2039', '\u0152', '?', '\u017d', '?', '?', '\u2018', '\u2019', '\u201c',
 		'\u201d', '\u2022', '\u2013', '\u2014', '\u02dc', '\u2122', '\u0161', '\u203a', '\u0153', '?',
 		'\u017e', '\u0178'}
-	cipherBlock         []int32
-	cipherDictionary    []int32
+	block               []int32
+	dictionary          []int32
 	specialCharacterMap map[rune]rune
 	init0               = []int8{22, 22, 22, 22, 22, 22, 21, 22,
 		22, 20, 22, 22, 22, 21, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 22, 3, 8, 22,
@@ -23,19 +23,19 @@ var (
 )
 
 func init() {
-	cipherDictionary = make([]int32, 8)
+	dictionary = make([]int32, 8)
 	specialCharacterMap = map[rune]rune{}
-	cipherBlock = make([]int32, len(init0))
+	block = make([]int32, len(init0))
 	for i := 0; i < len(specialCharacters); i++ {
 		specialCharacterMap[specialCharacters[i]] = rune(i - 128)
 	}
 	blockBuilder := make([]int32, 33)
-	cipherDictIndexTemp := int32(0)
+	dictIndexTemp := int32(0)
 	for initPos := int32(0); initPos < int32(len(init0)); initPos++ {
 		initValue := init0[initPos]
 		builderBitSelector := int32(1 << (32 - initValue))
 		builderValue := blockBuilder[initValue]
-		cipherBlock[initPos] = builderValue
+		block[initPos] = builderValue
 		var builderValueBit int32
 		if builderValue&builderBitSelector == 0 {
 			builderValueBit = builderValue | builderBitSelector
@@ -62,26 +62,26 @@ func init() {
 				blockBuilder[initValueCounter] = builderValueBit
 			}
 		}
-		cipherDictIndex := int32(0)
+		dictIndex := int32(0)
 		for initValueCounter := 0; initValueCounter < int(initValue); initValueCounter++ {
 			builderBitSelector2 := int32(uint32(0x80000000) >> initValueCounter)
 			if builderValue&builderBitSelector2 == 0 {
-				cipherDictIndex++
+				dictIndex++
 			} else {
-				if cipherDictionary[cipherDictIndex] == 0 {
-					cipherDictionary[cipherDictIndex] = cipherDictIndexTemp
+				if dictionary[dictIndex] == 0 {
+					dictionary[dictIndex] = dictIndexTemp
 				}
-				cipherDictIndex = cipherDictionary[cipherDictIndex]
+				dictIndex = dictionary[dictIndex]
 			}
-			if int32(len(cipherDictionary)) <= cipherDictIndex {
-				newCipherDict := make([]int32, len(cipherDictionary)*2)
-				copy(newCipherDict[:len(cipherDictionary)], cipherDictionary)
-				cipherDictionary = newCipherDict
+			if int32(len(dictionary)) <= dictIndex {
+				newDict := make([]int32, len(dictionary)*2)
+				copy(newDict[:len(dictionary)], dictionary)
+				dictionary = newDict
 			}
 		}
-		cipherDictionary[cipherDictIndex] = ^initPos
-		if cipherDictIndex >= cipherDictIndexTemp {
-			cipherDictIndexTemp = cipherDictIndex + 1
+		dictionary[dictIndex] = ^initPos
+		if dictIndex >= dictIndexTemp {
+			dictIndexTemp = dictIndex + 1
 		}
 	}
 }
@@ -102,40 +102,40 @@ func (p *client) convertMessageToBytes(s string) {
 
 func (c *client) encodeHuffman(message string) {
 	c.convertMessageToBytes(message)
-	encipheredByte := 0
+	encodedByte := 0
 	outputBitOffset := 0
 	for messageIndex := 0; len(message) > messageIndex; messageIndex++ {
 		messageCharacter := c.chatBuffer[messageIndex]
-		cipherBlockValue := cipherBlock[messageCharacter]
+		blockValue := block[messageCharacter]
 		initValue := init0[messageCharacter]
 		outputByteOffset := uint32(outputBitOffset) >> 3
-		cipherBlockShifter := 0x7 & outputBitOffset
-		encipheredByte &= int(-cipherBlockShifter >> 31)
-		outputByteOffset2 := outputByteOffset + uint32(cipherBlockShifter+int(initValue)-1)>>3
+		blockShifter := 0x7 & outputBitOffset
+		encodedByte &= int(-blockShifter >> 31)
+		outputByteOffset2 := outputByteOffset + uint32(blockShifter+int(initValue)-1)>>3
 		outputBitOffset += int(initValue)
-		cipherBlockShifter += 24
-		encipheredByte |= int(uint32(cipherBlockValue) >> cipherBlockShifter)
-		c.encodedChatBuffer[outputByteOffset] = byte(encipheredByte)
+		blockShifter += 24
+		encodedByte |= int(uint32(blockValue) >> blockShifter)
+		c.encodedChatBuffer[outputByteOffset] = byte(encodedByte)
 		if outputByteOffset2 > outputByteOffset {
 			outputByteOffset++
-			cipherBlockShifter -= 8
-			encipheredByte = int(uint32(cipherBlockValue) >> cipherBlockShifter)
-			c.encodedChatBuffer[outputByteOffset] = byte(encipheredByte)
+			blockShifter -= 8
+			encodedByte = int(uint32(blockValue) >> blockShifter)
+			c.encodedChatBuffer[outputByteOffset] = byte(encodedByte)
 			if outputByteOffset < outputByteOffset2 {
 				outputByteOffset++
-				cipherBlockShifter -= 8
-				encipheredByte = int(uint32(cipherBlockValue) >> cipherBlockShifter)
-				c.encodedChatBuffer[outputByteOffset] = byte(encipheredByte)
+				blockShifter -= 8
+				encodedByte = int(uint32(blockValue) >> blockShifter)
+				c.encodedChatBuffer[outputByteOffset] = byte(encodedByte)
 				if outputByteOffset2 > outputByteOffset {
 					outputByteOffset++
-					cipherBlockShifter -= 8
-					encipheredByte = int(uint32(cipherBlockValue) >> cipherBlockShifter)
-					c.encodedChatBuffer[outputByteOffset] = byte(encipheredByte)
+					blockShifter -= 8
+					encodedByte = int(uint32(blockValue) >> blockShifter)
+					c.encodedChatBuffer[outputByteOffset] = byte(encodedByte)
 					if outputByteOffset2 > outputByteOffset {
-						cipherBlockShifter -= 8
+						blockShifter -= 8
 						outputByteOffset++
-						encipheredByte = int(cipherBlockValue << -cipherBlockShifter)
-						c.encodedChatBuffer[outputByteOffset] = byte(encipheredByte)
+						encodedByte = int(blockValue << -blockShifter)
+						c.encodedChatBuffer[outputByteOffset] = byte(encodedByte)
 					}
 				}
 			}
@@ -157,9 +157,9 @@ func decodeHuffman(src []byte, dest []byte, destOffset int, srcOffset int, count
 			if var9 >= 0 {
 				var7++
 			} else {
-				var7 = cipherDictionary[var7]
+				var7 = dictionary[var7]
 			}
-			var var10 = cipherDictionary[var7]
+			var var10 = dictionary[var7]
 			if var10 < 0 {
 				dest[destOffset] = byte(^var10)
 				destOffset++
@@ -169,11 +169,11 @@ func decodeHuffman(src []byte, dest []byte, destOffset int, srcOffset int, count
 				var7 = 0
 			}
 			if 64&var9 != 0 {
-				var7 = cipherDictionary[var7]
+				var7 = dictionary[var7]
 			} else {
 				var7++
 			}
-			var10 = cipherDictionary[var7]
+			var10 = dictionary[var7]
 			if var10 < 0 {
 				dest[destOffset] = byte(^var10)
 				destOffset++
@@ -185,9 +185,9 @@ func decodeHuffman(src []byte, dest []byte, destOffset int, srcOffset int, count
 			if var9&32 == 0 {
 				var7++
 			} else {
-				var7 = cipherDictionary[var7]
+				var7 = dictionary[var7]
 			}
-			var10 = cipherDictionary[var7]
+			var10 = dictionary[var7]
 			if var10 < 0 {
 				dest[destOffset] = byte(^var10)
 				destOffset++
@@ -197,11 +197,11 @@ func decodeHuffman(src []byte, dest []byte, destOffset int, srcOffset int, count
 				var7 = 0
 			}
 			if 16&var9 != 0 {
-				var7 = cipherDictionary[var7]
+				var7 = dictionary[var7]
 			} else {
 				var7++
 			}
-			var10 = cipherDictionary[var7]
+			var10 = dictionary[var7]
 			if var10 < 0 {
 				dest[destOffset] = byte(^var10)
 				destOffset++
@@ -211,11 +211,11 @@ func decodeHuffman(src []byte, dest []byte, destOffset int, srcOffset int, count
 				var7 = 0
 			}
 			if var9&8 != 0 {
-				var7 = cipherDictionary[var7]
+				var7 = dictionary[var7]
 			} else {
 				var7++
 			}
-			var10 = cipherDictionary[var7]
+			var10 = dictionary[var7]
 			if var10 < 0 {
 				dest[destOffset] = byte(^var10)
 				destOffset++
@@ -225,11 +225,11 @@ func decodeHuffman(src []byte, dest []byte, destOffset int, srcOffset int, count
 				var7 = 0
 			}
 			if 4&var9 != 0 {
-				var7 = cipherDictionary[var7]
+				var7 = dictionary[var7]
 			} else {
 				var7++
 			}
-			var10 = cipherDictionary[var7]
+			var10 = dictionary[var7]
 			if var10 < 0 {
 				dest[destOffset] = byte(^var10)
 				destOffset++
@@ -241,9 +241,9 @@ func decodeHuffman(src []byte, dest []byte, destOffset int, srcOffset int, count
 			if 2&var9 == 0 {
 				var7++
 			} else {
-				var7 = cipherDictionary[var7]
+				var7 = dictionary[var7]
 			}
-			var10 = cipherDictionary[var7]
+			var10 = dictionary[var7]
 			if var10 < 0 {
 				dest[destOffset] = byte(^var10)
 				destOffset++
@@ -253,11 +253,11 @@ func decodeHuffman(src []byte, dest []byte, destOffset int, srcOffset int, count
 				var7 = 0
 			}
 			if 1&var9 != 0 {
-				var7 = cipherDictionary[var7]
+				var7 = dictionary[var7]
 			} else {
 				var7++
 			}
-			var10 = cipherDictionary[var7]
+			var10 = dictionary[var7]
 			if var10 < 0 {
 				dest[destOffset] = byte(^var10)
 				destOffset++

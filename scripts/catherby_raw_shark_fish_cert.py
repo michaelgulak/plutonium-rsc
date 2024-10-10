@@ -1,5 +1,7 @@
 # Catherby raw shark fisher & certer by RLN
 
+# Start with necessary equipment and sleeping bag.
+
 # No script settings required.
 
 import time

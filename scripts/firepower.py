@@ -1,6 +1,7 @@
 # Firepower by RLN
 
 # This script cuts trees and lights the logs with a tinderbox.
+# Make sure you have an axe, sleeping bag, and tinderbox.
 
 import time
 

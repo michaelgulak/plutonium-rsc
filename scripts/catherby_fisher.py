@@ -29,11 +29,11 @@ MACKEREL_COD_BASS = 4
 SHARK             = 5
 
 class FishingSpot:
-    def __init__(self, coord, at_type, raw_fish_ids, cooked_fish_ids, equipment):
+    def __init__(self, coord, at_type, id_):
         self.coord = coord
-        self.raw_fish_ids = raw_fish_ids
-        self.cooked_fish_ids = cooked_fish_ids
-        self.equipment = equipment
+        self.raw_fish_ids = RAW_FISH_IDS[id_]
+        self.cooked_fish_ids = COOKED_FISH_IDS[id_]
+        self.equipment = EQUIPMENT[id_]
         self.at_type = at_type
 
 fishing_spot = None
@@ -47,17 +47,17 @@ start_fish_xp = 0
 start_cook_xp = 0
 
 if settings.fish_type == "shrimp/anchovies":
-    fishing_spot = FishingSpot((418,500), 1, RAW_FISH_IDS[SHRIMP_ANCHOVIES], COOKED_FISH_IDS[SHRIMP_ANCHOVIES], EQUIPMENT[SHRIMP_ANCHOVIES])
+    fishing_spot = FishingSpot((418,500), 1, SHRIMP_ANCHOVIES)
 elif settings.fish_type == "sardines/herring":
-    fishing_spot = FishingSpot((418,500), 2, RAW_FISH_IDS[SARDINES_HERRING], COOKED_FISH_IDS[SARDINES_HERRING], EQUIPMENT[SARDINES_HERRING])
+    fishing_spot = FishingSpot((418,500), 2, SARDINES_HERRING)
 elif settings.fish_type == "tuna/swordfish":
-    fishing_spot = FishingSpot((409,504), 1, RAW_FISH_IDS[TUNA_SWORDFISH], COOKED_FISH_IDS[TUNA_SWORDFISH], EQUIPMENT[TUNA_SWORDFISH])
+    fishing_spot = FishingSpot((409,504), 1, TUNA_SWORDFISH)
 elif settings.fish_type == "lobster":
-    fishing_spot = FishingSpot((409,504), 2, RAW_FISH_IDS[LOBSTER], COOKED_FISH_IDS[LOBSTER], EQUIPMENT[LOBSTER])
+    fishing_spot = FishingSpot((409,504), 2, LOBSTER)
 elif settings.fish_type == "mackarel/cod/bass":
-    fishing_spot = FishingSpot((406,505), 1, RAW_FISH_IDS[MACKEREL_COD_BASS], COOKED_FISH_IDS[MACKEREL_COD_BASS], EQUIPMENT[MACKEREL_COD_BASS])
+    fishing_spot = FishingSpot((406,505), 1, MACKEREL_COD_BASS)
 elif settings.fish_type == "shark":
-    fishing_spot = FishingSpot((406,505), 2, RAW_FISH_IDS[SHARK], COOKED_FISH_IDS[SHARK], EQUIPMENT[SHARK])
+    fishing_spot = FishingSpot((406,505), 2, SHARK)
 else:
     raise RuntimeError("Unknown fish type")
 

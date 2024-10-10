@@ -1,5 +1,7 @@
 # Rune buyer by RLN
 
+# Start with coins near the npc you choose.
+
 # Note that if you have competition, how many runes you get will be determined by pid swaps.
 # For the time being this just logs out instead of moving for the 5 min move timer because
 # of the npc desync bug. Your progress reports might get spammed by log messages (intended).

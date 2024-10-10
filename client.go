@@ -30,7 +30,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.7.1"
+	botVersion       = "1.7.2"
 )
 
 var (
@@ -39,6 +39,7 @@ var (
 	objectDefs []*objectDef
 	itemDefs   []*itemDef
 	wordHashes = map[uint32]string{}
+	rsaKeys    *rsaKeyData
 )
 
 type client struct {
@@ -301,6 +302,11 @@ type itemDef struct {
 	BasePrice int
 }
 
+type rsaKeyData struct {
+	Exponent string
+	Modulus  string
+}
+
 type bot struct {
 	accounts  []*account
 	wg        *sync.WaitGroup
@@ -313,16 +319,17 @@ func main() {
 	rand.Seed(time.Now().UnixNano())
 
 	var (
-		user       string
-		pass       string
-		scriptPath string
-		regFile    string
-		configPath string
-		acctFile   string
-		autologin  bool
-		version    bool
-		help       bool
-		sigs       = make(chan os.Signal, 1)
+		user        string
+		pass        string
+		scriptPath  string
+		regFile     string
+		configPath  string
+		acctFile    string
+		autologin   bool
+		downloadRSA bool
+		version     bool
+		help        bool
+		sigs        = make(chan os.Signal, 1)
 	)
 
 	b := &bot{
@@ -339,6 +346,7 @@ func main() {
 	flag.StringVar(&scriptPath, "s", "", "Python script path")
 	flag.StringVar(&acctFile, "f", "", "Account file")
 	flag.StringVar(&configPath, "c", "settings.toml", "Config file path")
+	flag.BoolVar(&downloadRSA, "d", false, "Download RSA keys")
 	flag.BoolVar(&autologin, "l", false, "Autologin flag")
 	flag.BoolVar(&version, "v", false, "Version flag")
 	flag.BoolVar(&help, "h", false, "Help")
@@ -356,6 +364,11 @@ func main() {
 	}
 
 	parseConfig(configPath)
+
+	if downloadRSA {
+		downloadRSAKeys()
+		return
+	}
 
 	if regFile != "" {
 		doAccountCreations(regFile)
@@ -780,6 +793,89 @@ func loadDefs() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+
+	// rsa keys
+	f6, err := os.Open(filepath.Join(dataDir, settings.DataSettings.RSAKeyFile))
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer f6.Close()
+
+	err = json.NewDecoder(f6).Decode(&rsaKeys)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func downloadRSAKeys() {
+	conn, err := net.DialTimeout("tcp4", settings.ServerSettings.Address, connectTimeout*time.Second)
+	if err != nil {
+		fmt.Printf("Error connecting to server: %s\n", err)
+		return
+	}
+
+	defer conn.Close()
+
+	p := &RSCPacket{buf: make([]byte, 3)}
+
+	p.createPacket(19)
+	p.finish()
+
+	if err = writePacket(conn, p); err != nil {
+		fmt.Printf("Error writing packet: %s\n", err)
+		return
+	}
+
+	lengthBuf, err := readBytesRaw(conn, 2)
+	if err != nil {
+		fmt.Printf("Error reading packet length: %s\n", err)
+		return
+	}
+
+	length := ((int(lengthBuf[0]) << 8) | int(lengthBuf[1])) - 2
+	if length < 0 || length > maxPacketSize {
+		fmt.Printf("Invalid length from server: %d\n", length)
+		return
+	}
+
+	p.buf, err = readBytesRaw(conn, length)
+	if err != nil {
+		fmt.Printf("Error reading config: %s\n", err)
+		return
+	}
+
+	p.readString()
+	p.readString()
+	p.i += 39
+	p.readString()
+	p.i += 2
+	p.readString()
+	p.i += 41
+
+	exponent := p.readString()
+	modulus := p.readString()
+
+	keys := &rsaKeyData{
+		Exponent: exponent,
+		Modulus:  modulus,
+	}
+
+	path := filepath.Join(settings.executablePath, settings.DataSettings.Directory, settings.DataSettings.RSAKeyFile)
+
+	f, err := os.Open(path)
+	if err != nil {
+		fmt.Printf("Error opening rsa key file: %s\n", err)
+		return
+	}
+	defer f.Close()
+
+	err = json.NewEncoder(f).Encode(keys)
+	if err != nil {
+		fmt.Printf("Error writing rsa key file: %s\n", err)
+		return
+	}
 }
 
 func doAccountCreations(fileStr string) {
@@ -831,19 +927,10 @@ func doAccountCreations(fileStr string) {
 		p.writeByte(10)
 		p.finish()
 
-		wrote := 0
-		for wrote < p.i {
-			conn.SetWriteDeadline(time.Now().Add(time.Second * readWriteTimeout))
-			n, err := conn.Write(p.buf[wrote:p.i])
-			if err != nil {
-				fmt.Printf("Error writing creation packet: %s\n", err)
-				conn.Close()
-				return
-			}
-			wrote += n
+		if err = writePacket(conn, p); err != nil {
+			fmt.Println("Error writing packet:", err)
+			os.Exit(1)
 		}
-
-		p.i = 0
 
 		registerResponse, err := readBytesRaw(conn, 1)
 		if err != nil {
@@ -878,6 +965,22 @@ func doAccountCreations(fileStr string) {
 			fmt.Printf("[%s] Unknown registration response: %d\n", username, registerResponse[0])
 		}
 	}
+}
+
+func writePacket(conn net.Conn, p *RSCPacket) error {
+	wrote := 0
+	for wrote < p.i {
+		conn.SetWriteDeadline(time.Now().Add(time.Second * readWriteTimeout))
+		n, err := conn.Write(p.buf[wrote:p.i])
+		if err != nil {
+			return err
+		}
+		wrote += n
+	}
+
+	p.i = 0
+
+	return nil
 }
 
 func (c *client) writeProgressReportf(s0 string, args ...interface{}) error {

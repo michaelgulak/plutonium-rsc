@@ -1,6 +1,7 @@
 # Shafts by RLN
 
 # This script cuts trees and fletches the logs into arrow shafts.
+# Start with axe, knife, and sleeping bag in inventory.
 
 TREES = [0, 1]
 LOGS  = 14

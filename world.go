@@ -11,28 +11,41 @@ import (
 	"path/filepath"
 )
 
-var (
+const (
 	maxWorldHeight = 4032 // 3776
 	maxWorldWidth  = 1008 // 944
-)
 
-const (
-	sourceEast  = 8
-	sourceNorth = 4
-	sourceSouth = 1
-	sourceWest  = 2
-)
+	wallNorth  = 1 << 0
+	wallEast   = 1 << 1
+	wallSouth  = 1 << 2
+	wallWest   = 1 << 3
+	fullBlockA = 1 << 4
+	fullBlockB = 1 << 5
+	fullBlockC = 1 << 6
 
-var (
-	sourceNorthEast = sourceNorth | sourceEast
-	sourceNorthWest = sourceNorth | sourceWest
-	sourceSouthEast = sourceSouth | sourceEast
-	sourceSouthWest = sourceSouth | sourceWest
-
+	wallNorthEast    = wallNorth | wallEast
+	wallNorthWest    = wallNorth | wallWest
+	wallSouthEast    = wallSouth | wallEast
+	wallSouthWest    = wallSouth | wallWest
+	fullBlock        = fullBlockA | fullBlockB | fullBlockC
+	westBlocked      = fullBlock | wallWest
+	southBlocked     = fullBlock | wallSouth
+	northBlocked     = fullBlock | wallNorth
+	eastBlocked      = fullBlock | wallEast
 	southEastBlocked = fullBlock | wallSouthEast
 	southWestBlocked = fullBlock | wallSouthWest
 	northEastBlocked = fullBlock | wallNorthEast
 	northWestBlocked = fullBlock | wallNorthWest
+
+	sourceSouth = 1 << 0
+	sourceWest  = 1 << 1
+	sourceNorth = 1 << 2
+	sourceEast  = 1 << 3
+
+	sourceNorthEast = sourceNorth | sourceEast
+	sourceNorthWest = sourceNorth | sourceWest
+	sourceSouthEast = sourceSouth | sourceEast
+	sourceSouthWest = sourceSouth | sourceWest
 )
 
 type world struct {
@@ -72,10 +85,6 @@ type objectLoc struct {
 	Direction int
 }
 
-type objectLocs struct {
-	Sceneries []*objectLoc
-}
-
 type localWorld struct {
 	tiles map[int32]int32
 }
@@ -96,13 +105,22 @@ func (w *world) getRegion(x int, y int) *region {
 	regionX := int16(x / 48)
 	regionY := int16(y / 48)
 
-	if _, ok := w.regions[regionX]; !ok {
-		w.regions[regionX] = map[int16]*region{}
+	var (
+		r0 map[int16]*region
+		ok bool
+	)
+	if r0, ok = w.regions[regionX]; !ok {
+		r0 = map[int16]*region{}
+		w.regions[regionX] = r0
 	}
-	if _, ok := w.regions[regionX][regionY]; !ok {
-		w.regions[regionX][regionY] = newRegion(regionX, regionY)
+
+	var r *region
+	if r, ok = r0[regionY]; !ok {
+		r = newRegion(regionX, regionY)
+		w.regions[regionX][regionY] = r
 	}
-	return w.regions[regionX][regionY]
+
+	return r
 }
 
 func (w *world) getTile(x int, y int) int32 {
@@ -124,9 +142,6 @@ func newRegion(regionX int16, regionY int16) (z *region) {
 	z.tiles = make([][]int32, 48)
 	for i := 0; i < 48; i++ {
 		z.tiles[i] = make([]int32, 48)
-		for j := 0; j < 48; j++ {
-			z.tiles[i][j] = 0
-		}
 	}
 	return
 }
@@ -151,24 +166,24 @@ func fileToBuffer(r io.ReadCloser) *bytes.Buffer {
 	buf := &bytes.Buffer{}
 	_, err := io.Copy(buf, r)
 	if err != nil {
-		panic(err)
+		fmt.Println("fileToBuffer:", err)
+		os.Exit(1)
 	}
 	return buf
 }
 
 func (w *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, height int, bigX int, bigY int) bool {
-	s := (*sector)(nil)
-
 	filename := fmt.Sprintf("h%dx%dy%d", height, sectionX, sectionY)
 	e, err := reader.Open(filename)
 	if err != nil {
-		panic(err)
+		fmt.Println("loadSection:", err)
+		os.Exit(1)
 	}
 	if e == nil {
 		return false
 	}
 	data := fileToBuffer(e)
-	s = unpackSector(data)
+	s := unpackSector(data)
 
 	for y := 0; y < 48; y++ {
 		for x := 0; x < 48; x++ {
@@ -178,11 +193,11 @@ func (w *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, 
 				continue
 			}
 			sectorTile := s.tiles[x*48+y]
-			if byte(sectorTile.groundOverlay) == 250 {
-				sectorTile.groundOverlay = 2
-			}
-			groundOverlay := sectorTile.groundOverlay
 
+			groundOverlay := byte(sectorTile.groundOverlay)
+			if groundOverlay == 250 {
+				groundOverlay = 2
+			}
 			if groundOverlay > 0 && tileDefs[groundOverlay-1].ObjectType != 0 {
 				w.getRegion(bx, by).tiles[bx%48][by%48] |= 0x40
 			}
@@ -203,6 +218,7 @@ func (w *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, 
 			if diagonalWalls > 12000 && diagonalWalls < 24000 && doorDefs[diagonalWalls-12001].Unknown == 0 && doorDefs[diagonalWalls-12001].DoorType != 0 {
 				w.getRegion(bx, by).tiles[bx%48][by%48] |= 0x10
 			}
+
 		}
 	}
 	return true
@@ -248,10 +264,14 @@ func (w *world) loadWorld() {
 	}
 	defer f.Close()
 
+	type objectLocs struct {
+		Sceneries []*objectLoc
+	}
+
 	var sceneries objectLocs
 	err = json.NewDecoder(f).Decode(&sceneries)
 	if err != nil {
-		fmt.Printf("Error decoding object locs: %s\n", err)
+		fmt.Println("Error decoding object locs:", err)
 		os.Exit(1)
 	}
 
@@ -299,7 +319,7 @@ func unpackSector(in *bytes.Buffer) *sector {
 func readInt8FromBuffer(buf *bytes.Buffer) int8 {
 	b, err := buf.ReadByte()
 	if err != nil {
-		fmt.Println("unpackTile:", err)
+		fmt.Println("readInt8FromBuffer:", err)
 		os.Exit(1)
 	}
 	return int8(b)
@@ -308,7 +328,7 @@ func readInt8FromBuffer(buf *bytes.Buffer) int8 {
 func readByteFromBuffer(buf *bytes.Buffer) byte {
 	b, err := buf.ReadByte()
 	if err != nil {
-		fmt.Println("unpackTile2:", err)
+		fmt.Println("readByteFromBuffer:", err)
 		os.Exit(1)
 	}
 	return b
@@ -462,7 +482,7 @@ func (c *client) combinedTile(x, z int) int32 {
 	if tile1 == math.MaxInt32 {
 		return math.MaxInt32
 	}
-	tile2 := c.localWorld.getTileTraversalMask(x, z)
+	tile2 := c.localWorld.getTile(x, z)
 
 	return tile1 | tile2
 }
@@ -483,7 +503,7 @@ func (l *localWorld) setTileOr(x, z int, traversalMask int32) {
 	l.tiles[xz] = l.tiles[xz] | traversalMask
 }
 
-func (l *localWorld) getTileTraversalMask(x, z int) int32 {
+func (l *localWorld) getTile(x, z int) int32 {
 	xz := (int32(x) << 16) | int32(z)
 	return l.tiles[xz]
 }

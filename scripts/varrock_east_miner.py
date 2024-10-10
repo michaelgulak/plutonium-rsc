@@ -1,4 +1,6 @@
-# Plutonium version of AA_VarrockEastMiner by RLN
+# Varrock east miner by RLN
+#
+# Start with pickaxe and sleeping bag in inventory.
 #
 # Script block should look like this:
 # [script]

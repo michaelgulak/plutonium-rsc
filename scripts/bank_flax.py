@@ -1,6 +1,6 @@
 # Flax picker & banker by RLN
 
-# Start under the gnome stronghold bank.
+# Start under the gnome stronghold bank with an empty inv.
 
 flax_banked = 0
 

@@ -13,12 +13,13 @@ tile_defs    = "TileDefs.json"
 door_defs    = "DoorDefs.json"
 object_defs  = "ObjectDefs.json"
 word_hashes  = "Words.json"
+rsa_key_file = "RSA.json"
 
 [accounts]
 directory = "accounts"
 
 [client]
-client_version = 10009
+client_version = 10010
 
 [script]
 directory = "scripts"

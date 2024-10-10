@@ -1,5 +1,7 @@
 # Ardougne iron miner by RLN
 #
+# Must have sleeping bag and pickaxe in inventory.
+#
 # Script block should look like this:
 # [script]
 # name            = "ardy_iron_miner.py"
