@@ -117,6 +117,9 @@ func (c *client) loadScript() error {
 }
 
 func (s *script) callOnProgressReport() {
+	if !s.running {
+		return
+	}
 	if s.onProgressReport != nil {
 		res, err := s.onProgressReport.M__call__(nil, nil)
 		if err != nil {
@@ -157,6 +160,9 @@ func (s *script) callOnProgressReport() {
 }
 
 func (s *script) callOnServerMessage(message string) {
+	if !s.running {
+		return
+	}
 	if strings.HasSuffix(message, "moment") {
 		s.bankOptionMenuTimeout = time.Unix(0, 0)
 	}
@@ -168,6 +174,9 @@ func (s *script) callOnServerMessage(message string) {
 }
 
 func (s *script) callOnTradeRequest(name string) {
+	if !s.running {
+		return
+	}
 	_, err := s.onTradeRequest.M__call__(py.Tuple([]py.Object{py.String(name)}), nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -176,6 +185,9 @@ func (s *script) callOnTradeRequest(name string) {
 }
 
 func (s *script) callOnChatMessage(message, from string) {
+	if !s.running {
+		return
+	}
 	_, err := s.onChatMessage.M__call__(py.Tuple([]py.Object{py.String(message), py.String(from)}), nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -184,6 +196,9 @@ func (s *script) callOnChatMessage(message, from string) {
 }
 
 func (s *script) callOnPrivateMessage(message, from string) {
+	if !s.running {
+		return
+	}
 	_, err := s.onPrivateMessage.M__call__(py.Tuple([]py.Object{py.String(message), py.String(from)}), nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -192,6 +207,9 @@ func (s *script) callOnPrivateMessage(message, from string) {
 }
 
 func (s *script) callOnPlayerDamaged(damage int, p *player) {
+	if !s.running {
+		return
+	}
 	_, err := s.onPlayerDamaged.M__call__(py.Tuple([]py.Object{py.Int(damage), p}), nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -200,6 +218,9 @@ func (s *script) callOnPlayerDamaged(damage int, p *player) {
 }
 
 func (s *script) callOnNPCDamaged(damage int, n *npc) {
+	if !s.running {
+		return
+	}
 	_, err := s.onNPCDamaged.M__call__(py.Tuple([]py.Object{py.Int(damage), n}), nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -208,6 +229,9 @@ func (s *script) callOnNPCDamaged(damage int, n *npc) {
 }
 
 func (s *script) callOnNPCSpawned(n *npc) {
+	if !s.running {
+		return
+	}
 	_, err := s.onNPCSpawned.M__call__(py.Tuple([]py.Object{n}), nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -216,6 +240,9 @@ func (s *script) callOnNPCSpawned(n *npc) {
 }
 
 func (s *script) callOnNPCDespawned(n *npc) {
+	if !s.running {
+		return
+	}
 	_, err := s.onNPCDespawned.M__call__(py.Tuple([]py.Object{n}), nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -224,6 +251,9 @@ func (s *script) callOnNPCDespawned(n *npc) {
 }
 
 func (s *script) callOnNPCProjectile(projectileType int, n *npc, p *player) {
+	if !s.running {
+		return
+	}
 	_, err := s.onNPCProjectile.M__call__(py.Tuple([]py.Object{py.Int(projectileType), n, p}), nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -232,6 +262,9 @@ func (s *script) callOnNPCProjectile(projectileType int, n *npc, p *player) {
 }
 
 func (s *script) callOnNPCMessage(message string, n *npc, p *player) {
+	if !s.running {
+		return
+	}
 	_, err := s.onNPCMessage.M__call__(py.Tuple([]py.Object{py.String(message), n, p}), nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -240,6 +273,9 @@ func (s *script) callOnNPCMessage(message string, n *npc, p *player) {
 }
 
 func (s *script) callOnDeath() {
+	if !s.running {
+		return
+	}
 	_, err := s.onDeath.M__call__(nil, nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -248,6 +284,9 @@ func (s *script) callOnDeath() {
 }
 
 func (s *script) callOnGroundItemSpawned(g *groundItem) {
+	if !s.running {
+		return
+	}
 	_, err := s.onGroundItemSpawned.M__call__(py.Tuple([]py.Object{g}), nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -256,6 +295,9 @@ func (s *script) callOnGroundItemSpawned(g *groundItem) {
 }
 
 func (s *script) callOnGroundItemDespawned(g *groundItem) {
+	if !s.running {
+		return
+	}
 	_, err := s.onGroundItemDespawned.M__call__(py.Tuple([]py.Object{g}), nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -264,6 +306,9 @@ func (s *script) callOnGroundItemDespawned(g *groundItem) {
 }
 
 func (s *script) callOnObjectSpawned(o *object) {
+	if !s.running {
+		return
+	}
 	_, err := s.onObjectSpawned.M__call__(py.Tuple([]py.Object{o}), nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -272,6 +317,9 @@ func (s *script) callOnObjectSpawned(o *object) {
 }
 
 func (s *script) callOnObjectDespawned(o *object) {
+	if !s.running {
+		return
+	}
 	_, err := s.onObjectDespawned.M__call__(py.Tuple([]py.Object{o}), nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -280,6 +328,9 @@ func (s *script) callOnObjectDespawned(o *object) {
 }
 
 func (s *script) callOnWallObjectSpawned(o *wallObject) {
+	if !s.running {
+		return
+	}
 	_, err := s.onWallObjectSpawned.M__call__(py.Tuple([]py.Object{o}), nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -288,6 +339,9 @@ func (s *script) callOnWallObjectSpawned(o *wallObject) {
 }
 
 func (s *script) callOnWallObjectDespawned(o *wallObject) {
+	if !s.running {
+		return
+	}
 	_, err := s.onWallObjectDespawned.M__call__(py.Tuple([]py.Object{o}), nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -296,6 +350,9 @@ func (s *script) callOnWallObjectDespawned(o *wallObject) {
 }
 
 func (s *script) callOnKillSignal() {
+	if !s.running {
+		return
+	}
 	_, err := s.onKillSignal.M__call__(nil, nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -304,6 +361,9 @@ func (s *script) callOnKillSignal() {
 }
 
 func (s *script) callOnLoad() {
+	if !s.running {
+		return
+	}
 	_, err := s.onLoad.M__call__(nil, nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -312,6 +372,9 @@ func (s *script) callOnLoad() {
 }
 
 func (s *script) callOnSystemUpdate(seconds int) {
+	if !s.running {
+		return
+	}
 	_, err := s.onSystemUpdate.M__call__(py.Tuple([]py.Object{py.Int(seconds)}), nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -320,6 +383,9 @@ func (s *script) callOnSystemUpdate(seconds int) {
 }
 
 func (s *script) callOnFatigueUpdate(fatigue int, accurateFatigue float64) {
+	if !s.running {
+		return
+	}
 	_, err := s.onFatigueUpdate.M__call__(py.Tuple([]py.Object{py.Int(fatigue), py.Float(accurateFatigue)}), nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -328,6 +394,9 @@ func (s *script) callOnFatigueUpdate(fatigue int, accurateFatigue float64) {
 }
 
 func (s *script) callOnSleepWordSent() {
+	if !s.running {
+		return
+	}
 	_, err := s.onSleepWordSent.M__call__(nil, nil)
 	if err != nil {
 		py.TracebackDump(err)
@@ -336,6 +405,9 @@ func (s *script) callOnSleepWordSent() {
 }
 
 func (s *script) callOnServerTick() {
+	if !s.running {
+		return
+	}
 	_, err := s.onServerTick.M__call__(py.Tuple([]py.Object{py.Int(s.tick)}), nil)
 	if err != nil {
 		py.TracebackDump(err)

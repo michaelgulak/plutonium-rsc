@@ -30,7 +30,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.7.3"
+	botVersion       = "1.7.4"
 )
 
 var (
@@ -345,7 +345,7 @@ func main() {
 	flag.StringVar(&regFile, "r", "", "Register accounts path")
 	flag.StringVar(&scriptPath, "s", "", "Python script path")
 	flag.StringVar(&acctFile, "f", "", "Account file")
-	flag.StringVar(&configPath, "c", "settings.toml", "Config file path")
+	flag.StringVar(&configPath, "c", "", "Config file path")
 	flag.BoolVar(&downloadRSA, "d", false, "Download RSA keys")
 	flag.BoolVar(&autologin, "l", false, "Autologin flag")
 	flag.BoolVar(&version, "v", false, "Version flag")
@@ -641,15 +641,17 @@ loop:
 			opcode := packet.readByteAsInt()
 			c.handlePacket(packet, opcode, len(packet.buf)-1)
 		case <-progressTimer.C:
-			if !c.loading {
-				c.account.lastProgressReport = time.Now()
-				if c.script != nil && c.script.running && c.script.onProgressReport != nil && c.account.progressDur != time.Duration(math.MaxInt) {
-					c.script.callOnProgressReport()
-					c.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(c.account.progressDur).Format(time.RFC1123))
+			if c.script.running {
+				if !c.loading {
+					c.account.lastProgressReport = time.Now()
+					if c.script != nil && c.script.running && c.script.onProgressReport != nil && c.account.progressDur != time.Duration(math.MaxInt) {
+						c.script.callOnProgressReport()
+						c.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(c.account.progressDur).Format(time.RFC1123))
+					}
+					progressTimer.Reset(c.account.progressDur)
+				} else {
+					progressTimer.Reset(time.Second)
 				}
-				progressTimer.Reset(c.account.progressDur)
-			} else {
-				progressTimer.Reset(time.Second)
 			}
 		case <-c.scriptKillSignal:
 			c.close()
@@ -659,6 +661,7 @@ loop:
 			if !scriptTimer.Stop() {
 				<-scriptTimer.C
 			}
+			c.script.running = false
 		case waitTime := <-c.scriptDCSignal:
 			fmt.Printf("[%s] Disconnecting for %d seconds\n", c.user, waitTime)
 			c.conn.Close()

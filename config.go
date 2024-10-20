@@ -89,8 +89,8 @@ func parseConfig(filePath string) {
 		os.Exit(1)
 	}
 	ex = filepath.Dir(ex)
-	if filePath == "settings.toml" {
-		filePath = filepath.Join(ex, filePath)
+	if filePath == "" {
+		filePath = filepath.Join(ex, "settings.toml")
 	}
 
 	f, err := os.Open(filePath)
