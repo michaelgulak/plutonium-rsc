@@ -30,7 +30,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.7.4"
+	botVersion       = "1.7.5"
 )
 
 var (
@@ -641,7 +641,7 @@ loop:
 			opcode := packet.readByteAsInt()
 			c.handlePacket(packet, opcode, len(packet.buf)-1)
 		case <-progressTimer.C:
-			if c.script.running {
+			if c.script != nil && c.script.running {
 				if !c.loading {
 					c.account.lastProgressReport = time.Now()
 					if c.script != nil && c.script.running && c.script.onProgressReport != nil && c.account.progressDur != time.Duration(math.MaxInt) {
