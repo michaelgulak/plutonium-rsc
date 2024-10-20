@@ -22,6 +22,10 @@ After this is called, the script has 15 seconds to clean up (ie. get out of comb
 
 This event is called when the client is fully loaded in the game world. It gets called every time the bot logs into an account.
 
+###### on_server_tick(tick)
+
+Called every time the npc update packet comes in, which coincides with every server tick.
+
 ###### on_system_update(seconds)
 ###### on_server_message(msg)
 ###### on_trade_request(name)
@@ -64,7 +68,14 @@ Checks whether a point is in the supplied polygon. `polygon` should be an array 
 
 Checks whether the client coords are equal to `x` and `z`.
 
+###### set_wakeup_at(int)
+
+Changes the default (0) wakeup fatigue setting to whatever you want.
+
 ###### set_fatigue_tricking(True)
+
+Sets the wakeup fatigue setting to 99.
+
 ###### stop_script()
 ###### log(str)
 

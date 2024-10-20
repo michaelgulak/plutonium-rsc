@@ -20,14 +20,15 @@ import (
 )
 
 type script struct {
-	path            string
-	pathDir         string
-	running         bool
-	c               *client
-	settings        py.StringDict
-	fatigueTricking bool
-	loaded          bool
-	module          *py.Module
+	path     string
+	pathDir  string
+	running  bool
+	c        *client
+	settings py.StringDict
+	wakeupAt int
+	loaded   bool
+	module   *py.Module
+	tick     int
 
 	loopFn                *py.Function
 	onProgressReport      *py.Function
@@ -53,6 +54,7 @@ type script struct {
 	onSystemUpdate        *py.Function
 	onFatigueUpdate       *py.Function
 	onSleepWordSent       *py.Function
+	onServerTick          *py.Function
 
 	bankOptionMenuTimeout time.Time
 }
@@ -331,6 +333,15 @@ func (s *script) callOnSleepWordSent() {
 		py.TracebackDump(err)
 		os.Exit(1)
 	}
+}
+
+func (s *script) callOnServerTick() {
+	_, err := s.onServerTick.M__call__(py.Tuple([]py.Object{py.Int(s.tick)}), nil)
+	if err != nil {
+		py.TracebackDump(err)
+		os.Exit(1)
+	}
+	s.tick++
 }
 
 func (n *npc) Type() *py.Type {
@@ -641,6 +652,9 @@ func (s *script) addHooks(module *py.Module) {
 	if onSleepwordSent, ok := module.Globals["on_sleepword_sent"]; ok {
 		s.onSleepWordSent = onSleepwordSent.(*py.Function)
 	}
+	if onServerTick, ok := module.Globals["on_server_tick"]; ok {
+		s.onServerTick = onServerTick.(*py.Function)
+	}
 }
 
 func (s *script) addPreGlobals(module *py.ModuleImpl) {
@@ -801,7 +815,11 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		return py.Int(min + rand.Intn(max-min+1)), nil
 	}, py.METH_STATIC, "")
 	module.Globals["set_fatigue_tricking"] = py.MustNewMethod("set_fatigue_tricking", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-		s.fatigueTricking = bool(args[0].(py.Bool))
+		s.wakeupAt = 99
+		return py.None, nil
+	}, py.METH_STATIC, "")
+	module.Globals["set_wakeup_at"] = py.MustNewMethod("set_fatigue_tricking", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		s.wakeupAt = int(args[0].(py.Int))
 		return py.None, nil
 	}, py.METH_STATIC, "")
 	module.Globals["stop_script"] = py.MustNewMethod("stop_script", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {

@@ -30,7 +30,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.7.2"
+	botVersion       = "1.7.3"
 )
 
 var (
@@ -1594,6 +1594,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		for k := range removedNPCs {
 			c.script.callOnNPCDespawned(k)
 		}
+
+		if c.script != nil && c.script.onServerTick != nil {
+			c.script.callOnServerTick()
+		}
 	case 25: // load area
 		c.serverIndex = p.readShort()
 		c.worldX = p.readShort()
@@ -2013,7 +2017,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		c.sleeping = true
 		c.captchaBuf = p.readBytes(length)
 		if resleep {
-			if c.sleepingFatigue == 0 || (c.script != nil && c.script.fatigueTricking && c.sleepingFatigue < 100) {
+			if c.sleepingFatigue == 0 || (c.script != nil && c.sleepingFatigue <= c.script.wakeupAt) {
 				c.doCaptcha(c.captchaBuf)
 			}
 		}
@@ -2118,7 +2122,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		if c.account.debug {
 			fmt.Printf("[%s] Sleep fatigue at %d\n", c.user, c.sleepingFatigue)
 		}
-		if c.sleepingFatigue == 0 || (c.script != nil && c.script.fatigueTricking && c.sleepingFatigue < 100) {
+		if c.sleepingFatigue == 0 || (c.script != nil && c.sleepingFatigue <= c.script.wakeupAt) {
 			c.doCaptcha(c.captchaBuf)
 		}
 	case 115: // black hole
