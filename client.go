@@ -602,6 +602,7 @@ func (c *client) eventLoop(b *bot) (bool, time.Duration) {
 		scriptTimer       *time.Timer
 		idleTimer         = time.NewTimer(5 * time.Second)
 		localClosing      = b.closing
+		scriptStopped     = false
 	)
 
 	if c.account.progressDur != noProgressDurSet && c.script != nil && c.script.running {
@@ -618,7 +619,7 @@ func (c *client) eventLoop(b *bot) (bool, time.Duration) {
 		if progressTimer != nil && !progressTimer.Stop() {
 			<-progressTimer.C
 		}
-		if scriptTimer != nil && !scriptTimer.Stop() {
+		if scriptTimer != nil && !scriptStopped && !scriptTimer.Stop() {
 			<-scriptTimer.C
 		}
 		if !idleTimer.Stop() {
@@ -665,6 +666,7 @@ loop:
 				<-scriptTimer.C
 			}
 			c.script.running = false
+			scriptStopped = true
 		case waitTime := <-c.scriptDCSignal:
 			fmt.Printf("[%s] Disconnecting for %d seconds\n", c.user, waitTime)
 			c.conn.Close()
