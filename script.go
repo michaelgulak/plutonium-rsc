@@ -59,6 +59,102 @@ type script struct {
 	bankOptionMenuTimeout time.Time
 }
 
+var (
+	npcType        = py.NewType("npc", "")
+	playerType     = py.NewType("player", "")
+	objectType     = py.NewType("game_object", "")
+	wallObjectType = py.NewType("wall_object", "")
+	groundItemType = py.NewType("ground_item", "")
+	bankItemType   = py.NewType("bank_item", "")
+	tradeItemType  = py.NewType("trade_item", "")
+	itemType       = py.NewType("inventory_item", "")
+	shopItemType   = py.NewType("shop_item", "")
+	friendType     = py.NewType("friend", "")
+	ignoredType    = py.NewType("ignored", "")
+	questType      = py.NewType("quest", "")
+	longPathType   = py.NewType("path", "")
+)
+
+func init() {
+	// npc
+	npcType.Dict["id"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*npc).id), nil }}
+	npcType.Dict["x"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*npc).x), nil }}
+	npcType.Dict["z"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*npc).z), nil }}
+	npcType.Dict["sid"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*npc).serverIndex), nil }}
+	npcType.Dict["sprite"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*npc).sprite), nil }}
+	npcType.Dict["currentHP"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*npc).currentHP), nil }}
+	npcType.Dict["maxHP"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*npc).maxHP), nil }}
+	npcType.Dict["is_talking"] = py.MustNewMethod("is_talking", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return py.Bool(self.(*npc).isTalking()), nil
+	}, py.METH_CLASS, "")
+	npcType.Dict["in_combat"] = py.MustNewMethod("in_combat", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return py.Bool(self.(*npc).inCombat()), nil
+	}, py.METH_CLASS, "")
+	// player
+	playerType.Dict["x"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*player).x), nil }}
+	playerType.Dict["z"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*player).z), nil }}
+	playerType.Dict["pid"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*player).serverIndex), nil }}
+	playerType.Dict["sprite"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*player).sprite), nil }}
+	playerType.Dict["currentHP"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*player).currentHP), nil }}
+	playerType.Dict["maxHP"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*player).maxHP), nil }}
+	playerType.Dict["username"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.String(self.(*player).username), nil }}
+	playerType.Dict["combat_level"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.String(self.(*player).combatLevel), nil }}
+	playerType.Dict["is_talking"] = py.MustNewMethod("is_talking", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return py.Bool(self.(*player).isTalking()), nil
+	}, py.METH_CLASS, "")
+	playerType.Dict["in_combat"] = py.MustNewMethod("in_combat", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		return py.Bool(self.(*player).inCombat()), nil
+	}, py.METH_CLASS, "")
+
+	// object
+	objectType.Dict["id"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*object).id), nil }}
+	objectType.Dict["x"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*object).x), nil }}
+	objectType.Dict["z"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*object).z), nil }}
+	objectType.Dict["dir"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*object).dir), nil }}
+	// wall object
+	wallObjectType.Dict["id"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*wallObject).id), nil }}
+	wallObjectType.Dict["x"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*wallObject).x), nil }}
+	wallObjectType.Dict["z"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*wallObject).z), nil }}
+	wallObjectType.Dict["dir"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*wallObject).dir), nil }}
+	// ground item
+	groundItemType.Dict["id"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*groundItem).id), nil }}
+	groundItemType.Dict["x"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*groundItem).x), nil }}
+	groundItemType.Dict["z"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*groundItem).z), nil }}
+	// bank item
+	bankItemType.Dict["id"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*bankItem).id), nil }}
+	bankItemType.Dict["amount"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*bankItem).amount), nil }}
+	// trade item
+	tradeItemType.Dict["id"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*tradeItem).id), nil }}
+	tradeItemType.Dict["amount"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*tradeItem).amount), nil }}
+	// inventory item
+	itemType.Dict["id"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*item).id), nil }}
+	itemType.Dict["amount"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*item).amount), nil }}
+	itemType.Dict["equipped"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Bool(self.(*item).equipped), nil }}
+	itemType.Dict["slot"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*item).slot), nil }}
+	// shop item
+	shopItemType.Dict["id"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*shopItem).id), nil }}
+	shopItemType.Dict["amount"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*shopItem).amount), nil }}
+	shopItemType.Dict["price"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*shopItem).price), nil }}
+	// friend
+	friendType.Dict["username"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.String(self.(*friend).username), nil }}
+	friendType.Dict["online"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Bool(self.(*friend).online), nil }}
+	// ignored
+	ignoredType.Dict["username"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.String(self.(*ignored).username), nil }}
+	// quest
+	questType.Dict["id"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*quest).id), nil }}
+	questType.Dict["name"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.String(self.(*quest).name), nil }}
+	questType.Dict["stage"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*quest).stage), nil }}
+	// path
+	longPathType.Dict["complete"] = py.MustNewMethod("complete", longPathComplete, py.METH_CLASS, "")
+	longPathType.Dict["reset"] = py.MustNewMethod("reset", longPathReset, py.METH_CLASS, "")
+	longPathType.Dict["next_x"] = py.MustNewMethod("next_x", longPathNextX, py.METH_CLASS, "")
+	longPathType.Dict["next_z"] = py.MustNewMethod("next_z", longPathNextZ, py.METH_CLASS, "")
+	longPathType.Dict["process"] = py.MustNewMethod("process", longPathProcess, py.METH_CLASS, "")
+	longPathType.Dict["set_nearest"] = py.MustNewMethod("set_nearest", longPathSetNearest, py.METH_CLASS, "")
+	longPathType.Dict["length"] = py.MustNewMethod("length", longPathLength, py.METH_CLASS, "")
+	longPathType.Dict["walk"] = py.MustNewMethod("walk", longPathWalk, py.METH_CLASS, "")
+}
+
 func (c *client) loadScript() error {
 	s := c.script
 	s.c = c
@@ -116,6 +212,20 @@ func (c *client) loadScript() error {
 	return nil
 }
 
+func (s *script) loop() int {
+	res, err := s.loopFn.M__call__(nil, nil)
+	if err != nil {
+		py.TracebackDump(err)
+		os.Exit(1)
+	}
+	res0, ok := res.(py.Int)
+	if !ok {
+		fmt.Printf("[%s] Script [%s] did not return a sleep time\n", s.c.user, s.path)
+		os.Exit(1)
+	}
+	return int(res0)
+}
+
 func (s *script) callOnProgressReport() {
 	if !s.running {
 		return
@@ -156,6 +266,200 @@ func (s *script) callOnProgressReport() {
 			s.c.account.progressFile.Seek(0, 0)
 		}
 		table.Render()
+	}
+}
+
+func (n *npc) Type() *py.Type {
+	return npcType
+}
+
+func (n *player) Type() *py.Type {
+	return playerType
+}
+
+func (n *object) Type() *py.Type {
+	return objectType
+}
+
+func (n *wallObject) Type() *py.Type {
+	return wallObjectType
+}
+
+func (n *groundItem) Type() *py.Type {
+	return groundItemType
+}
+
+func (n *bankItem) Type() *py.Type {
+	return bankItemType
+}
+
+func (n *tradeItem) Type() *py.Type {
+	return tradeItemType
+}
+
+func (n *item) Type() *py.Type {
+	return itemType
+}
+
+func (n *shopItem) Type() *py.Type {
+	return shopItemType
+}
+
+func (n *friend) Type() *py.Type {
+	return friendType
+}
+
+func (n *ignored) Type() *py.Type {
+	return ignoredType
+}
+
+func (n *quest) Type() *py.Type {
+	return questType
+}
+
+func (n *longPath) Type() *py.Type {
+	return longPathType
+}
+
+func longPathComplete(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	n := self.(*longPath)
+	return py.Bool(n.currentPt >= len(n.points)), nil
+}
+
+func longPathReset(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	n := self.(*longPath)
+	n.currentPt = 0
+	return py.None, nil
+}
+func longPathNextX(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	n := self.(*longPath)
+	if n.currentPt >= len(n.points) {
+		return py.Int(-1), nil
+	}
+	return py.Int(n.points[n.currentPt].x), nil
+}
+
+func longPathNextZ(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	n := self.(*longPath)
+	if n.currentPt >= len(n.points) {
+		return py.Int(-1), nil
+	}
+	return py.Int(n.points[n.currentPt].y), nil
+}
+
+func longPathProcess(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	n := self.(*longPath)
+	if n.currentPt >= len(n.points) {
+		return py.None, nil
+	}
+	pt := n.points[n.currentPt]
+	if pt.x == n.script.c.x && pt.y == n.script.c.z {
+		n.currentPt++
+	}
+	return py.None, nil
+}
+
+func longPathSetNearest(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	n := self.(*longPath)
+	x, z := n.script.c.x, n.script.c.z
+	minIdx := 0
+	minDist := math.MaxInt
+	for i, p := range n.points {
+		if dist := distance(x, z, p.x, p.y); dist <= minDist {
+			minDist = dist
+			minIdx = i
+		}
+	}
+	n.currentPt = minIdx
+	return py.None, nil
+}
+
+func longPathLength(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	n := self.(*longPath)
+	return py.Int(n.length), nil
+}
+
+func longPathWalk(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	n := self.(*longPath)
+	if n.currentPt >= len(n.points) {
+		return py.None, nil
+	}
+	pt := n.points[n.currentPt]
+	return py.Bool(n.script.c.walkTo(pt.x, pt.y, pt.x, pt.y, false, false)), nil
+}
+
+func (s *script) addHooks(module *py.Module) {
+	if onProgressReport, ok := module.Globals["on_progress_report"]; ok {
+		s.onProgressReport = onProgressReport.(*py.Function)
+	}
+	if onServerMessage, ok := module.Globals["on_server_message"]; ok {
+		s.onServerMessage = onServerMessage.(*py.Function)
+	}
+	if onTradeRequest, ok := module.Globals["on_trade_request"]; ok {
+		s.onTradeRequest = onTradeRequest.(*py.Function)
+	}
+	if onChatMessage, ok := module.Globals["on_chat_message"]; ok {
+		s.onChatMessage = onChatMessage.(*py.Function)
+	}
+	if onPrivateMessage, ok := module.Globals["on_private_message"]; ok {
+		s.onPrivateMessage = onPrivateMessage.(*py.Function)
+	}
+	if onPlayerDamaged, ok := module.Globals["on_player_damaged"]; ok {
+		s.onPlayerDamaged = onPlayerDamaged.(*py.Function)
+	}
+	if onNPCDamaged, ok := module.Globals["on_npc_damaged"]; ok {
+		s.onNPCDamaged = onNPCDamaged.(*py.Function)
+	}
+	if onNPCSpawned, ok := module.Globals["on_npc_spawned"]; ok {
+		s.onNPCSpawned = onNPCSpawned.(*py.Function)
+	}
+	if onNPCDespawned, ok := module.Globals["on_npc_despawned"]; ok {
+		s.onNPCDespawned = onNPCDespawned.(*py.Function)
+	}
+	if onNPCProjectile, ok := module.Globals["on_npc_projectile"]; ok {
+		s.onNPCProjectile = onNPCProjectile.(*py.Function)
+	}
+	if onNPCMessage, ok := module.Globals["on_npc_message"]; ok {
+		s.onNPCMessage = onNPCMessage.(*py.Function)
+	}
+	if onDeath, ok := module.Globals["on_death"]; ok {
+		s.onDeath = onDeath.(*py.Function)
+	}
+	if onGroundItemSpawned, ok := module.Globals["on_ground_item_spawned"]; ok {
+		s.onGroundItemSpawned = onGroundItemSpawned.(*py.Function)
+	}
+	if onGroundItemDespawned, ok := module.Globals["on_ground_item_despawned"]; ok {
+		s.onGroundItemDespawned = onGroundItemDespawned.(*py.Function)
+	}
+	if onObjectSpawned, ok := module.Globals["on_object_spawned"]; ok {
+		s.onObjectSpawned = onObjectSpawned.(*py.Function)
+	}
+	if onObjectDespawned, ok := module.Globals["on_object_despawned"]; ok {
+		s.onObjectDespawned = onObjectDespawned.(*py.Function)
+	}
+	if onWallObjectSpawned, ok := module.Globals["on_wall_object_spawned"]; ok {
+		s.onWallObjectSpawned = onWallObjectSpawned.(*py.Function)
+	}
+	if onWallObjectDespawned, ok := module.Globals["on_wall_object_despawned"]; ok {
+		s.onWallObjectDespawned = onWallObjectDespawned.(*py.Function)
+	}
+	if onKillSignal, ok := module.Globals["on_kill_signal"]; ok {
+		s.onKillSignal = onKillSignal.(*py.Function)
+	}
+	if onLoad, ok := module.Globals["on_load"]; ok {
+		s.onLoad = onLoad.(*py.Function)
+	}
+	if onSystemUpdate, ok := module.Globals["on_system_update"]; ok {
+		s.onSystemUpdate = onSystemUpdate.(*py.Function)
+	}
+	if onFatigueUpdate, ok := module.Globals["on_fatigue_update"]; ok {
+		s.onFatigueUpdate = onFatigueUpdate.(*py.Function)
+	}
+	if onSleepwordSent, ok := module.Globals["on_sleepword_sent"]; ok {
+		s.onSleepWordSent = onSleepwordSent.(*py.Function)
+	}
+	if onServerTick, ok := module.Globals["on_server_tick"]; ok {
+		s.onServerTick = onServerTick.(*py.Function)
 	}
 }
 
@@ -416,319 +720,6 @@ func (s *script) callOnServerTick() {
 	s.tick++
 }
 
-func (n *npc) Type() *py.Type {
-	return &py.Type{
-		ObjectType: py.ObjectType,
-		Name:       "npc",
-		Dict: py.StringDict{
-			"id":         py.Int(n.id),
-			"x":          py.Int(n.x),
-			"z":          py.Int(n.z),
-			"sid":        py.Int(n.serverIndex),
-			"sprite":     py.Int(n.sprite),
-			"current_hp": py.Int(n.currentHP),
-			"max_hp":     py.Int(n.maxHP),
-			"is_talking": py.MustNewMethod("is_talking", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-				return py.Bool(n.isTalking()), nil
-			}, py.METH_CLASS, ""),
-			"in_combat": py.MustNewMethod("in_combat", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-				return py.Bool(n.inCombat()), nil
-			}, py.METH_CLASS, ""),
-		},
-	}
-}
-
-func (n *player) Type() *py.Type {
-	return &py.Type{
-		ObjectType: py.ObjectType,
-		Name:       "player",
-		Dict: py.StringDict{
-			"x":            py.Int(n.x),
-			"z":            py.Int(n.z),
-			"pid":          py.Int(n.serverIndex),
-			"sprite":       py.Int(n.sprite),
-			"current_hp":   py.Int(n.currentHP),
-			"max_hp":       py.Int(n.maxHP),
-			"username":     py.String(n.username),
-			"combat_level": py.Int(n.combatLevel),
-			"in_combat": py.MustNewMethod("in_combat", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-				return py.Bool(n.inCombat()), nil
-			}, py.METH_CLASS, ""),
-			"in_talking": py.MustNewMethod("in_talking", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-				return py.Bool(n.isTalking()), nil
-			}, py.METH_CLASS, ""),
-		},
-	}
-}
-
-func (n *object) Type() *py.Type {
-	return &py.Type{
-		ObjectType: py.ObjectType,
-		Name:       "game_object",
-		Dict: py.StringDict{
-			"id":  py.Int(n.id),
-			"x":   py.Int(n.x),
-			"z":   py.Int(n.z),
-			"dir": py.Int(n.dir),
-		},
-	}
-}
-
-func (n *wallObject) Type() *py.Type {
-	return &py.Type{
-		ObjectType: py.ObjectType,
-		Name:       "wall_object",
-		Dict: py.StringDict{
-			"id":  py.Int(n.id),
-			"x":   py.Int(n.x),
-			"z":   py.Int(n.z),
-			"dir": py.Int(n.dir),
-		},
-	}
-}
-
-func (n *groundItem) Type() *py.Type {
-	return &py.Type{
-		ObjectType: py.ObjectType,
-		Name:       "ground_item",
-		Dict: py.StringDict{
-			"id": py.Int(n.id),
-			"x":  py.Int(n.x),
-			"z":  py.Int(n.z),
-		},
-	}
-}
-
-func (n *bankItem) Type() *py.Type {
-	return &py.Type{
-		ObjectType: py.ObjectType,
-		Name:       "bank_item",
-		Dict: py.StringDict{
-			"id":     py.Int(n.id),
-			"amount": py.Int(n.amount),
-		},
-	}
-}
-
-func (n *tradeItem) Type() *py.Type {
-	return &py.Type{
-		ObjectType: py.ObjectType,
-		Name:       "trade_item",
-		Dict: py.StringDict{
-			"id":     py.Int(n.id),
-			"amount": py.Int(n.amount),
-		},
-	}
-}
-
-func (n *item) Type() *py.Type {
-	return &py.Type{
-		ObjectType: py.ObjectType,
-		Name:       "inventory_item",
-		Dict: py.StringDict{
-			"id":       py.Int(n.id),
-			"amount":   py.Int(n.amount),
-			"equipped": py.Bool(n.equipped),
-			"slot":     py.Int(n.slot),
-		},
-	}
-}
-
-func (n *shopItem) Type() *py.Type {
-	return &py.Type{
-		ObjectType: py.ObjectType,
-		Name:       "shop_item",
-		Dict: py.StringDict{
-			"id":     py.Int(n.id),
-			"amount": py.Int(n.amount),
-			"price":  py.Int(n.price),
-		},
-	}
-}
-
-func (n *friend) Type() *py.Type {
-	return &py.Type{
-		ObjectType: py.ObjectType,
-		Name:       "friend",
-		Dict: py.StringDict{
-			"username": py.String(n.username),
-			"online":   py.Bool(n.online),
-		},
-	}
-}
-
-func (n *ignored) Type() *py.Type {
-	return &py.Type{
-		ObjectType: py.ObjectType,
-		Name:       "ignored",
-		Dict: py.StringDict{
-			"username": py.String(n.username),
-		},
-	}
-}
-
-func (n *quest) Type() *py.Type {
-	return &py.Type{
-		ObjectType: py.ObjectType,
-		Name:       "quest",
-		Dict: py.StringDict{
-			"id":    py.Int(n.id),
-			"name":  py.String(n.name),
-			"stage": py.Int(n.stage),
-		},
-	}
-}
-
-func (n *longPath) Type() *py.Type {
-	return &py.Type{
-		ObjectType: py.ObjectType,
-		Name:       "path",
-		Dict: py.StringDict{
-			"complete": py.MustNewMethod("complete", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-				return py.Bool(n.currentPt >= len(n.points)), nil
-			}, py.METH_CLASS, ""),
-			"reset": py.MustNewMethod("reset", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-				n.currentPt = 0
-				return py.None, nil
-			}, py.METH_CLASS, ""),
-			"next_x": py.MustNewMethod("next_x", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-				if n.currentPt >= len(n.points) {
-					return py.Int(-1), nil
-				}
-				return py.Int(n.points[n.currentPt].x), nil
-			}, py.METH_CLASS, ""),
-			"next_z": py.MustNewMethod("next_z", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-				if n.currentPt >= len(n.points) {
-					return py.Int(-1), nil
-				}
-				return py.Int(n.points[n.currentPt].y), nil
-			}, py.METH_CLASS, ""),
-			"process": py.MustNewMethod("process", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-				if n.currentPt >= len(n.points) {
-					return py.None, nil
-				}
-				pt := n.points[n.currentPt]
-				if pt.x == n.script.c.x && pt.y == n.script.c.z {
-					n.currentPt++
-				}
-				return py.None, nil
-			}, py.METH_CLASS, ""),
-			"set_nearest": py.MustNewMethod("set_nearest", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-				x, z := n.script.c.x, n.script.c.z
-				minIdx := 0
-				minDist := math.MaxInt
-				for i, p := range n.points {
-					if dist := distance(x, z, p.x, p.y); dist <= minDist {
-						minDist = dist
-						minIdx = i
-					}
-				}
-				n.currentPt = minIdx
-				return py.None, nil
-			}, py.METH_CLASS, ""),
-			"length": py.MustNewMethod("length", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-				return py.Int(n.length), nil
-			}, py.METH_CLASS, ""),
-			"walk": py.MustNewMethod("walk", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-				if n.currentPt >= len(n.points) {
-					return py.None, nil
-				}
-				pt := n.points[n.currentPt]
-				return py.Bool(n.script.c.walkTo(pt.x, pt.y, pt.x, pt.y, false, false)), nil
-			}, py.METH_CLASS, ""),
-		},
-	}
-}
-
-func (s *script) loop() int {
-	res, err := s.loopFn.M__call__(nil, nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
-	res0, ok := res.(py.Int)
-	if !ok {
-		fmt.Printf("[%s] Script [%s] did not return a sleep time\n", s.c.user, s.path)
-		os.Exit(1)
-	}
-	return int(res0)
-}
-
-func (s *script) addHooks(module *py.Module) {
-	if onProgressReport, ok := module.Globals["on_progress_report"]; ok {
-		s.onProgressReport = onProgressReport.(*py.Function)
-	}
-	if onServerMessage, ok := module.Globals["on_server_message"]; ok {
-		s.onServerMessage = onServerMessage.(*py.Function)
-	}
-	if onTradeRequest, ok := module.Globals["on_trade_request"]; ok {
-		s.onTradeRequest = onTradeRequest.(*py.Function)
-	}
-	if onChatMessage, ok := module.Globals["on_chat_message"]; ok {
-		s.onChatMessage = onChatMessage.(*py.Function)
-	}
-	if onPrivateMessage, ok := module.Globals["on_private_message"]; ok {
-		s.onPrivateMessage = onPrivateMessage.(*py.Function)
-	}
-	if onPlayerDamaged, ok := module.Globals["on_player_damaged"]; ok {
-		s.onPlayerDamaged = onPlayerDamaged.(*py.Function)
-	}
-	if onNPCDamaged, ok := module.Globals["on_npc_damaged"]; ok {
-		s.onNPCDamaged = onNPCDamaged.(*py.Function)
-	}
-	if onNPCSpawned, ok := module.Globals["on_npc_spawned"]; ok {
-		s.onNPCSpawned = onNPCSpawned.(*py.Function)
-	}
-	if onNPCDespawned, ok := module.Globals["on_npc_despawned"]; ok {
-		s.onNPCDespawned = onNPCDespawned.(*py.Function)
-	}
-	if onNPCProjectile, ok := module.Globals["on_npc_projectile"]; ok {
-		s.onNPCProjectile = onNPCProjectile.(*py.Function)
-	}
-	if onNPCMessage, ok := module.Globals["on_npc_message"]; ok {
-		s.onNPCMessage = onNPCMessage.(*py.Function)
-	}
-	if onDeath, ok := module.Globals["on_death"]; ok {
-		s.onDeath = onDeath.(*py.Function)
-	}
-	if onGroundItemSpawned, ok := module.Globals["on_ground_item_spawned"]; ok {
-		s.onGroundItemSpawned = onGroundItemSpawned.(*py.Function)
-	}
-	if onGroundItemDespawned, ok := module.Globals["on_ground_item_despawned"]; ok {
-		s.onGroundItemDespawned = onGroundItemDespawned.(*py.Function)
-	}
-	if onObjectSpawned, ok := module.Globals["on_object_spawned"]; ok {
-		s.onObjectSpawned = onObjectSpawned.(*py.Function)
-	}
-	if onObjectDespawned, ok := module.Globals["on_object_despawned"]; ok {
-		s.onObjectDespawned = onObjectDespawned.(*py.Function)
-	}
-	if onWallObjectSpawned, ok := module.Globals["on_wall_object_spawned"]; ok {
-		s.onWallObjectSpawned = onWallObjectSpawned.(*py.Function)
-	}
-	if onWallObjectDespawned, ok := module.Globals["on_wall_object_despawned"]; ok {
-		s.onWallObjectDespawned = onWallObjectDespawned.(*py.Function)
-	}
-	if onKillSignal, ok := module.Globals["on_kill_signal"]; ok {
-		s.onKillSignal = onKillSignal.(*py.Function)
-	}
-	if onLoad, ok := module.Globals["on_load"]; ok {
-		s.onLoad = onLoad.(*py.Function)
-	}
-	if onSystemUpdate, ok := module.Globals["on_system_update"]; ok {
-		s.onSystemUpdate = onSystemUpdate.(*py.Function)
-	}
-	if onFatigueUpdate, ok := module.Globals["on_fatigue_update"]; ok {
-		s.onFatigueUpdate = onFatigueUpdate.(*py.Function)
-	}
-	if onSleepwordSent, ok := module.Globals["on_sleepword_sent"]; ok {
-		s.onSleepWordSent = onSleepwordSent.(*py.Function)
-	}
-	if onServerTick, ok := module.Globals["on_server_tick"]; ok {
-		s.onServerTick = onServerTick.(*py.Function)
-	}
-}
-
 func (s *script) addPreGlobals(module *py.ModuleImpl) {
 	module.Globals["settings"] = &py.Type{
 		ObjectType: py.ObjectType,
@@ -863,7 +854,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 			s.bankOptionMenuTimeout = time.Now().Add(time.Second * 5)
 			return py.Int(250), nil
 		}
-		if time.Now().UnixNano() <= s.bankOptionMenuTimeout.UnixNano() {
+		if time.Now().UnixNano() < s.bankOptionMenuTimeout.UnixNano() {
 			return py.Int(250), nil
 		}
 		npc := c.getNearestNPCByID(false, false, true, 0, 0, -1, bankersID...)
@@ -887,7 +878,11 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		return py.Int(min + rand.Intn(max-min+1)), nil
 	}, py.METH_STATIC, "")
 	module.Globals["set_fatigue_tricking"] = py.MustNewMethod("set_fatigue_tricking", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-		s.wakeupAt = 99
+		if args[0].(py.Bool) {
+			s.wakeupAt = 99
+		} else {
+			s.wakeupAt = 0
+		}
 		return py.None, nil
 	}, py.METH_STATIC, "")
 	module.Globals["set_wakeup_at"] = py.MustNewMethod("set_fatigue_tricking", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
@@ -1199,44 +1194,14 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		return py.Int(c.distanceTo(x, z)), nil
 	}, py.METH_STATIC, "")
 	module.Globals["in_radius_of"] = py.MustNewMethod("in_radius_of", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-		var (
-			x      = -1
-			z      = -1
-			radius = -1
-		)
-		if len(args) > 0 {
-			x = int(args[0].(py.Int))
-			if len(args) > 1 {
-				z = int(args[1].(py.Int))
-				if len(args) > 2 {
-					switch v := args[2].(type) {
-					case py.Int:
-						radius = int(v)
-					case py.Float:
-						radius = int(v)
-					}
-				}
-			}
-		}
-
-		if x0, ok := kwargs["x"]; ok {
-			x = int(x0.(py.Int))
-		}
-		if z0, ok := kwargs["z"]; ok {
-			z = int(z0.(py.Int))
-		}
-		if radius0, ok := kwargs["radius"]; ok {
-			switch v := radius0.(type) {
-			case py.Int:
-				radius = int(v)
-			case py.Float:
-				radius = int(v)
-			}
-		}
-
-		if x == -1 || z == -1 || radius == -1 {
+		if len(args) < 3 {
 			return nil, errors.New("x, z, and radius must be set in in_radius_of")
 		}
+
+		x := int(args[0].(py.Int))
+		z := int(args[1].(py.Int))
+		radius := int(args[2].(py.Int))
+
 		return py.Bool(c.inRadiusOf(x, z, radius)), nil
 	}, py.METH_STATIC, "")
 

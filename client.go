@@ -30,7 +30,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.7.5"
+	botVersion       = "1.8.0"
 )
 
 var (
@@ -429,7 +429,7 @@ func (b *bot) loadAccounts(user, pass, acctFile, scriptPath string, autologin bo
 			autologin:   autologin,
 			enabled:     true,
 			debug:       true,
-			progressDur: time.Duration(math.MaxInt),
+			progressDur: noProgressDurSet,
 		}
 		if scriptPath != "" {
 			pathDir := filepath.Dir(scriptPath)
@@ -489,11 +489,11 @@ func (acc *account) mustCreateProgressFile() *os.File {
 		os.Exit(1)
 	}
 	acc.lastProgressReport = time.Now()
+
 	return acc.progressFile
 }
 
 func (b *bot) runClientLoop(acc *account) {
-	runCount := 0
 clientLoop:
 	for {
 		c := &client{
@@ -517,6 +517,10 @@ clientLoop:
 			if err := c.loadScript(); err != nil {
 				fmt.Printf("[%s] Script load error [%s]: %s\n", c.user, c.script.path, err)
 				os.Exit(1)
+			}
+
+			if c.account.needsFirstNotif {
+				c.account.writeFirstNotif(c.script.onProgressReport == nil)
 			}
 		}
 
@@ -543,9 +547,6 @@ clientLoop:
 		c.init()
 
 		go c.readHandler()
-
-		runCount++
-		c.writeProgressHeader(runCount)
 
 		shouldBreak, waitTime := c.eventLoop(b)
 		if shouldBreak || !acc.autologin {
@@ -595,25 +596,29 @@ out:
 
 func (c *client) eventLoop(b *bot) (bool, time.Duration) {
 	var (
-		progressTimer = time.NewTimer(c.account.progressDur - time.Since(c.account.lastProgressReport))
-		scriptTimer   = time.NewTimer(100 * time.Millisecond)
-		idleTimer     = time.NewTimer(5 * time.Second)
-		localClosing  = b.closing
-		stopped       = false
+		progressTimerChan <-chan time.Time
+		progressTimer     *time.Timer
+		scriptTimerChan   <-chan time.Time
+		scriptTimer       *time.Timer
+		idleTimer         = time.NewTimer(5 * time.Second)
+		localClosing      = b.closing
 	)
 
-	if c.script == nil || !c.script.running {
-		if !scriptTimer.Stop() {
-			<-scriptTimer.C
-		}
-		stopped = true
+	if c.account.progressDur != noProgressDurSet && c.script != nil && c.script.running {
+		progressTimer = time.NewTimer(c.account.progressDur - time.Since(c.account.lastProgressReport))
+		progressTimerChan = progressTimer.C
+	}
+
+	if c.script != nil && c.script.running {
+		scriptTimer = time.NewTimer(100 * time.Millisecond)
+		scriptTimerChan = scriptTimer.C
 	}
 
 	defer func() {
-		if !progressTimer.Stop() {
+		if progressTimer != nil && !progressTimer.Stop() {
 			<-progressTimer.C
 		}
-		if !stopped && !scriptTimer.Stop() {
+		if scriptTimer != nil && !scriptTimer.Stop() {
 			<-scriptTimer.C
 		}
 		if !idleTimer.Stop() {
@@ -640,18 +645,16 @@ loop:
 		case packet := <-c.packetChan:
 			opcode := packet.readByteAsInt()
 			c.handlePacket(packet, opcode, len(packet.buf)-1)
-		case <-progressTimer.C:
-			if c.script != nil && c.script.running {
-				if !c.loading {
-					c.account.lastProgressReport = time.Now()
-					if c.script != nil && c.script.running && c.script.onProgressReport != nil && c.account.progressDur != time.Duration(math.MaxInt) {
-						c.script.callOnProgressReport()
-						c.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(c.account.progressDur).Format(time.RFC1123))
-					}
-					progressTimer.Reset(c.account.progressDur)
-				} else {
-					progressTimer.Reset(time.Second)
+		case <-progressTimerChan:
+			if !c.loading {
+				c.account.lastProgressReport = time.Now()
+				if c.script != nil && c.script.running && c.script.onProgressReport != nil {
+					c.script.callOnProgressReport()
+					c.account.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(c.account.progressDur).Format(time.RFC1123))
 				}
+				progressTimer.Reset(c.account.progressDur)
+			} else {
+				progressTimer.Reset(time.Second)
 			}
 		case <-c.scriptKillSignal:
 			c.close()
@@ -667,7 +670,7 @@ loop:
 			c.conn.Close()
 			c.close()
 			return false, time.Second * time.Duration(waitTime)
-		case <-scriptTimer.C:
+		case <-scriptTimerChan:
 			if !c.sleeping && !c.loading {
 				scriptTimer.Reset(time.Duration(c.script.loop()) * time.Millisecond)
 			} else {
@@ -697,21 +700,6 @@ loop:
 	}
 
 	return false, 0
-}
-
-func (c *client) writeProgressHeader(runCount int) {
-	if c.account.progressDur == time.Duration(math.MaxInt) {
-		if runCount == 1 {
-			c.writeProgressReportf("You have not configured progress reports")
-		}
-	} else {
-		if c.script.onProgressReport != nil {
-			tdiff := c.account.progressDur - time.Since(c.account.lastProgressReport)
-			c.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(tdiff).Format(time.RFC1123))
-		} else if runCount == 1 {
-			c.writeProgressReportf("Your script is not designed to output progress reports")
-		}
-	}
 }
 
 func (c *client) close() {
@@ -810,6 +798,18 @@ func loadDefs() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+}
+
+func (acc *account) writeFirstNotif(noProgressReport bool) {
+	if acc.progressDur == noProgressDurSet {
+		acc.writeProgressReportf("You have not configured progress reports")
+	} else if noProgressReport {
+		acc.writeProgressReportf("Your script is not designed to output progress reports")
+	} else {
+		tdiff := acc.progressDur - time.Since(acc.lastProgressReport)
+		acc.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(tdiff).Format(time.RFC1123))
+	}
+	acc.needsFirstNotif = false
 }
 
 func downloadRSAKeys() {
@@ -986,16 +986,16 @@ func writePacket(conn net.Conn, p *RSCPacket) error {
 	return nil
 }
 
-func (c *client) writeProgressReportf(s0 string, args ...interface{}) error {
-	_, err := c.account.progressFile.Write([]byte(fmt.Sprintf(s0, args...)))
+func (a *account) writeProgressReportf(s0 string, args ...interface{}) error {
+	_, err := a.progressFile.Write([]byte(fmt.Sprintf(s0, args...)))
 	if err != nil {
-		fmt.Printf("[%s] Unable to save progress report: %s\n", c.user, err)
+		fmt.Printf("[%s] Unable to save progress report: %s\n", a.username, err)
 		return err
 	}
 	if runtime.GOOS == "windows" {
-		_, err = c.account.progressFile.Write([]byte("\r\n"))
+		_, err = a.progressFile.Write([]byte("\r\n"))
 	} else {
-		_, err = c.account.progressFile.Write([]byte{'\n'})
+		_, err = a.progressFile.Write([]byte{'\n'})
 	}
 	return err
 }

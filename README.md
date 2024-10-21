@@ -69,6 +69,8 @@ On Linux, make sure your working directory is the bot directory and run:
 ./bot
 ``` 
 
+To close Plutonium, press Ctrl+C in the terminal/command prompt.
+
 If you want to run just one instance of a bot for any reason, for example to skip the tutorial you can do:
 
 ```bash

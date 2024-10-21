@@ -6,12 +6,15 @@ import (
 	"math"
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"time"
 
 	"github.com/go-python/gpython/py"
 	"github.com/pelletier/go-toml"
+)
+
+const (
+	noProgressDurSet = time.Duration(math.MaxInt)
 )
 
 var (
@@ -28,6 +31,7 @@ type account struct {
 	progressFile       *os.File
 	progressDur        time.Duration
 	lastProgressReport time.Time
+	needsFirstNotif    bool
 }
 
 type ocrSettings struct {
@@ -115,9 +119,10 @@ func loadAccount(path string) (*account, error) {
 		return nil, err
 	}
 	acct := &account{
-		username: acctFile.Get("account.user").(string),
-		password: acctFile.Get("account.pass").(string),
-		script:   &script{},
+		username:        acctFile.Get("account.user").(string),
+		password:        acctFile.Get("account.pass").(string),
+		script:          &script{},
+		needsFirstNotif: true,
 	}
 	if acctFile.Has("account.autologin") {
 		acct.autologin = acctFile.Get("account.autologin").(bool)
@@ -143,7 +148,7 @@ func loadAccount(path string) (*account, error) {
 			}
 			acct.progressDur = dur
 		} else {
-			acct.progressDur = time.Duration(math.MaxInt)
+			acct.progressDur = noProgressDurSet
 		}
 		if acctFile.Has("script.settings") {
 			scriptArgs := acctFile.Get("script.settings").(*toml.Tree).ToMap()
@@ -196,7 +201,7 @@ func loadAccount(path string) (*account, error) {
 							}
 							acct.script.settings[k] = py.NewListFromItems(objs)
 						default:
-							return nil, fmt.Errorf("unhandled type: %v", reflect.ValueOf(v))
+							return nil, fmt.Errorf("unhandled type: %v", v)
 						}
 					}
 				case string:
@@ -204,13 +209,17 @@ func loadAccount(path string) (*account, error) {
 				case float64:
 					acct.script.settings[k] = py.Float(v)
 				default:
-					return nil, fmt.Errorf("unhandled type: %v", reflect.ValueOf(v))
+					return nil, fmt.Errorf("unhandled type: %v", v)
 				}
 			}
 		}
 	}
 
-	fmt.Println("complete")
+	if acct.enabled {
+		fmt.Println("enabled")
+	} else {
+		fmt.Println("disabled")
+	}
 
 	return acct, nil
 }
