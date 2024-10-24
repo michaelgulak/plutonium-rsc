@@ -9,7 +9,7 @@ Plutonium is written in Go. Scripts for it are written in Python 3.4 via [gpytho
 You must build Plutonium. Make sure you have at least version 1.18 of [Go](https://go.dev/) installed, along with [git](https://git-scm.com/). On Linux, open a terminal, or on Windows open a command prompt. Then clone this repo with 
 
 ```bash
-git clone https://gitlab.com/open-runescape-classic/plutonium
+git clone https://gitlab.com/openrsc/plutonium
 ```
 
 Enter the directory it creates (type `cd plutonium` to get in the directory) and type `go build`. A binary named `bot` (or on Windows `bot.exe`) will now be in the directory.
@@ -101,4 +101,4 @@ If you happen to notice that the VIRT memory allocated is high, it is due to [Go
 
 ## Scripts
 
-General scripting documentation/features can be found [here](https://gitlab.com/open-runescape-classic/plutonium/-/blob/main/SCRIPTING.md), and API documentation can be found [here](https://gitlab.com/open-runescape-classic/plutonium/-/blob/main/API.md).
+General scripting documentation/features can be found [here](https://gitlab.com/openrsc/plutonium/-/blob/main/SCRIPTING.md), and API documentation can be found [here](https://gitlab.com/openrsc/plutonium/-/blob/main/API.md).
