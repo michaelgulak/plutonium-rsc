@@ -39,7 +39,7 @@ func (c *client) walkToObject(o *object) bool {
 	} else {
 		if o.dir == 0 {
 			objWidth++
-			destZ--
+			destX--
 		}
 
 		if o.dir == 2 {
