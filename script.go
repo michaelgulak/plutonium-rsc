@@ -98,7 +98,7 @@ func init() {
 	playerType.Dict["currentHP"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*player).currentHP), nil }}
 	playerType.Dict["maxHP"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*player).maxHP), nil }}
 	playerType.Dict["username"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.String(self.(*player).username), nil }}
-	playerType.Dict["combat_level"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.String(self.(*player).combatLevel), nil }}
+	playerType.Dict["combat_level"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*player).combatLevel), nil }}
 	playerType.Dict["is_talking"] = py.MustNewMethod("is_talking", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(self.(*player).isTalking()), nil
 	}, py.METH_CLASS, "")
