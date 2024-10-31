@@ -4,7 +4,7 @@
 
 # Note that if you have competition, how many runes you get will be determined by pid swaps.
 # For the time being this just logs out instead of moving for the 5 min move timer because
-# of the npc desync bug. Your progress reports might get spammed by log messages (intended).
+# of the npc desync bug.
 
 # Script block should look like this:
 # [script]
@@ -37,7 +37,6 @@ if BUYING_SOULS and settings.npc_id != 514:
 
 move_x       = -1
 move_z       = -1
-stopped      = False
 soul_timeout = 0
 
 class Door:
@@ -53,7 +52,7 @@ DOORS = [
 ]
 
 def loop():
-    global stopped, move_x, move_z, soul_timeout
+    global move_x, move_z, soul_timeout
     
     coin_count = get_inventory_count_by_id(10)
     if (BUYING_SOULS and coin_count < 6000) or coin_count < 7:
@@ -63,7 +62,7 @@ def loop():
 
     # This is removed until the npc desync bug is fixed
     #if move_x != -1:
-    #    if get_x() == move_x and get_z() == move_z:
+    #    if at(move_x, move_z):
     #        move_x, move_z = (-1, -1)
     #    else:
     #        walk_to(move_x, move_z)

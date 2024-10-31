@@ -1,9 +1,5 @@
 package main
 
-import (
-	"strings"
-)
-
 var (
 	bitMasks = []int{0, 1, 3, 7, 15, 31, 63, 127, 255, 511, 1023, 2047, 4095, 8191,
 		16383, 32767, 65535, 0x1ffff, 0x3ffff, 0x7ffff, 0xfffff, 0x1fffff, 0x3fffff,
@@ -120,15 +116,15 @@ func (p *RSCPacket) readBytes(n int) []byte {
 }
 
 func (p *RSCPacket) readString() string {
-	s := &strings.Builder{}
+	startIdx := p.i
 	for {
 		if p.buf[p.i] == 10 {
 			p.i++
 			break
 		}
-		s.WriteByte(p.buf[p.inc()])
+		p.i++
 	}
-	return s.String()
+	return string(p.buf[startIdx : p.i-1])
 }
 
 func readBits(buffer []byte, start, length int) int {
@@ -153,7 +149,7 @@ func readBits(buffer []byte, start, length int) int {
 
 func (p *RSCPacket) readHuffman() string {
 	count := p.readSmart08_16()
-	src := p.buf[p.i:len(p.buf)]
+	src := p.buf[p.i:]
 	dest := make([]byte, count)
 	decodeHuffman(src, dest, 0, 0, count)
 	return string(dest)

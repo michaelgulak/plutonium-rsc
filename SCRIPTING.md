@@ -62,7 +62,7 @@ Note the usage of the `settings` object.
 
 ## Progress reports
 
-Within the `[script]` block of the `account.toml` file you are allowed to define a `progress_report` field with a duration. This duration is waited upon to call a function named `on_progress_report` that should return a string dict. For example with a config like this:
+Within the `[script]` block of the `account.toml` file you are able to define a `progress_report` field with a duration. This duration is waited upon to call a function named `on_progress_report` that should return a string dict. For example with a config like this:
 
 ```toml
 [script]

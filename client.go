@@ -11,6 +11,7 @@ import (
 	"hash/fnv"
 	"io"
 	"math"
+	"math/big"
 	"math/rand"
 	"net"
 	"os"
@@ -30,7 +31,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.8.2"
+	botVersion       = "1.8.3"
 )
 
 var (
@@ -39,7 +40,8 @@ var (
 	objectDefs []*objectDef
 	itemDefs   []*itemDef
 	wordHashes = map[uint32]string{}
-	rsaKeys    *rsaKeyData
+	rsaExp     *big.Int
+	rsaMod     *big.Int
 )
 
 type client struct {
@@ -354,13 +356,13 @@ func main() {
 
 	if version {
 		fmt.Printf("Plutonium v%s\n", botVersion)
-		os.Exit(0)
+		return
 	}
 
 	if help {
 		fmt.Printf("Plutonium v%s command line arguments:\n\n", botVersion)
 		flag.PrintDefaults()
-		os.Exit(0)
+		return
 	}
 
 	parseConfig(configPath)
@@ -439,6 +441,11 @@ func (b *bot) loadAccounts(user, pass, acctFile, scriptPath string, autologin bo
 			}
 		}
 		b.accounts = append(b.accounts, acct)
+	}
+
+	if len(b.accounts) == 0 {
+		fmt.Println("[BOT] You need account files to run Plutonium")
+		os.Exit(1)
 	}
 }
 
@@ -795,11 +802,14 @@ func loadDefs() {
 	}
 	defer f6.Close()
 
-	err = json.NewDecoder(f6).Decode(&rsaKeys)
+	rsaKeys := &rsaKeyData{}
+	err = json.NewDecoder(f6).Decode(rsaKeys)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
 	}
+	rsaExp, _ = new(big.Int).SetString(rsaKeys.Exponent, 10)
+	rsaMod, _ = new(big.Int).SetString(rsaKeys.Modulus, 10)
 }
 
 func (acc *account) writeFirstNotif(noProgressReport bool) {
@@ -869,7 +879,7 @@ func downloadRSAKeys() {
 
 	path := filepath.Join(settings.executablePath, settings.DataSettings.Directory, settings.DataSettings.RSAKeyFile)
 
-	f, err := os.Open(path)
+	f, err := os.Create(path)
 	if err != nil {
 		fmt.Printf("Error opening rsa key file: %s\n", err)
 		return
@@ -1112,6 +1122,41 @@ func encodeCredential(s string) string {
 	return string(s1)
 }
 
+func encodePassword(s string) string {
+	s1 := make([]byte, 20)
+	for i := 0; i < 20; i++ {
+		if i >= len(s) {
+			s1[i] = ' '
+			continue
+		}
+		c := s[i]
+		if c >= 'a' && c <= 'z' {
+			s1[i] = c
+		} else if c >= 'A' && c <= 'Z' {
+			s1[i] = c
+		} else if c >= '0' && c <= '9' {
+			s1[i] = c
+		} else {
+			s1[i] = '_'
+		}
+	}
+
+	return string(s1)
+}
+
+func encodeRSA(bs []byte, doAppend bool) []byte {
+	if doAppend {
+		bs = append(bs, 10)
+	}
+
+	base := new(big.Int).SetBytes(bs)
+
+	result := new(big.Int)
+	result.Exp(base, rsaExp, rsaMod)
+
+	return result.Bytes()
+}
+
 func (c *client) login() (bool, time.Duration, error) {
 	conn, err := net.DialTimeout("tcp4", settings.ServerSettings.Address, connectTimeout*time.Second)
 	if err != nil {
@@ -1125,13 +1170,19 @@ func (c *client) login() (bool, time.Duration, error) {
 	}
 	_ = sessionPacket
 
+	pass := encodeRSA([]byte(encodePassword(c.pass)), true)
+	loginDetails := encodeRSA([]byte("plutonium"), true)
+
 	c.createPacket(0)
 	c.writeByte(0)
 	c.writeInt(settings.ClientSettings.ClientVersion)
 	c.writeBytes([]byte(encodeCredential(c.user)))
 	c.writeByte(10)
-	c.writeBytes([]byte(encodeCredential(c.pass)))
-	c.writeByte(10)
+	c.writeByte(1) // 0 = plain, 1 = rsa
+	c.writeShort(len(pass))
+	c.writeBytes(pass)
+	c.writeShort(len(loginDetails))
+	c.writeBytes(loginDetails)
 	c.writeLong(0)
 
 	c.writeShort(228)
@@ -1248,18 +1299,17 @@ func (c *client) sendPacket() error {
 }
 
 func (c *client) readPacket() (*RSCPacket, error) {
-	var length int
-	lengthPacketRead := 0
+	lenPacketRead := 0
 	lenBuf := make([]byte, 2)
-	for lengthPacketRead < 2 {
+	for lenPacketRead < 2 {
 		c.conn.SetReadDeadline(time.Now().Add(time.Second * readWriteTimeout))
-		n, err := c.conn.Read(lenBuf[lengthPacketRead:])
+		n, err := c.conn.Read(lenBuf[lenPacketRead:])
 		if err != nil {
 			return nil, err
 		}
-		lengthPacketRead += n
+		lenPacketRead += n
 	}
-	length = ((int(lenBuf[0]) << 8) | int(lenBuf[1])) - 2
+	length := ((int(lenBuf[0]) << 8) | int(lenBuf[1])) - 2
 
 	if length > maxPacketSize {
 		return nil, fmt.Errorf("packet size too large: %d", length)
@@ -1286,9 +1336,7 @@ func (c *client) readPacket() (*RSCPacket, error) {
 func (c *client) createPlayer(serverIndex, x, z, sprite int) {
 	var p *player
 	if p = c.playersServer[serverIndex]; p == nil {
-		p = &player{
-			serverIndex: serverIndex,
-		}
+		p = &player{serverIndex: serverIndex}
 		c.playersServer[serverIndex] = p
 	}
 
@@ -1324,9 +1372,7 @@ func (c *client) createPlayer(serverIndex, x, z, sprite int) {
 func (c *client) createNPC(serverIndex, id, x, z, sprite int) *npc {
 	var n *npc
 	if n = c.npcsServer[serverIndex]; n == nil {
-		n = &npc{
-			serverIndex: serverIndex,
-		}
+		n = &npc{serverIndex: serverIndex}
 		c.npcsServer[serverIndex] = n
 	}
 
