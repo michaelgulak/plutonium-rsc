@@ -82,8 +82,8 @@ func init() {
 	npcType.Dict["z"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*npc).z), nil }}
 	npcType.Dict["sid"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*npc).serverIndex), nil }}
 	npcType.Dict["sprite"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*npc).sprite), nil }}
-	npcType.Dict["currentHP"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*npc).currentHP), nil }}
-	npcType.Dict["maxHP"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*npc).maxHP), nil }}
+	npcType.Dict["current_hp"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*npc).currentHP), nil }}
+	npcType.Dict["max_hp"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*npc).maxHP), nil }}
 	npcType.Dict["is_talking"] = py.MustNewMethod("is_talking", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(self.(*npc).isTalking()), nil
 	}, py.METH_CLASS, "")
@@ -95,8 +95,8 @@ func init() {
 	playerType.Dict["z"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*player).z), nil }}
 	playerType.Dict["pid"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*player).serverIndex), nil }}
 	playerType.Dict["sprite"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*player).sprite), nil }}
-	playerType.Dict["currentHP"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*player).currentHP), nil }}
-	playerType.Dict["maxHP"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*player).maxHP), nil }}
+	playerType.Dict["current_hp"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*player).currentHP), nil }}
+	playerType.Dict["max_hp"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*player).maxHP), nil }}
 	playerType.Dict["username"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.String(self.(*player).username), nil }}
 	playerType.Dict["combat_level"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*player).combatLevel), nil }}
 	playerType.Dict["is_talking"] = py.MustNewMethod("is_talking", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {

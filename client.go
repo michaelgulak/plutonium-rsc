@@ -31,7 +31,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.8.3"
+	botVersion       = "1.8.4"
 )
 
 var (
@@ -1144,7 +1144,7 @@ func encodePassword(s string) string {
 	return string(s1)
 }
 
-func encodeRSA(bs []byte, doAppend bool) []byte {
+func encryptRSA(bs []byte, doAppend bool) []byte {
 	if doAppend {
 		bs = append(bs, 10)
 	}
@@ -1170,8 +1170,8 @@ func (c *client) login() (bool, time.Duration, error) {
 	}
 	_ = sessionPacket
 
-	pass := encodeRSA([]byte(encodePassword(c.pass)), true)
-	loginDetails := encodeRSA([]byte("plutonium"), true)
+	pass := encryptRSA([]byte(encodePassword(c.pass)), true)
+	loginDetails := encryptRSA([]byte("plutonium"), true)
 
 	c.createPacket(0)
 	c.writeByte(0)
