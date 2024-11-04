@@ -31,7 +31,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.8.4"
+	botVersion       = "1.8.5"
 )
 
 var (
@@ -1928,6 +1928,9 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 					if player != nil {
 						if c.account.debug {
 							fmt.Printf("[%s] Chat message[%d]: (%s) %s\n", c.user, updateType, player.username, message)
+						}
+						if c.script != nil && c.script.onChatMessage != nil {
+							c.script.callOnChatMessage(message, player.username)
 						}
 					}
 				} else {

@@ -147,6 +147,7 @@ func init() {
 	// path
 	longPathType.Dict["complete"] = py.MustNewMethod("complete", longPathComplete, py.METH_CLASS, "")
 	longPathType.Dict["reset"] = py.MustNewMethod("reset", longPathReset, py.METH_CLASS, "")
+	longPathType.Dict["reverse"] = py.MustNewMethod("reverse", longPathReverse, py.METH_CLASS, "")
 	longPathType.Dict["next_x"] = py.MustNewMethod("next_x", longPathNextX, py.METH_CLASS, "")
 	longPathType.Dict["next_z"] = py.MustNewMethod("next_z", longPathNextZ, py.METH_CLASS, "")
 	longPathType.Dict["process"] = py.MustNewMethod("process", longPathProcess, py.METH_CLASS, "")
@@ -331,6 +332,19 @@ func longPathReset(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Obje
 	n.currentPt = 0
 	return py.None, nil
 }
+
+func longPathReverse(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	n := self.(*longPath)
+	start := 0
+	end := len(n.points) - 1
+	for start < end {
+		n.points[start], n.points[end] = n.points[end], n.points[start]
+		start++
+		end--
+	}
+	return py.None, nil
+}
+
 func longPathNextX(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 	n := self.(*longPath)
 	if n.currentPt >= len(n.points) {
