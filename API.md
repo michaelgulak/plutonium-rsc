@@ -153,13 +153,17 @@ Returns a random integer between min and max, inclusive. Min and max must be >= 
 
 #### Path Object
 
-Contains the following methods: `complete()`, `reset()`, `process()`, `walk()`, `next_x()`, `next_z()`, `set_nearest()`, `length()`.
+Contains the following methods: `complete()`, `reset()`, `reverse()`, `process()`, `walk()`, `next_x()`, `next_z()`, `set_nearest()`, `length()`.
 
 The `process` method must be called before calling `walk`. This is to make handling obstacles with `next_x` and `next_z` cleaner. For example you may want to call `process`, check if `next_z` is beyond some gate or other obstacle, then handle the obstacle before continuing to walk.
 
 The `walk` method returns false if the next tile is unreachable.
 
 The `set_nearest` method can be called on the path to set the path index to the nearest point to the player. This is useful if you calculate a path between two points and you're somewhere in between the two points because you stopped your script before the player reached the destination.
+
+###### create_path([x1, z1, x2, z2, ...])
+
+The simplest way to use the path object is to create your own path using this method. Points in the path should be at most around 20 tiles apart. You may want to stay within 10-15 tiles apart to be safe.
 
 ###### calculate_path_to(x, z, depth, skip_local=True, max_depth=512)
 

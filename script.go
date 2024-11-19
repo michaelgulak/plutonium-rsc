@@ -908,6 +908,20 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		c.scriptStopSignal <- struct{}{}
 		return py.None, nil
 	}, py.METH_STATIC, "")
+	module.Globals["create_path"] = py.MustNewMethod("create_path", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		coords := args[0].(*py.List)
+		points := make([]*point, coords.Len()/2)
+		for i := 0; i < len(points); i++ {
+			points[i] = &point{
+				x: int(coords.Items[i*2].(py.Int)),
+				y: int(coords.Items[i*2+1].(py.Int)),
+			}
+		}
+		return &longPath{
+			points: points,
+			script: s,
+		}, nil
+	}, py.METH_STATIC, "")
 	module.Globals["calculate_path"] = py.MustNewMethod("calculate_path", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		startX, startZ := int(args[0].(py.Int)), int(args[1].(py.Int))
 		x, z := int(args[2].(py.Int)), int(args[3].(py.Int))

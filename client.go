@@ -31,7 +31,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.8.5"
+	botVersion       = "1.8.6"
 )
 
 var (
