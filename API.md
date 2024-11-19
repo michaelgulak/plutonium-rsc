@@ -161,10 +161,6 @@ The `walk` method returns false if the next tile is unreachable.
 
 The `set_nearest` method can be called on the path to set the path index to the nearest point to the player. This is useful if you calculate a path between two points and you're somewhere in between the two points because you stopped your script before the player reached the destination.
 
-###### create_path([x1, z1, x2, z2, ...])
-
-The simplest way to use the path object is to create your own path using this method. Points in the path should be at most around 20 tiles apart. You may want to stay within 10-15 tiles apart to be safe.
-
 ###### calculate_path_to(x, z, depth, skip_local=True, max_depth=512)
 
 Calculates a path from the client's current coordinates to the specified coordinates. Returns a path object or `None` if a path was not found.
@@ -224,6 +220,10 @@ Example:
 ```python
 path = calculate_path_through(points=[(447, 482), (445, 474)])
 ```
+
+###### create_path([x1, z1, x2, z2, ...])
+
+One way to use the path object is to create your own path using this method. Points in the path should be at most around 20 tiles apart. You may want to stay within 10-15 tiles apart to be safe.
 
 ## Ground items
 
