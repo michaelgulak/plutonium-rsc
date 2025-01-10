@@ -1,4 +1,4 @@
-# Catherby raw shark fisher & certer by RLN
+# Catherby raw shark fisher & certer by Space
 
 # Start with necessary equipment and sleeping bag.
 
@@ -51,13 +51,13 @@ def fish():
     global fish_timeout, move_timer
 
     if move_timer:
-        if get_x() != SPOT_X or get_z() != SPOT_Z - 2:
+        if not at(SPOT_X, SPOT_Z - 2):
             walk_to(SPOT_X, SPOT_Z - 2)
             return 600
         else:
             move_timer = False
 
-    if get_x() != SPOT_X or get_z() != SPOT_Z - 1:
+    if not at(SPOT_X, SPOT_Z):
         if in_radius_of(427, 485, 10):
             door = get_wall_object_from_coords(427, 485)
             if door != None and door.id == 2:
@@ -67,11 +67,11 @@ def fish():
         walk_path_to(SPOT_X, SPOT_Z - 1)
         return 5000
 
-    if get_fatigue() > 95:
+    if get_fatigue() > 99:
         use_sleeping_bag()
         return 1000
 
-    if fish_timeout != 0 and time.time() <= fish_timeout:
+    if fish_timeout != 0 and time.time() < fish_timeout:
         return 250
     
     item_to_drop = get_inventory_item_except(KEPT_ITEMS)

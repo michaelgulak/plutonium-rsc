@@ -1,4 +1,4 @@
-# Get sleeping bag script by RLN
+# Get sleeping bag script by Space
 
 # Pickpockets men in Lumbridge until it gets enough gold for a sleeping bag
 # and then buys one.

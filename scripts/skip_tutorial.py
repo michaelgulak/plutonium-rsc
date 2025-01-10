@@ -1,4 +1,4 @@
-# Skip tutorial script by RLN
+# Skip tutorial script by Space
 
 # Chooses a random look for your character then skips the tutorial.
 

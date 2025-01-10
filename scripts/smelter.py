@@ -1,4 +1,4 @@
-# Al Kharid smelter by RLN
+# Al Kharid smelter by Space
 
 # Start with a sleeping bag in Al Kharid bank.
 
@@ -127,7 +127,7 @@ def smelt():
         walk_to(84, 679)
         return 1000
     
-    if get_fatigue() >= 98:
+    if get_fatigue() > 99:
         use_sleeping_bag()
         return 2000
 

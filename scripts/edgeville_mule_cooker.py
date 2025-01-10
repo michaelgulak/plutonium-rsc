@@ -1,7 +1,4 @@
-# Edgeville mule cooker by RLN
-#
-# Make sure you're using at least plutonium v1.5.1. You can check your 
-# version by running ./bot -v or .\bot.exe -v
+# Edgeville mule cooker by Space
 #
 # Start mule in Edgeville bank or upstairs in the Edgeville general store.
 #
@@ -53,7 +50,7 @@ trade_timeout    = 0
 def cook():
     global cook_timeout
     
-    if get_fatigue() > 99 and not is_sleeping():
+    if get_fatigue() > 99:
         bed = get_object_from_coords(226, 1386)
         if bed != None:
             at_object(bed)
@@ -155,7 +152,7 @@ def trade_from_mule():
             at_object(ladder)
             return 600
 
-    if get_x() != 226 or get_z() != 1384:
+    if not at(226, 1384):
         walk_to(226, 1384)
         return 600
     
@@ -287,6 +284,4 @@ def on_progress_report():
             "Cooking xp":    cooking_xp,
             "Shark cooked":  shark_cooked,
             "Shark/hr":      per_hour(shark_cooked, start_time)}
-
-def on_sleepword_sent():
-    cook()
+            

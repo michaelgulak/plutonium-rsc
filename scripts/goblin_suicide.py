@@ -1,21 +1,22 @@
-# Goblin Suicide by RLN
+# Goblin Suicide by Space
 
 # Kills goblins in Lumbridge and walks back if it dies.
 # This script only trains defence and stops at 40 defence.
 
+# This script is very slow. I don't recommend you use it.
+
 GOBLIN_POLYGON = [124, 641, 124, 622, 105, 622, 105, 629, 92, 629,
                   92, 669, 105, 669, 105, 654]
 
-def get_nearest_npc_in_polygon(ids, polygon, in_combat):
+def get_nearest_goblin():
     min_dist = 999
     min_npc = None
     for i in range(get_npc_count()):
         npc = get_npc_at_index(i)
-        if npc != None and npc.id in ids:
+        if npc != None and npc.id == 62:
             dist = distance_to(npc.x, npc.z)
             if dist < min_dist:
-                if (not in_combat and npc.in_combat()) or \
-                    not point_in_polygon(npc.x, npc.z, polygon):
+                if npc.in_combat() or not point_in_polygon(npc.x, npc.z, GOBLIN_POLYGON):
                     continue
                 min_dist = dist
                 min_npc = npc
@@ -24,6 +25,7 @@ def get_nearest_npc_in_polygon(ids, polygon, in_combat):
 
 def loop():
     if get_max_stat(1) >= 40:
+        log("40 defence reached")
         stop_account()
         return 5000
 
@@ -48,7 +50,7 @@ def loop():
         walk_path_to(99, 653)
         return 1200
     
-    goblin = get_nearest_npc_in_polygon([62], GOBLIN_POLYGON, False)
+    goblin = get_nearest_goblin()
     if goblin != None:
         attack_npc(goblin)
         return 650

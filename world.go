@@ -225,6 +225,7 @@ func (w *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, 
 }
 
 func (w *world) loadWorld() {
+	fmt.Printf("[BOT] Loading landscape...")
 	archiveFile := filepath.Join(settings.executablePath, settings.DataSettings.Directory, settings.DataSettings.Landscape)
 	tileArchive, err := zip.OpenReader(archiveFile)
 	if err != nil {
@@ -278,6 +279,7 @@ func (w *world) loadWorld() {
 	for _, v := range sceneries.Sceneries {
 		w.setUnwalkableTiles(v)
 	}
+	fmt.Println("complete")
 }
 
 func (w *world) setUnwalkableTiles(o *objectLoc) {
@@ -621,9 +623,6 @@ func (c *client) findPath(startX int, startZ int, xLow int, xHigh int, zLow int,
 		source := prevSource
 		for x != startX || z != startZ {
 			if prevSource != source {
-				if openListRead >= openListSize {
-					return -1
-				}
 				prevSource = source
 				c.pathX[openListRead] = int16(x)
 				c.pathZ[openListRead] = int16(z)

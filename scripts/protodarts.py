@@ -1,6 +1,6 @@
-# Prototype dart fletcher by RLN
+# Prototype dart fletcher by Space
 #
-# Have feathers, sleeping bag, technicla plans, and a hammer in inventory
+# Have feathers, sleeping bag, technical plans, and a hammer in your inventory
 # and start beside the desert anvil. Set the fatigue_trick setting to true
 # at high fletching levels to speed up xp gains. If your inventory is full
 # it will drop your last item (gnomeball support).
@@ -80,7 +80,7 @@ def loop():
         return SLEEP_TIME
     
     if move_x != -1:
-        if get_x() == move_x and get_z() == move_z:
+        if at(move_x, move_z):
             move_x, move_z = (-1, -1)
             bag_timeout = 0
         else:
@@ -127,9 +127,9 @@ def on_server_message(msg):
     global move_x, move_z, bag_timeout, anvil_timeout, answer_timeout, attach_timeout
     
     if msg.startswith("@cya@You have been standing"):
-        if get_x() == 171 and get_z() == 792:
+        if at(171, 792):
             move_x, move_z = (171, 791)
-        elif get_x() == 171 and get_z() == 791:
+        elif at(171, 791):
             move_x, move_z = (171, 792)
     elif msg.startswith("You wake up") or msg.startswith("You are unexpectedly awoken"):
         bag_timeout = 0
@@ -165,10 +165,4 @@ def on_progress_report():
             "Fletching xp":    fletching_xp,
             "Feathers left":   feathers_count,
             "Feathers/hr":     per_hour(feathers_diff, t_diff)}
-
-def on_sleepword_sent():
-    global anvil_timeout
-    
-    at_object_no_walk(ANVIL_X, ANVIL_Z)
-    anvil_timeout = time.time() + 20
     

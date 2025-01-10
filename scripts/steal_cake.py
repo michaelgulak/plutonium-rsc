@@ -1,4 +1,4 @@
-# Ardougne cake thieving script by RLN
+# Ardougne cake thieving script by Space
 
 # Start with sleeping bag near stall in ardy.
 # Optionally bring armour.
@@ -44,7 +44,7 @@ def thieve():
         walk_to(get_x(), get_z())
         return 650
 
-    if get_fatigue() > 95:
+    if get_fatigue() > 99:
         use_sleeping_bag()
         return 2000
     

@@ -1,4 +1,4 @@
-# Shafts by RLN
+# Shafts by Space
 
 # This script cuts trees and fletches the logs into arrow shafts.
 # Start with axe, knife, and sleeping bag in inventory.

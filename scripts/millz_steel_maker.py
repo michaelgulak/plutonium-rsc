@@ -10,7 +10,7 @@
 # [Optional]  trade_to_cannonball_smelter       is the name of a partner that's running millz_falador_cannonball.py. 
 #                                               If the value is defined, the script will smelt the bars, and trade them to the smelter character.
 
-# Credit to RLN as lots of the mining code has come from his varrock east miner/guild miner scripts.
+# Credit to Space as lots of the mining code has come from his varrock east miner/guild miner scripts.
 
 # [script.settings]
 # bars_per_loop = 1000
@@ -42,7 +42,7 @@ destination = [0, 0]
 
 smelt_timeout = 0
 
-# From RLN's Varrock East Miner:
+# From Space's Varrock East Miner:
 previous_rock         = None
 current_rock          = None
 click_timeout         = 0

@@ -1,4 +1,4 @@
-# Lumbridge woodcutter by RLN
+# Lumbridge woodcutter by Space
 
 # This script cuts trees between lumbridge and draynor.
 # Start with axe and sleeping bag.
@@ -12,7 +12,7 @@ click_timeout = 0
 def loop():
     global click_timeout
 
-    if get_fatigue() > 95:
+    if get_fatigue() > 99:
         use_sleeping_bag()
         return 2000
 

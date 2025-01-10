@@ -1,4 +1,4 @@
-# Mining guild script by RLN that mines mith ore and coal.
+# Mining guild script by Space that mines mith ore and coal.
 
 # Make sure you start it with a pickaxe and sleeping bag.
 
@@ -62,7 +62,7 @@ def bank():
     return 1000
  
 def mine():
-    if get_fatigue() > 95:
+    if get_fatigue() > 99:
         use_sleeping_bag()
         return 3000
 
@@ -103,9 +103,7 @@ def mine():
     return 1000
  
 def loop():
-    if is_bank_open() \
-        or get_total_inventory_count() == 30:
-        
+    if is_bank_open() or get_total_inventory_count() == 30:
         return bank()
         
     return mine()

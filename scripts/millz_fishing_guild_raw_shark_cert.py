@@ -1,4 +1,4 @@
-# Fishing guild raw shark fisher & certer by Millz (Adapted from RLN's Catherby)
+# Fishing guild raw shark fisher & certer by Millz (Adapted from Space's Catherby)
 
 # Will walk to, and enter the fishing guild. Doesn't handle gates, but moves from catherby etc.
 

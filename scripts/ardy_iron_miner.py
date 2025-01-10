@@ -1,4 +1,4 @@
-# Ardougne iron miner by RLN
+# Ardougne iron miner by Space
 #
 # Must have sleeping bag and pickaxe in inventory.
 #
@@ -86,14 +86,14 @@ def mine():
     global click_timeout, current_rock, move_x, move_z
 
     if move_x != -1:
-        if get_x() == move_x and get_z() == move_z:
+        if at(move_x, move_z):
             move_x = -1
             move_z = -1
         else:
             walk_to(move_x, move_z)
             return 700
 
-    if get_x() != coord.x or get_z() != coord.z:
+    if not at(coord.x, coord.z):
         if in_radius_of(550, 612, 15):
             door = get_object_from_coords(550, 612)
             if door != None and door.id == 64:
@@ -103,11 +103,11 @@ def mine():
         walk_path_to(coord.x, coord.z)
         return 3000
     
-    if get_fatigue() > 95:
+    if get_fatigue() > 99:
         use_sleeping_bag()
         return 3000
 
-    if click_timeout != 0 and time.time() <= click_timeout:
+    if click_timeout != 0 and time.time() < click_timeout:
         return 250
 
     if hasattr(settings, "pickup") and settings.pickup:
@@ -121,8 +121,7 @@ def mine():
             return 1000
     
     for rock in rocks:
-        if previous_rock == rock \
-            and time.time() <= previous_rock_timeout:
+        if previous_rock == rock and time.time() < previous_rock_timeout:
             continue
         obj = get_object_from_coords(rock.x, rock.z)
         if obj == None or obj.id != rock.id:
@@ -166,7 +165,6 @@ def loop():
     if is_bank_open() \
         or (get_total_inventory_count() == 30 \
             and not settings.powermine):
-
         return bank()
     
     return mine()

@@ -1,4 +1,4 @@
-# Flax picker & banker by RLN
+# Flax picker & banker by Space
 
 # Start under the gnome stronghold bank with an empty inv.
 

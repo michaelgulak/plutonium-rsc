@@ -1,4 +1,4 @@
-# Catherby/Ardougne walker by RLN
+# Catherby/Ardougne walker by Space
 #
 # You can get to Catherby/Ardougne as a level 3 with this script.
 # This script can be run with or without script settings. If you want 

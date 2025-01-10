@@ -1,4 +1,4 @@
-# Falador Thiever by RLN
+# Falador Thiever by Space
 
 # Pickpockets guards in Falador at different spots. Only uses cake.
 # Must have cake in bank and sleeping bag in inventory (armour optional).
@@ -81,7 +81,7 @@ def thieve():
     if get_current_stat(3) <= 9:
         return eat_cake()
 
-    if get_fatigue() > 95:
+    if get_fatigue() > 99:
         use_sleeping_bag()
         return 2000
     
@@ -95,7 +95,12 @@ def thieve():
         walk_path_to(spot.walkx, spot.walkz)
         return 5000
     
-    guard = get_nearest_npc_by_id_in_rect(65, in_combat=False, x=spot.minx, z=spot.minz, width=spot.width, height=spot.height)
+    guard = get_nearest_npc_by_id_in_rect(65, \
+                                          in_combat=False, \
+                                          x=spot.minx, \
+                                          z=spot.minz, \
+                                          width=spot.width, \
+                                          height=spot.height)
     if guard != None:
         thieve_npc(guard)
         return 1000
@@ -119,15 +124,13 @@ def loop():
         set_combat_style(3)
         return 2000
     
-    if is_bank_open() \
-        or get_inventory_count_by_id(ids=CAKE_IDS) == 0:
-
+    if is_bank_open() or get_inventory_count_by_id(ids=CAKE_IDS) == 0:
         return bank()
     
     return thieve()
 
 def on_progress_report():
-    return {"Thieving Level": get_max_stat(17), \
+    return {"Thieving Level": get_max_stat(17),
             "Coins":          get_inventory_count_by_id(10)}
 
 def on_kill_signal():

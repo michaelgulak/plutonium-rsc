@@ -835,7 +835,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["point_in_polygon"] = py.MustNewMethod("point_in_polygon", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x := args[0].(py.Int)
 		z := args[1].(py.Int)
-		poly := []py.Object(args[2].(*py.List).Items)
+		poly := args[2].(*py.List).Items
 
 		if len(poly) < 6 {
 			return py.None, errors.New("point_in_polygon supplied poly should have at least 6 elements")
@@ -845,8 +845,8 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		length := len(poly) / 2
 
 		for i, j := 0, length-1; i < length; i, j = i+1, i {
-			xi, zi := poly[i*2+0].(py.Int), poly[i*2+1].(py.Int)
-			xj, zj := poly[j*2+0].(py.Int), poly[j*2+1].(py.Int)
+			xi, zi := poly[i*2].(py.Int), poly[i*2+1].(py.Int)
+			xj, zj := poly[j*2].(py.Int), poly[j*2+1].(py.Int)
 
 			intersect := ((zi > z) != (zj > z)) && (x < (xj-xi)*(z-zi)/(zj-zi)+xi)
 
@@ -899,7 +899,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 		return py.None, nil
 	}, py.METH_STATIC, "")
-	module.Globals["set_wakeup_at"] = py.MustNewMethod("set_fatigue_tricking", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["set_wakeup_at"] = py.MustNewMethod("set_wakeup_at", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		s.wakeupAt = int(args[0].(py.Int))
 		return py.None, nil
 	}, py.METH_STATIC, "")
@@ -1175,7 +1175,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["get_quest_points"] = py.MustNewMethod("get_quest_points", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.questPoints), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_equipment_stats"] = py.MustNewMethod("get_equipment_stats", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_equipment_stat"] = py.MustNewMethod("get_equipment_stat", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.equipmentStats[int(args[0].(py.Int))]), nil
 	}, py.METH_STATIC, "")
 	module.Globals["set_autologin"] = py.MustNewMethod("set_autologin", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {

@@ -1,4 +1,4 @@
-# Paladin thieving script by RLN
+# Paladin thieving script by Space
 
 # Start near or inside paladin room.
 

@@ -127,10 +127,10 @@ Proper use is like this:
 Can only be used in event handlers.
 
 ###### get_combat_style()
-###### set_combat_style(idx)
-###### get_max_stat(idx)
-###### get_current_stat(idx)
-###### get_experience(idx)
+###### set_combat_style(id)
+###### get_max_stat(id)
+###### get_current_stat(id)
+###### get_experience(id)
 ###### get_hp_percent()
 ###### get_item_name(id)
 ###### skip_tutorial()
@@ -145,6 +145,8 @@ Can only be used in event handlers.
 ###### set_autologin(True)
 ###### is_appearance_screen()
 ###### send_appearance_update(head_gender, head_type, body_type, hair_colour, top_colour, pants_colour, skin_colour)
+###### get_equipment_stat(id)
+###### set_debug(True)
 ###### random(min, max)
 
 Returns a random integer between min and max, inclusive. Min and max must be >= 0.
@@ -303,9 +305,9 @@ Contains the following methods: `in_combat()`, `is_talking()`.
 ###### is_option_menu()
 ###### get_option_menu()
 ###### get_option_menu_count()
-###### get_option_menu_option(idx)
+###### get_option_menu_option(index)
 ###### get_option_menu_index(str)
-###### answer(idx)
+###### answer(index)
 
 ## Players
 
@@ -435,9 +437,9 @@ Contains the following fields: `id`, `amount`.
 
 ## Prayers
 
-###### enable_prayer(idx)
-###### disable_prayer(idx)
-###### is_prayer_enabled(idx)
+###### enable_prayer(id)
+###### disable_prayer(id)
+###### is_prayer_enabled(id)
 
 ## Shop
 

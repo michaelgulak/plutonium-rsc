@@ -1,12 +1,16 @@
 # Plutonium
 
-Plutonium is a shell bot written for the [Open RSC](https://rsc.vet/) Uranium server that runs on Linux, Windows, MacOS, etc. Being a shell bot means that it runs without any graphics whatsoever, and thus has a much smaller memory and cpu footprint than other bots. Plutonium also makes it easy to run several accounts at once. One thing to consider is that Open RSC servers have a max player per ip limit that the admins change sometimes. The most bots per ip you can run on Uranium is around 10 at any given time. There is also a registration limit of around 3 accounts per day so you may need to spend a few days creating accounts in order to reach the maximum of 10.
+Plutonium is a lightweight shell bot written for the [OpenRSC](https://rsc.vet/) Uranium server that runs on at least Linux, Windows, and MacOS. Being a shell bot means that it runs without any graphics, and thus has a much smaller memory and cpu footprint than other bots. A Plutonium process running 10 accounts uses around 25-30mb memory. Plutonium also makes it easy to run several accounts at once with a single command, and doesn't have the inherent memory leaks of traditional RSC clients - meaning it can run for years on a stable box. 
 
-Plutonium is written in Go. Scripts for it are written in Python 3.4 via [gpython](https://github.com/go-python/gpython). Some code is taken from the Open RSC server (in particular, the pathfinding and chat message code).
+Scripts for it are written in Python 3.4 via [gpython](https://github.com/go-python/gpython).
+
+Consider that that OpenRSC servers have a max player per ip limit. At the time of this writing, the limit is 10 on Uranium. There is also a registration limit per day so you need to spend multiple days creating accounts in order to reach the maximum of 10.
+
+Some code is ported from Java to Go from the Open RSC server (in particular, the pathfinding and chat message code).
 
 ## Building Plutonium
 
-You must build Plutonium. Make sure you have at least version 1.18 of [Go](https://go.dev/) installed, along with [git](https://git-scm.com/). On Linux, open a terminal, or on Windows open a command prompt. Then clone this repo with 
+You must build Plutonium as there aren't any official builds of it. Make sure you have at least version 1.18 of [Go](https://go.dev/) installed, along with [git](https://git-scm.com/). On Linux, open a terminal, or on Windows open a command prompt. Then clone this repo with 
 
 ```bash
 git clone https://gitlab.com/openrsc/plutonium
@@ -14,25 +18,11 @@ git clone https://gitlab.com/openrsc/plutonium
 
 Enter the directory it creates (type `cd plutonium` to get in the directory) and type `go build`. A binary named `bot` (or on Windows `bot.exe`) will now be in the directory.
 
-
-## Updating Plutonium
-
-To update Plutonium run these commands in the terminal or command prompt while your working directory is the `plutonium` directory (it will save your changes and replay them over the updated bot):
-
-```bash
-git stash
-git pull
-git stash pop
-go build
-```
-
-This will only work if you cloned the repo first with git.
-
 ## Account Configuration
 
 To run Plutonium, you need account files. Each account file specifies the username and password of an account, and the script to run for that account. An account config is created by creating a file in the `accounts` directory. These files must be in [toml](https://toml.io/en/) format with the exception that it cannot contain key/value pairs, multidimensional arrays, or dates.
 
-To get started quickly, rename the example file in the `accounts` directory to be `myaccount.toml`. Then input your username and password, and make sure to change the script and script settings. Windows users should note that [file name extensions](https://support.microsoft.com/en-us/windows/common-file-name-extensions-in-windows-da4a4430-8e76-89c5-59f7-1cdbbc75cb01) must be enabled to rename the file properly.
+To get started quickly, rename the example file in the `accounts` directory to be `myaccount.toml`. Then input your username and password, and make sure to change the script and script settings. Windows users should note that [file name extensions](https://answers.microsoft.com/en-us/windows/forum/all/how-can-i-get-the-extension-to-display-along-with/ec523f53-357b-41eb-a6c7-9b6b95a91235) must be enabled to rename the file properly.
 
 Example file:
 
@@ -91,11 +81,22 @@ After you create your account and run `skip_tutorial.py` on it, you may want to 
 
 If you want progress report files to be overwritten every time they're generated you can set `overwrite_progress_reports` to `true` in `settings.toml`.
 
+## Updating Plutonium
+
+To update Plutonium run these commands in the terminal or command prompt while your working directory is the `plutonium` directory (it will save your changes and replay them over the updated bot):
+
+```bash
+git stash
+git pull
+git stash pop
+go build
+```
+
+This will only work if you cloned the repo first with git.
+
 ## Memory
 
-A Plutonium process running 10 accounts uses around 25mb memory.
-
-If you see your memory going up, you're probably calling `calculate_path_to` without a `depth` or `max_depth`.
+Known issue: If you see your memory going up, your script is probably calling `calculate_path_to` without a `depth` or `max_depth`.
 
 If you happen to notice that the VIRT memory allocated is high, it is due to [Go reserving a lot of virtual memory for allocations](https://go.dev/doc/faq#Why_does_my_Go_process_use_so_much_virtual_memory). Check the RES memory of htop to see the real memory footprint.
 

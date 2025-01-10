@@ -1,4 +1,4 @@
-# Catherby fish/cook by RLN
+# Catherby fish/cook by Space
 # Modified by Millz for optional bank raw fish. cook_and_bank, and raw_bank should be set exclusively.
 #   Setting both cook_and_bank and raw_bank to false will powerfish (drop items on ground).
 #
@@ -71,13 +71,13 @@ def fish():
         init = False
 
     if move_timer:
-        if get_x() != fishing_spot.coord[0] or get_z() != fishing_spot.coord[1] - 2:
+        if not at(fishing_spot.coord[0], fishing_spot.coord[1] - 2):
             walk_to(fishing_spot.coord[0], fishing_spot.coord[1] - 2)
             return 600
         else:
             move_timer = False
 
-    if get_x() != fishing_spot.coord[0] or get_z() != fishing_spot.coord[1] - 1:
+    if not at(fishing_spot.coord[0], fishing_spot.coord[1] - 1):
         if in_radius_of(439, 497, 15):
             door = get_object_from_coords(439, 497)
             if door != None and door.id == 64:

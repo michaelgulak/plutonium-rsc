@@ -1,5 +1,8 @@
 package main
 
+// This file was ported and slightly modified from the OpenRSC server
+// The code was originally written by Aenge
+
 import (
 	"math"
 )

@@ -1,4 +1,4 @@
-# Get pick by RLN
+# Get pick by Space
 
 # Walks to Barbarian Village to grab a bronze pickaxe.
 

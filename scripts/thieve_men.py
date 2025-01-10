@@ -1,4 +1,4 @@
-# Man thieving script by RLN
+# Man thieving script by Space
 
 # Thieves men until 5 thieving then stops.
 # The Ardougne and various men have different ids than the ones in
@@ -18,7 +18,7 @@ def loop():
         walk_to(get_x(), get_z())
         return 650
     
-    if get_fatigue() > 95:
+    if get_fatigue() > 99:
         use_sleeping_bag()
         return 2000
     

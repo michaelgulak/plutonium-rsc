@@ -1,4 +1,4 @@
-# Barbarian Village coal miner by RLN
+# Barbarian Village coal miner by Space
 #
 # Must have sleeping bag and pickaxe in inventory.
 #

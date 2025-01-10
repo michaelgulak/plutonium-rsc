@@ -1,4 +1,4 @@
-# Seers Yews by RLN
+# Seers woodcutter by Space
 #
 # Start at seers with an axe and a sleeping bag in your inventory.
 # Script settings should look like this:
@@ -25,6 +25,8 @@ move_z = -1
 if settings.tree_type != "yew" and settings.tree_type != "magic":
     raise RuntimeError("tree_type must be either yew or magic")
 
+CHOPPING_YEWS = settings.tree_type == "yew"
+
 def chop_yews():
     global click_timeout, move_x, move_z
 
@@ -39,19 +41,18 @@ def chop_yews():
         return 3000
     
     if move_x != -1:
-        if get_x() == move_x and get_z() == move_z:
+        if at(move_x, move_z):
             move_x = -1
             move_z = -1
         else:
             walk_to(move_x, move_z)
             return 700
 
-    if get_fatigue() > 95:
+    if get_fatigue() > 99:
         use_sleeping_bag()
         return 5000
 
-    if click_timeout != 0 \
-        and time.time() <= click_timeout:
+    if click_timeout != 0 and time.time() < click_timeout:
         return 250
     
     obj = get_nearest_object_by_id(309)
@@ -76,7 +77,7 @@ def chop_magics():
         return 3000
     
     if move_x != -1:
-        if get_x() == move_x and get_z() == move_z:
+        if at(move_x, move_z):
             move_x = -1
             move_z = -1
         else:
@@ -87,8 +88,7 @@ def chop_magics():
         use_sleeping_bag()
         return 5000
 
-    if click_timeout != 0 \
-        and time.time() <= click_timeout:
+    if click_timeout != 0 and time.time() < click_timeout:
         return 250
     
     obj = get_nearest_object_by_id(310)
@@ -137,17 +137,13 @@ def bank():
         return 3000
 
 def loop():
-    if is_bank_open() \
-        or get_total_inventory_count() == 30:
-
+    if is_bank_open() or get_total_inventory_count() == 30:
         return bank()
     
-    if settings.tree_type == "yew":
+    if CHOPPING_YEWS:
         return chop_yews()
-    elif settings.tree_type == "magic":
+    else:
         return chop_magics()
-    
-    return 1000
 
 def get_adjacent_coord():
     if is_reachable(get_x()+1, get_z()):

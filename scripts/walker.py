@@ -1,4 +1,4 @@
-# Generic walker that handles members gates by RLN
+# Generic walker that handles members gates by Space
 
 # Script block should look like this:
 

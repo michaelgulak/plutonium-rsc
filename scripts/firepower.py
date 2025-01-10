@@ -1,4 +1,4 @@
-# Firepower by RLN
+# Firepower by Space
 
 # This script cuts trees and lights the logs with a tinderbox.
 # Make sure you have an axe, sleeping bag, and tinderbox.

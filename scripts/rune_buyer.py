@@ -1,4 +1,4 @@
-# Rune buyer by RLN
+# Rune buyer by Space
 
 # Start with coins near the npc you choose.
 

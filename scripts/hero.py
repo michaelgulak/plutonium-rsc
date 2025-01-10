@@ -1,4 +1,4 @@
-# Hero thiever by RLN
+# Hero thiever by Space
 
 # Make sure you have at least 28 hp or this script won't work.
 # Start with armour equipped and optionally sleeping bag.
@@ -152,11 +152,11 @@ def thieve():
             at_object(door)
             return 1300
 
-    if thieve_timeout != 0 and time.time() <= thieve_timeout:
+    if thieve_timeout != 0 and time.time() < thieve_timeout:
         return 250
 
     if move_x != -1 and move_x != None:
-        if get_x() == move_x and get_z() == move_z:
+        if at(move_x, move_z):
             move_x, move_z = (-1, -1)
         else:
             walk_to(move_x, move_z)

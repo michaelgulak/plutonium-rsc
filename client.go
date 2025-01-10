@@ -31,7 +31,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.8.6"
+	botVersion       = "1.8.7"
 )
 
 var (
@@ -386,25 +386,13 @@ func main() {
 	}()
 
 	b.checkOCR()
-	b.loadDefs()
-	b.loadWorld()
+	loadDefs()
+	b.world.loadWorld()
 	b.loadAccounts(user, pass, acctFile, scriptPath, autologin)
 	b.loginWaiter()
 	b.runAccounts()
 
 	fmt.Println("[BOT] All accounts are finished, exiting")
-}
-
-func (b *bot) loadDefs() {
-	fmt.Printf("[BOT] Loading definitions...")
-	loadDefs()
-	fmt.Println("complete")
-}
-
-func (b *bot) loadWorld() {
-	fmt.Printf("[BOT] Loading landscape...")
-	b.world.loadWorld()
-	fmt.Println("complete")
 }
 
 func (b *bot) loadAccounts(user, pass, acctFile, scriptPath string, autologin bool) {
@@ -537,14 +525,14 @@ clientLoop:
 			break clientLoop
 		}
 
-		success, waitTime, err := c.login()
+		success, loginWait, err := c.login()
 		if err != nil {
 			fmt.Printf("[%s] Login error: %s\n", c.user, err)
 		}
 
 		if !success {
 			select {
-			case <-time.After(waitTime):
+			case <-time.After(loginWait):
 				continue clientLoop
 			case <-b.closing:
 				break clientLoop
@@ -555,18 +543,17 @@ clientLoop:
 
 		go c.readHandler()
 
-		shouldBreak, waitTime := c.eventLoop(b)
+		shouldBreak, reloginWait := b.eventLoop(c)
 		if shouldBreak || !acc.autologin {
 			break
 		}
 
-		sleepTime := 5 * time.Second
-		if waitTime != 0 {
-			sleepTime = waitTime
+		if reloginWait == 0 {
+			reloginWait = 5 * time.Second
 		}
 
 		select {
-		case <-time.After(sleepTime):
+		case <-time.After(reloginWait):
 			continue clientLoop
 		case <-b.closing:
 			break clientLoop
@@ -601,7 +588,7 @@ out:
 	c.conn.Close()
 }
 
-func (c *client) eventLoop(b *bot) (bool, time.Duration) {
+func (b *bot) eventLoop(c *client) (bool, time.Duration) {
 	var (
 		progressTimerChan <-chan time.Time
 		progressTimer     *time.Timer
@@ -723,6 +710,7 @@ func (c *client) close() {
 }
 
 func loadDefs() {
+	fmt.Printf("[BOT] Loading definitions...")
 	dataDir := filepath.Join(settings.executablePath, settings.DataSettings.Directory)
 	// tile defs
 	f1, err := os.Open(filepath.Join(dataDir, settings.DataSettings.TileDefs))
@@ -808,8 +796,17 @@ func loadDefs() {
 		fmt.Println(err)
 		os.Exit(1)
 	}
-	rsaExp, _ = new(big.Int).SetString(rsaKeys.Exponent, 10)
-	rsaMod, _ = new(big.Int).SetString(rsaKeys.Modulus, 10)
+	var ok bool
+	if rsaExp, ok = new(big.Int).SetString(rsaKeys.Exponent, 10); !ok {
+		fmt.Println("Error decoding RSA exponent")
+		os.Exit(1)
+	}
+	if rsaMod, ok = new(big.Int).SetString(rsaKeys.Modulus, 10); !ok {
+		fmt.Println("Error decoding RSA modulus")
+		os.Exit(1)
+	}
+
+	fmt.Println("complete")
 }
 
 func (acc *account) writeFirstNotif(noProgressReport bool) {
@@ -833,6 +830,13 @@ func downloadRSAKeys() {
 
 	defer conn.Close()
 
+	sessionPacket, err := readBytesRaw(conn, 4)
+	if err != nil {
+		fmt.Printf("Error reading session packet: %s\n", err)
+		return
+	}
+	_ = sessionPacket
+
 	p := &RSCPacket{buf: make([]byte, 3)}
 
 	p.createPacket(19)
@@ -855,11 +859,12 @@ func downloadRSAKeys() {
 		return
 	}
 
-	p.buf, err = readBytesRaw(conn, length)
+	bs, err := readBytesRaw(conn, length)
 	if err != nil {
 		fmt.Printf("Error reading config: %s\n", err)
 		return
 	}
+	p = &RSCPacket{buf: bs}
 
 	p.readString()
 	p.readString()
@@ -881,16 +886,18 @@ func downloadRSAKeys() {
 
 	f, err := os.Create(path)
 	if err != nil {
-		fmt.Printf("Error opening rsa key file: %s\n", err)
+		fmt.Printf("Error opening RSA key file: %s\n", err)
 		return
 	}
 	defer f.Close()
 
 	err = json.NewEncoder(f).Encode(keys)
 	if err != nil {
-		fmt.Printf("Error writing rsa key file: %s\n", err)
+		fmt.Printf("Error writing RSA key file: %s\n", err)
 		return
 	}
+
+	fmt.Printf("Saved RSA keys to %s\n", path)
 }
 
 func doAccountCreations(fileStr string) {
@@ -936,7 +943,7 @@ func doAccountCreations(fileStr string) {
 		p.createPacket(2)
 		p.writeBytes([]byte(username))
 		p.writeByte(10)
-		p.writeBytes([]byte(encodeCredential(password)))
+		p.writeBytes(encodeCredential(password))
 		p.writeByte(10)
 		p.writeBytes([]byte(email))
 		p.writeByte(10)
@@ -1104,7 +1111,7 @@ func readBytesRaw(conn net.Conn, length int) ([]byte, error) {
 	return buf, nil
 }
 
-func encodeCredential(s string) string {
+func encodeCredential(s string) []byte {
 	s1 := make([]byte, len(s))
 	for i := 0; i < len(s); i++ {
 		c := s[i]
@@ -1119,10 +1126,10 @@ func encodeCredential(s string) string {
 		}
 	}
 
-	return string(s1)
+	return s1
 }
 
-func encodePassword(s string) string {
+func encodePassword(s string) []byte {
 	s1 := make([]byte, 20)
 	for i := 0; i < 20; i++ {
 		if i >= len(s) {
@@ -1141,13 +1148,11 @@ func encodePassword(s string) string {
 		}
 	}
 
-	return string(s1)
+	return s1
 }
 
-func encryptRSA(bs []byte, doAppend bool) []byte {
-	if doAppend {
-		bs = append(bs, 10)
-	}
+func encryptRSA(bs []byte) []byte {
+	bs = append(bs, 10) // this is here to keep parity with the official openrsc client
 
 	base := new(big.Int).SetBytes(bs)
 
@@ -1170,17 +1175,17 @@ func (c *client) login() (bool, time.Duration, error) {
 	}
 	_ = sessionPacket
 
-	pass := encryptRSA([]byte(encodePassword(c.pass)), true)
-	loginDetails := encryptRSA([]byte("plutonium"), true)
+	encryptedPass := encryptRSA(encodePassword(c.pass))
+	loginDetails := encryptRSA([]byte("plutonium"))
 
 	c.createPacket(0)
 	c.writeByte(0)
 	c.writeInt(settings.ClientSettings.ClientVersion)
-	c.writeBytes([]byte(encodeCredential(c.user)))
+	c.writeBytes(encodeCredential(c.user))
 	c.writeByte(10)
 	c.writeByte(1) // 0 = plain, 1 = rsa
-	c.writeShort(len(pass))
-	c.writeBytes(pass)
+	c.writeShort(len(encryptedPass))
+	c.writeBytes(encryptedPass)
 	c.writeShort(len(loginDetails))
 	c.writeBytes(loginDetails)
 	c.writeLong(0)
