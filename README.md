@@ -4,7 +4,7 @@ Plutonium is a lightweight shell bot written for the [OpenRSC](https://rsc.vet/)
 
 Scripts for it are written in Python 3.4 via [gpython](https://github.com/go-python/gpython).
 
-Consider that that OpenRSC servers have a max player per ip limit. At the time of this writing, the limit is 10 on Uranium. There is also a registration limit per day so you need to spend multiple days creating accounts in order to reach the maximum of 10.
+Consider that the OpenRSC servers have a max player per ip limit. At the time of this writing, the limit is 10 on Uranium. There is also a registration limit per day so you need to spend multiple days creating accounts in order to reach the maximum of 10.
 
 Some code is ported from Java to Go from the Open RSC server (in particular, the pathfinding and chat message code).
 
