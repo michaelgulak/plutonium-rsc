@@ -35,11 +35,12 @@ def loop():
         path.process()
         for gate in GATES:
             if in_radius_of(gate.x, gate.z, 15):
-                pnc = path.next_z()
-                mnc = get_z()
                 if gate.is_x:
                     pnc = path.next_x()
                     mnc = get_x()
+                else:
+                    pnc = path.next_z()
+                    mnc = get_z()
                     
                 if (pnc <= gate.thresh_to and mnc >= gate.thresh_from) or \
                     (pnc >= gate.thresh_from and mnc <= gate.thresh_to):
@@ -63,7 +64,7 @@ def loop():
         else:
             path = None
 
-    if get_x() != settings.target_x or get_z() != settings.target_z:
+    if not at(settings.target_x, settings.target_z):
         path = calculate_path_to(settings.target_x, settings.target_z, skip_local=True)
         if path == None:
             log("Failed to path")

@@ -1,7 +1,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"math"
 	"os"
@@ -10,7 +9,7 @@ import (
 	"time"
 
 	"github.com/go-python/gpython/py"
-	"github.com/pelletier/go-toml"
+	"github.com/pelletier/go-toml/v2"
 )
 
 const (
@@ -86,6 +85,17 @@ type config struct {
 	LogSettings     *logSettings     `toml:"logs"`
 }
 
+type accountConfig struct {
+	Account struct {
+		User      string
+		Pass      string
+		Autologin interface{}
+		Enabled   interface{}
+		Debug     interface{}
+	}
+	Script interface{}
+}
+
 func parseConfig(filePath string) {
 	ex, err := os.Executable()
 	if err != nil {
@@ -114,103 +124,98 @@ func parseConfig(filePath string) {
 func loadAccount(path string) (*account, error) {
 	fmt.Printf("[BOT] Loading account [%s]...", filepath.Base(path))
 
-	acctFile, err := toml.LoadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		return nil, err
 	}
+	defer f.Close()
+
+	var config accountConfig
+	if err = toml.NewDecoder(f).Decode(&config); err != nil {
+		return nil, err
+	}
+
 	acct := &account{
-		username:        acctFile.Get("account.user").(string),
-		password:        acctFile.Get("account.pass").(string),
+		username:        config.Account.User,
+		password:        config.Account.Pass,
 		script:          &script{},
 		needsFirstNotif: true,
 	}
-	if acctFile.Has("account.autologin") {
-		acct.autologin = acctFile.Get("account.autologin").(bool)
+
+	if autologin, ok := config.Account.Autologin.(bool); ok {
+		acct.autologin = autologin
 	} else {
 		acct.autologin = true
 	}
-	if acctFile.Has("account.enabled") {
-		acct.enabled = acctFile.Get("account.enabled").(bool)
+
+	if enabled, ok := config.Account.Enabled.(bool); ok {
+		acct.enabled = enabled
 	} else {
 		acct.enabled = true
 	}
-	if acctFile.Has("account.debug") {
-		acct.debug = acctFile.Get("account.debug").(bool)
+
+	if debug, ok := config.Account.Debug.(bool); ok {
+		acct.debug = debug
 	}
-	if acctFile.Has("script") {
-		acct.script.path = filepath.Join(settings.executablePath, settings.ScriptSettings.Directory, acctFile.Get("script.name").(string))
+
+	if script, ok := config.Script.(map[string]interface{}); ok {
+		name := script["name"].(string)
+		acct.script.path = filepath.Join(settings.executablePath, settings.ScriptSettings.Directory, name)
 		acct.script.pathDir = filepath.Dir(acct.script.path)
-		if acctFile.Has("script.progress_report") {
-			str := acctFile.Get("script.progress_report").(string)
-			dur, err := time.ParseDuration(str)
-			if err != nil {
+		if pr, ok := script["progress_report"]; ok {
+			dur, err := time.ParseDuration(pr.(string))
+			if err != nil || dur < 0 {
 				return nil, fmt.Errorf("invalid progress report field: %s", err)
 			}
 			acct.progressDur = dur
 		} else {
 			acct.progressDur = noProgressDurSet
 		}
-		if acctFile.Has("script.settings") {
-			scriptArgs := acctFile.Get("script.settings").(*toml.Tree).ToMap()
+		if scriptArgs, ok := script["settings"]; ok {
 			acct.script.settings = py.StringDict{}
-			for k, v := range scriptArgs {
+
+			var convertType func(v interface{}) py.Object
+			convertType = func(v interface{}) py.Object {
 				switch v := v.(type) {
-				case map[string]interface{}:
-					return nil, errors.New("key/value pairs aren't supported")
-				case time.Time:
-					return nil, errors.New("dates aren't supported")
 				case bool:
-					acct.script.settings[k] = py.Bool(v)
+					return py.Bool(v)
 				case uint64:
-					acct.script.settings[k] = py.Int(v)
+					return py.Int(v)
 				case int64:
-					acct.script.settings[k] = py.Int(v)
+					return py.Int(v)
+				case string:
+					return py.String(v)
+				case float64:
+					return py.Float(v)
+				case toml.LocalDateTime:
+					return py.Float(v.AsTime(time.UTC).Unix())
+				case toml.LocalDate:
+					return py.Float(v.AsTime(time.UTC).Unix())
 				case []interface{}:
 					if len(v) == 0 {
-						acct.script.settings[k] = py.NewList()
-					} else {
-						switch v[0].(type) {
-						case []interface{}:
-							return nil, errors.New("multidimensional arrays aren't supported")
-						case time.Time:
-							return nil, errors.New("dates aren't supported")
-						case map[string]interface{}:
-							return nil, errors.New("key/value pairs aren't supported")
-						case int64:
-							var objs []py.Object
-							for _, v0 := range v {
-								objs = append(objs, py.Int(v0.(int64)))
-							}
-							acct.script.settings[k] = py.NewListFromItems(objs)
-						case uint64:
-							var objs []py.Object
-							for _, v0 := range v {
-								objs = append(objs, py.Int(v0.(uint64)))
-							}
-							acct.script.settings[k] = py.NewListFromItems(objs)
-						case string:
-							var objs []py.Object
-							for _, v0 := range v {
-								objs = append(objs, py.String(v0.(string)))
-							}
-							acct.script.settings[k] = py.NewListFromItems(objs)
-						case float64:
-							var objs []py.Object
-							for _, v0 := range v {
-								objs = append(objs, py.Float(v0.(float64)))
-							}
-							acct.script.settings[k] = py.NewListFromItems(objs)
-						default:
-							return nil, fmt.Errorf("unhandled type: %v", v)
-						}
+						return py.NewList()
 					}
-				case string:
-					acct.script.settings[k] = py.String(v)
-				case float64:
-					acct.script.settings[k] = py.Float(v)
-				default:
+					var objs []py.Object
+					for _, v0 := range v {
+						objs = append(objs, convertType(v0))
+					}
+					return py.NewListFromItems(objs)
+				case map[string]interface{}:
+					dict := py.StringDict{}
+					for k, v0 := range v {
+						dict[k] = convertType(v0)
+					}
+					return dict
+				default: // toml.LocalTime is unhandled
+					return nil
+				}
+			}
+			for k, v := range scriptArgs.(map[string]interface{}) {
+				setting := convertType(v)
+				if setting == nil {
 					return nil, fmt.Errorf("unhandled type: %v", v)
 				}
+				acct.script.settings[k] = setting
 			}
 		}
 	}

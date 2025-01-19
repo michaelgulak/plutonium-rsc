@@ -10,7 +10,7 @@ Some code is ported from Java to Go from the Open RSC server (in particular, the
 
 ## Building Plutonium
 
-You must build Plutonium as there aren't any official builds of it. Make sure you have at least version 1.18 of [Go](https://go.dev/) installed, along with [git](https://git-scm.com/). On Linux, open a terminal, or on Windows open a command prompt. Then clone this repo with 
+You must build Plutonium as there aren't any official builds of it. Make sure you have at least version 1.21 of [Go](https://go.dev/) installed, along with [git](https://git-scm.com/). On Linux, open a terminal, or on Windows open a command prompt. Then clone this repo with 
 
 ```bash
 git clone https://gitlab.com/openrsc/plutonium
@@ -20,7 +20,7 @@ Enter the directory it creates (type `cd plutonium` to get in the directory) and
 
 ## Account Configuration
 
-To run Plutonium, you need account files. Each account file specifies the username and password of an account, and the script to run for that account. An account config is created by creating a file in the `accounts` directory. These files must be in [toml](https://toml.io/en/) format with the exception that it cannot contain key/value pairs, multidimensional arrays, or dates.
+To run Plutonium, you need account files. Each account file specifies the username and password of an account, and the script to run for that account. An account config is created by creating a file in the `accounts` directory. These files must be in [toml](https://toml.io/en/) format.
 
 To get started quickly, rename the example file in the `accounts` directory to be `myaccount.toml`. Then input your username and password, and make sure to change the script and script settings. Windows users should note that [file name extensions](https://answers.microsoft.com/en-us/windows/forum/all/how-can-i-get-the-extension-to-display-along-with/ec523f53-357b-41eb-a6c7-9b6b95a91235) must be enabled to rename the file properly.
 
