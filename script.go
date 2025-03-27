@@ -29,6 +29,7 @@ type script struct {
 	loaded   bool
 	module   *py.Module
 	tick     int
+	inited   bool
 
 	loopFn                *py.Function
 	onProgressReport      *py.Function
@@ -55,6 +56,7 @@ type script struct {
 	onFatigueUpdate       *py.Function
 	onSleepWordSent       *py.Function
 	onServerTick          *py.Function
+	onInit                *py.Function
 
 	bankOptionMenuTimeout time.Time
 }
@@ -475,6 +477,9 @@ func (s *script) addHooks(module *py.Module) {
 	if onServerTick, ok := module.Globals["on_server_tick"]; ok {
 		s.onServerTick = onServerTick.(*py.Function)
 	}
+	if onInit, ok := module.Globals["on_init"]; ok {
+		s.onInit = onInit.(*py.Function)
+	}
 }
 
 func (s *script) callOnServerMessage(message string) {
@@ -734,6 +739,17 @@ func (s *script) callOnServerTick() {
 	s.tick++
 }
 
+func (s *script) callOnInit() {
+	if !s.running {
+		return
+	}
+	_, err := s.onInit.M__call__(nil, nil)
+	if err != nil {
+		py.TracebackDump(err)
+		os.Exit(1)
+	}
+}
+
 func (s *script) addPreGlobals(module *py.ModuleImpl) {
 	module.Globals["settings"] = &py.Type{
 		ObjectType: py.ObjectType,
@@ -746,6 +762,24 @@ func (s *script) addPreGlobals(module *py.ModuleImpl) {
 		bankers[i] = py.Int(bankersID[i])
 	}
 	module.Globals["BANKERS"] = py.NewListFromItems(bankers)
+
+	module.Globals["WALL_NORTH"] = py.Int(wallNorth)
+	module.Globals["WALL_EAST"] = py.Int(wallEast)
+	module.Globals["WALL_SOUTH"] = py.Int(wallSouth)
+	module.Globals["WALL_WEST"] = py.Int(wallWest)
+	module.Globals["WALL_NORTHEAST"] = py.Int(wallNorthEast)
+	module.Globals["WALL_NORTHWEST"] = py.Int(wallNorthWest)
+	module.Globals["WALL_SOUTHEAST"] = py.Int(wallSouthEast)
+	module.Globals["WALL_SOUTHWEST"] = py.Int(wallSouthWest)
+	module.Globals["FULL_BLOCK"] = py.Int(fullBlock)
+	module.Globals["WEST_BLOCKED"] = py.Int(westBlocked)
+	module.Globals["SOUTH_BLOCKED"] = py.Int(southBlocked)
+	module.Globals["NORTH_BLOCKED"] = py.Int(northBlocked)
+	module.Globals["EAST_BLOCKED"] = py.Int(eastBlocked)
+	module.Globals["SOUTHEAST_BLOCKED"] = py.Int(southEastBlocked)
+	module.Globals["SOUTHWEST_BLOCKED"] = py.Int(southWestBlocked)
+	module.Globals["NORTHEAST_BLOCKED"] = py.Int(northEastBlocked)
+	module.Globals["NORTHWEST_BLOCKED"] = py.Int(northWestBlocked)
 }
 
 func (s *script) addGlobalsToAll(module *py.Module) {
@@ -773,6 +807,24 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		bankers[i] = py.Int(bankersID[i])
 	}
 	module.Globals["BANKERS"] = py.NewListFromItems(bankers)
+
+	module.Globals["WALL_NORTH"] = py.Int(wallNorth)
+	module.Globals["WALL_EAST"] = py.Int(wallEast)
+	module.Globals["WALL_SOUTH"] = py.Int(wallSouth)
+	module.Globals["WALL_WEST"] = py.Int(wallWest)
+	module.Globals["WALL_NORTHEAST"] = py.Int(wallNorthEast)
+	module.Globals["WALL_NORTHWEST"] = py.Int(wallNorthWest)
+	module.Globals["WALL_SOUTHEAST"] = py.Int(wallSouthEast)
+	module.Globals["WALL_SOUTHWEST"] = py.Int(wallSouthWest)
+	module.Globals["FULL_BLOCK"] = py.Int(fullBlock)
+	module.Globals["WEST_BLOCKED"] = py.Int(westBlocked)
+	module.Globals["SOUTH_BLOCKED"] = py.Int(southBlocked)
+	module.Globals["NORTH_BLOCKED"] = py.Int(northBlocked)
+	module.Globals["EAST_BLOCKED"] = py.Int(eastBlocked)
+	module.Globals["SOUTHEAST_BLOCKED"] = py.Int(southEastBlocked)
+	module.Globals["SOUTHWEST_BLOCKED"] = py.Int(southWestBlocked)
+	module.Globals["NORTHEAST_BLOCKED"] = py.Int(northEastBlocked)
+	module.Globals["NORTHWEST_BLOCKED"] = py.Int(northWestBlocked)
 
 	// general
 	module.Globals["stop_account"] = py.MustNewMethod("stop_account", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
@@ -2351,5 +2403,19 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	}, py.METH_STATIC, "")
 	module.Globals["is_system_update"] = py.MustNewMethod("is_system_update", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.systemUpdate), nil
+	}, py.METH_STATIC, "")
+	module.Globals["get_collision_flags_at"] = py.MustNewMethod("get_collision_flags_at", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		var (
+			skipLocal = false
+			x         = int(args[0].(py.Int))
+			z         = int(args[1].(py.Int))
+		)
+		if skipLocal0, ok := kwargs["skip_local"].(py.Bool); ok {
+			skipLocal = bool(skipLocal0)
+		}
+		if skipLocal {
+			return py.Int(c.world.getTile(x, z)), nil
+		}
+		return py.Int(c.combinedTile(x, z)), nil
 	}, py.METH_STATIC, "")
 }

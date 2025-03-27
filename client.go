@@ -31,7 +31,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.9.0"
+	botVersion       = "1.10.0"
 )
 
 var (
@@ -318,8 +318,6 @@ type bot struct {
 }
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
-
 	var (
 		user        string
 		pass        string
@@ -668,6 +666,12 @@ loop:
 			return false, time.Second * time.Duration(waitTime)
 		case <-scriptTimerChan:
 			if !c.sleeping && !c.loading {
+				if !c.script.inited {
+					if c.script.onInit != nil {
+						c.script.callOnInit()
+					}
+					c.script.inited = true
+				}
 				scriptTimer.Reset(time.Duration(c.script.loop()) * time.Millisecond)
 			} else {
 				scriptTimer.Reset(50 * time.Millisecond)
@@ -1034,9 +1038,6 @@ func (c *client) init() {
 	}
 	for i := 0; i < len(c.ignoreList); i++ {
 		c.ignoreList[i] = &ignored{}
-	}
-	for i := 0; i < len(c.myTradeItems); i++ {
-		c.myTradeItems[i] = &tradeItem{}
 	}
 }
 

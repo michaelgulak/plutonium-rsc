@@ -8,6 +8,8 @@
 
 `settings` dict with script settings
 
+`WALL_NORTH`, `WALL_EAST`, `WALL_SOUTH`, `WALL_WEST`, `WALL_NORTHEAST`, `WALL_NORTHWEST`, `WALL_SOUTHEAST`, `WALL_SOUTHWEST`, `FULL_BLOCK`,`WEST_BLOCKED`, `SOUTH_BLOCKED`, `NORTH_BLOCKED`, `EAST_BLOCKED`, `SOUTHEAST_BLOCKED`, `SOUTHWEST_BLOCKED`, `NORTHEAST_BLOCKED`, `NORTHWEST_BLOCKED` collision flags
+
 ## Events
 
 ###### on_progress_report()
@@ -25,6 +27,10 @@ This event is called when the client is fully loaded in the game world. It gets 
 ###### on_server_tick(tick)
 
 Called every time the npc update packet comes in, which coincides with every server tick.
+
+###### on_init()
+
+Called once before the script starts running. The account will be logged in and loaded before this is called.
 
 ###### on_system_update(seconds)
 ###### on_server_message(msg)
@@ -125,6 +131,10 @@ Proper use is like this:
 ###### is_sleeping()
 
 Can only be used in event handlers.
+
+###### get_collision_flags_at(x, z, skip_local=True)
+
+`skip_local` is optional.
 
 ###### get_combat_style()
 ###### set_combat_style(id)

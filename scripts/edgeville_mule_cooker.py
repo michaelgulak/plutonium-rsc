@@ -212,9 +212,10 @@ def init_script():
 
             trading = True
     else:
-        if 24 > get_inventory_count_by_id(COOKED_SHARK) > 0 or \
-            (get_inventory_count_by_id(RAW_SHARK) == 12 and \
-                get_total_inventory_count() == 12):
+        if (24 > get_inventory_count_by_id(COOKED_SHARK) > 0 and \
+            get_empty_slots() >= 12) or \
+                (get_inventory_count_by_id(RAW_SHARK) == 12 and \
+                    get_total_inventory_count() == 12):
             
             trading = True
 def loop():

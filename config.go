@@ -174,42 +174,6 @@ func loadAccount(path string) (*account, error) {
 		if scriptArgs, ok := script["settings"]; ok {
 			acct.script.settings = py.StringDict{}
 
-			var convertType func(v interface{}) py.Object
-			convertType = func(v interface{}) py.Object {
-				switch v := v.(type) {
-				case bool:
-					return py.Bool(v)
-				case uint64:
-					return py.Int(v)
-				case int64:
-					return py.Int(v)
-				case string:
-					return py.String(v)
-				case float64:
-					return py.Float(v)
-				case toml.LocalDateTime:
-					return py.Float(v.AsTime(time.UTC).Unix())
-				case toml.LocalDate:
-					return py.Float(v.AsTime(time.UTC).Unix())
-				case []interface{}:
-					if len(v) == 0 {
-						return py.NewList()
-					}
-					var objs []py.Object
-					for _, v0 := range v {
-						objs = append(objs, convertType(v0))
-					}
-					return py.NewListFromItems(objs)
-				case map[string]interface{}:
-					dict := py.StringDict{}
-					for k, v0 := range v {
-						dict[k] = convertType(v0)
-					}
-					return dict
-				default: // toml.LocalTime is unhandled
-					return nil
-				}
-			}
 			for k, v := range scriptArgs.(map[string]interface{}) {
 				setting := convertType(v)
 				if setting == nil {
@@ -246,4 +210,40 @@ func loadAccounts() ([]*account, error) {
 		accounts = append(accounts, acct)
 	}
 	return accounts, nil
+}
+
+func convertType(v interface{}) py.Object {
+	switch v := v.(type) {
+	case bool:
+		return py.Bool(v)
+	case uint64:
+		return py.Int(v)
+	case int64:
+		return py.Int(v)
+	case string:
+		return py.String(v)
+	case float64:
+		return py.Float(v)
+	case toml.LocalDateTime:
+		return py.Float(v.AsTime(time.UTC).Unix())
+	case toml.LocalDate:
+		return py.Float(v.AsTime(time.UTC).Unix())
+	case []interface{}:
+		if len(v) == 0 {
+			return py.NewList()
+		}
+		var objs []py.Object
+		for _, v0 := range v {
+			objs = append(objs, convertType(v0))
+		}
+		return py.NewListFromItems(objs)
+	case map[string]interface{}:
+		dict := py.StringDict{}
+		for k, v0 := range v {
+			dict[k] = convertType(v0)
+		}
+		return dict
+	default: // toml.LocalTime is unhandled
+		return nil
+	}
 }
