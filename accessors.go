@@ -414,16 +414,13 @@ func (c *client) getNearestWallObjectByID(x, z int, radius int, reachable bool, 
 }
 
 func (c *client) bankCount(ids ...int) int {
-	if c.banking {
-		count := 0
-		for i := 0; i < c.bankItemCount; i++ {
-			if inIntArray(c.bankItems[i].id, ids) {
-				count += c.bankItems[i].amount
-			}
+	count := 0
+	for i := 0; i < c.bankItemCount; i++ {
+		if inIntArray(c.bankItems[i].id, ids) {
+			count += c.bankItems[i].amount
 		}
-		return count
 	}
-	return 0
+	return count
 }
 
 func (c *client) hasBankItem(id int) bool {

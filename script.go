@@ -750,6 +750,17 @@ func (s *script) callOnInit() {
 	}
 }
 
+func makeSafeFunc(f func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error)) func(self py.Object, args py.Tuple, kwargs py.StringDict) (ret py.Object, err0 error) {
+	return func(self py.Object, args py.Tuple, kwargs py.StringDict) (ret py.Object, err0 error) {
+		defer func() {
+			if r := recover(); r != nil {
+				err0 = fmt.Errorf("%v", r)
+			}
+		}()
+		return f(self, args, kwargs)
+	}
+}
+
 func (s *script) addPreGlobals(module *py.ModuleImpl) {
 	module.Globals["settings"] = &py.Type{
 		ObjectType: py.ObjectType,
@@ -831,51 +842,51 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		c.scriptKillSignal <- struct{}{}
 		return py.None, nil
 	}, py.METH_STATIC, "")
-	module.Globals["create_packet"] = py.MustNewMethod("create_packet", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["create_packet"] = py.MustNewMethod("create_packet", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.createPacket(byte(args[0].(py.Int)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["write_byte"] = py.MustNewMethod("write_byte", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["write_byte"] = py.MustNewMethod("write_byte", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.writeByte(byte(args[0].(py.Int)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["write_short"] = py.MustNewMethod("write_short", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["write_short"] = py.MustNewMethod("write_short", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.writeShort(int(args[0].(py.Int)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["write_int"] = py.MustNewMethod("write_int", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["write_int"] = py.MustNewMethod("write_int", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.writeInt(int(args[0].(py.Int)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["write_bytes"] = py.MustNewMethod("write_bytes", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["write_bytes"] = py.MustNewMethod("write_bytes", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.writeBytes(args[0].(py.Bytes))
 		return py.None, nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["send_packet"] = py.MustNewMethod("send_packet", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.sendPacket()
 		return py.None, nil
 	}, py.METH_STATIC, "")
-	module.Globals["log"] = py.MustNewMethod("log", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["log"] = py.MustNewMethod("log", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		fmt.Printf("[%s] %s\n", c.user, args[0].(py.String))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["debug"] = py.MustNewMethod("debug", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["debug"] = py.MustNewMethod("debug", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		if c.account.debug {
 			fmt.Printf("[%s] %s\n", c.user, args[0].(py.String))
 		}
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["distance"] = py.MustNewMethod("distance", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["distance"] = py.MustNewMethod("distance", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(distance(int(args[0].(py.Int)), int(args[1].(py.Int)), int(args[2].(py.Int)), int(args[3].(py.Int)))), nil
-	}, py.METH_STATIC, "")
-	module.Globals["in_rect"] = py.MustNewMethod("in_rect", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["in_rect"] = py.MustNewMethod("in_rect", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x := int(args[0].(py.Int))
 		z := int(args[1].(py.Int))
 		width := int(args[2].(py.Int))
 		height := int(args[3].(py.Int))
 		return py.Bool(c.inRect(x, z, width, height)), nil
-	}, py.METH_STATIC, "")
-	module.Globals["point_in_rect"] = py.MustNewMethod("point_in_rect", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["point_in_rect"] = py.MustNewMethod("point_in_rect", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x1 := int(args[0].(py.Int))
 		z1 := int(args[1].(py.Int))
 		x2 := int(args[2].(py.Int))
@@ -883,8 +894,8 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		width := int(args[4].(py.Int))
 		height := int(args[5].(py.Int))
 		return py.Bool(inRect(x1, z1, x2, z2, width, height)), nil
-	}, py.METH_STATIC, "")
-	module.Globals["point_in_polygon"] = py.MustNewMethod("point_in_polygon", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["point_in_polygon"] = py.MustNewMethod("point_in_polygon", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x := args[0].(py.Int)
 		z := args[1].(py.Int)
 		poly := args[2].(*py.List).Items
@@ -908,12 +919,12 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 
 		}
 		return py.Bool(inside), nil
-	}, py.METH_STATIC, "")
-	module.Globals["at"] = py.MustNewMethod("at", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["at"] = py.MustNewMethod("at", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x := int(args[0].(py.Int))
 		z := int(args[1].(py.Int))
 		return py.Bool(x == c.x && z == c.z), nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["open_bank"] = py.MustNewMethod("open_bank", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		if c.optionMenuVisible {
 			c.answer(0)
@@ -938,29 +949,29 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["is_sleeping"] = py.MustNewMethod("is_sleeping", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.sleeping), nil
 	}, py.METH_STATIC, "")
-	module.Globals["random"] = py.MustNewMethod("random", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["random"] = py.MustNewMethod("random", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		min := int(args[0].(py.Int))
 		max := int(args[1].(py.Int))
 		return py.Int(min + rand.Intn(max-min+1)), nil
-	}, py.METH_STATIC, "")
-	module.Globals["set_fatigue_tricking"] = py.MustNewMethod("set_fatigue_tricking", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["set_fatigue_tricking"] = py.MustNewMethod("set_fatigue_tricking", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		if args[0].(py.Bool) {
 			s.wakeupAt = 99
 		} else {
 			s.wakeupAt = 0
 		}
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["set_wakeup_at"] = py.MustNewMethod("set_wakeup_at", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["set_wakeup_at"] = py.MustNewMethod("set_wakeup_at", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		s.wakeupAt = int(args[0].(py.Int))
 		return py.None, nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["stop_script"] = py.MustNewMethod("stop_script", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		s.running = false
 		c.scriptStopSignal <- struct{}{}
 		return py.None, nil
 	}, py.METH_STATIC, "")
-	module.Globals["create_path"] = py.MustNewMethod("create_path", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["create_path"] = py.MustNewMethod("create_path", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		coords := args[0].(*py.List)
 		points := make([]*point, coords.Len()/2)
 		for i := 0; i < len(points); i++ {
@@ -973,8 +984,8 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 			points: points,
 			script: s,
 		}, nil
-	}, py.METH_STATIC, "")
-	module.Globals["calculate_path"] = py.MustNewMethod("calculate_path", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["calculate_path"] = py.MustNewMethod("calculate_path", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		startX, startZ := int(args[0].(py.Int)), int(args[1].(py.Int))
 		x, z := int(args[2].(py.Int)), int(args[3].(py.Int))
 		depth := -1
@@ -1002,8 +1013,8 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 			return py.None, nil
 		}
 		return path, nil
-	}, py.METH_STATIC, "")
-	module.Globals["calculate_path_to"] = py.MustNewMethod("calculate_path_to", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["calculate_path_to"] = py.MustNewMethod("calculate_path_to", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x, z := int(args[0].(py.Int)), int(args[1].(py.Int))
 		depth := -1
 		skipLocal := false
@@ -1030,8 +1041,8 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 			return py.None, nil
 		}
 		return path, nil
-	}, py.METH_STATIC, "")
-	module.Globals["calculate_path_through"] = py.MustNewMethod("calculate_path_through", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["calculate_path_through"] = py.MustNewMethod("calculate_path_through", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var (
 			l         *py.List
 			depth     = -1
@@ -1081,8 +1092,8 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 			return py.None, nil
 		}
 		return path, nil
-	}, py.METH_STATIC, "")
-	module.Globals["walk_path_to"] = py.MustNewMethod("walk_path_to", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["walk_path_to"] = py.MustNewMethod("walk_path_to", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x, z := int(args[0].(py.Int)), int(args[1].(py.Int))
 		pt := c.generateLongPathPoint(x, z, -1)
 		if pt == nil {
@@ -1093,8 +1104,8 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 		c.walkTo(pt.x, pt.y, pt.x, pt.y, false, false)
 		return py.Bool(true), nil
-	}, py.METH_STATIC, "")
-	module.Globals["walk_path_depth_to"] = py.MustNewMethod("walk_path_depth_to", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["walk_path_depth_to"] = py.MustNewMethod("walk_path_depth_to", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x, z := int(args[0].(py.Int)), int(args[1].(py.Int))
 		var depth int
 		switch v := args[2].(type) {
@@ -1112,7 +1123,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 		c.walkTo(pt.x, pt.y, pt.x, pt.y, false, false)
 		return py.Bool(true), nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["get_pid"] = py.MustNewMethod("get_pid", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.serverIndex), nil
 	}, py.METH_STATIC, "")
@@ -1132,9 +1143,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["get_z"] = py.MustNewMethod("get_z", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.z), nil
 	}, py.METH_STATIC, "")
-	module.Globals["in_combat"] = py.MustNewMethod("in_combat", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["in_combat"] = py.MustNewMethod("in_combat", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.inCombat()), nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["is_skilling"] = py.MustNewMethod("is_skilling", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.playersServer[c.serverIndex].isSkilling()), nil
 	}, py.METH_STATIC, "")
@@ -1144,39 +1155,39 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["get_combat_style"] = py.MustNewMethod("get_combat_style", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.combatStyle), nil
 	}, py.METH_STATIC, "")
-	module.Globals["set_combat_style"] = py.MustNewMethod("set_combat_style", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["set_combat_style"] = py.MustNewMethod("set_combat_style", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.setCombatStyle(int(args[0].(py.Int)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["get_max_stat"] = py.MustNewMethod("get_max_stat", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["get_max_stat"] = py.MustNewMethod("get_max_stat", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.baseStats[int(args[0].(py.Int))]), nil
-	}, py.METH_STATIC, "")
-	module.Globals["get_current_stat"] = py.MustNewMethod("get_current_stat", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["get_current_stat"] = py.MustNewMethod("get_current_stat", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.currentStats[int(args[0].(py.Int))]), nil
-	}, py.METH_STATIC, "")
-	module.Globals["get_experience"] = py.MustNewMethod("get_experience", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["get_experience"] = py.MustNewMethod("get_experience", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.experience[int(args[0].(py.Int))]), nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["get_hp_percent"] = py.MustNewMethod("get_hp_percent", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.getHPPercent()), nil
 	}, py.METH_STATIC, "")
 	module.Globals["is_appearance_screen"] = py.MustNewMethod("is_appearance_screen", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.appearanceChange), nil
 	}, py.METH_STATIC, "")
-	module.Globals["cast_on_self"] = py.MustNewMethod("cast_on_self", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["cast_on_self"] = py.MustNewMethod("cast_on_self", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.castOnSelf(int(args[0].(py.Int)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["get_total_inventory_count"] = py.MustNewMethod("get_total_inventory_count", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.inventoryCount), nil
 	}, py.METH_STATIC, "")
 	module.Globals["get_empty_slots"] = py.MustNewMethod("get_empty_slots", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(30 - c.inventoryCount), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_item_name"] = py.MustNewMethod("get_item_name", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_item_name"] = py.MustNewMethod("get_item_name", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.String(itemDefs[int(args[0].(py.Int))].Name), nil
-	}, py.METH_STATIC, "")
-	module.Globals["get_inventory_count_by_id"] = py.MustNewMethod("get_inventory_count_by_id", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["get_inventory_count_by_id"] = py.MustNewMethod("get_inventory_count_by_id", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var ids []int
 
 		if len(args) > 0 {
@@ -1190,8 +1201,8 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 
 		return py.Int(c.getInventoryCountByID(ids...)), nil
-	}, py.METH_STATIC, "")
-	module.Globals["get_inventory_item_except"] = py.MustNewMethod("get_inventory_item_except", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["get_inventory_item_except"] = py.MustNewMethod("get_inventory_item_except", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		ids := args[0].(*py.List)
 		var selectedItem *item
 	next:
@@ -1209,10 +1220,10 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 			return py.None, nil
 		}
 		return selectedItem, nil
-	}, py.METH_STATIC, "")
-	module.Globals["has_inventory_item"] = py.MustNewMethod("has_inventory_item", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["has_inventory_item"] = py.MustNewMethod("has_inventory_item", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.getInventoryCountByID(int(args[0].(py.Int))) > 0), nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["use_sleeping_bag"] = py.MustNewMethod("use_sleeping_bag", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.useSleepingBag()
 		return py.None, nil
@@ -1221,59 +1232,59 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		c.skipTutorial()
 		return py.None, nil
 	}, py.METH_STATIC, "")
-	module.Globals["is_inventory_item_equipped"] = py.MustNewMethod("is_inventory_item_equipped", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["is_inventory_item_equipped"] = py.MustNewMethod("is_inventory_item_equipped", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.isItemEquippedByID(int(args[0].(py.Int)))), nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["get_quest_points"] = py.MustNewMethod("get_quest_points", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.questPoints), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_equipment_stat"] = py.MustNewMethod("get_equipment_stat", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_equipment_stat"] = py.MustNewMethod("get_equipment_stat", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.equipmentStats[int(args[0].(py.Int))]), nil
-	}, py.METH_STATIC, "")
-	module.Globals["set_autologin"] = py.MustNewMethod("set_autologin", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["set_autologin"] = py.MustNewMethod("set_autologin", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.account.autologin = bool(args[0].(py.Bool))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["set_debug"] = py.MustNewMethod("set_debug", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["set_debug"] = py.MustNewMethod("set_debug", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.account.debug = bool(args[0].(py.Bool))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["disconnect_for"] = py.MustNewMethod("disconnect_for", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["disconnect_for"] = py.MustNewMethod("disconnect_for", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		waitTime := int(args[0].(py.Int))
 		c.scriptDCSignal <- waitTime
 		return py.None, nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 
 	// world
 
-	module.Globals["walk_to"] = py.MustNewMethod("walk_to", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["walk_to"] = py.MustNewMethod("walk_to", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x := int(args[0].(py.Int))
 		z := int(args[1].(py.Int))
 		return py.Bool(c.walkTo(x, z, x, z, false, false)), nil
-	}, py.METH_STATIC, "")
-	module.Globals["walk_to_entity"] = py.MustNewMethod("walk_to_entity", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["walk_to_entity"] = py.MustNewMethod("walk_to_entity", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x := int(args[0].(py.Int))
 		z := int(args[1].(py.Int))
 		return py.Bool(c.walkTo(x, z, x, z, true, false)), nil
-	}, py.METH_STATIC, "")
-	module.Globals["is_reachable"] = py.MustNewMethod("is_reachable", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["is_reachable"] = py.MustNewMethod("is_reachable", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.isReachable(int(args[0].(py.Int)), int(args[1].(py.Int)))), nil
-	}, py.METH_STATIC, "")
-	module.Globals["is_ground_item_reachable"] = py.MustNewMethod("is_ground_item_reachable", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["is_ground_item_reachable"] = py.MustNewMethod("is_ground_item_reachable", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.isGroundItemReachable(args[0].(*groundItem))), nil
-	}, py.METH_STATIC, "")
-	module.Globals["is_object_reachable"] = py.MustNewMethod("is_object_reachable", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["is_object_reachable"] = py.MustNewMethod("is_object_reachable", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.isObjectReachable(args[0].(*object))), nil
-	}, py.METH_STATIC, "")
-	module.Globals["is_wall_object_reachable"] = py.MustNewMethod("is_wall_object_reachable", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["is_wall_object_reachable"] = py.MustNewMethod("is_wall_object_reachable", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.isWallObjectReachable(args[0].(*wallObject))), nil
-	}, py.METH_STATIC, "")
-	module.Globals["distance_to"] = py.MustNewMethod("distance_to", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["distance_to"] = py.MustNewMethod("distance_to", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		x := int(args[0].(py.Int))
 		z := int(args[1].(py.Int))
 		return py.Int(c.distanceTo(x, z)), nil
-	}, py.METH_STATIC, "")
-	module.Globals["in_radius_of"] = py.MustNewMethod("in_radius_of", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["in_radius_of"] = py.MustNewMethod("in_radius_of", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		if len(args) < 3 {
 			return nil, errors.New("x, z, and radius must be set in in_radius_of")
 		}
@@ -1283,16 +1294,16 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		radius := int(args[2].(py.Int))
 
 		return py.Bool(c.inRadiusOf(x, z, radius)), nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 
 	// ground items
 
 	module.Globals["get_ground_item_count"] = py.MustNewMethod("get_ground_item_count", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.groundItemCount), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_ground_item_at_index"] = py.MustNewMethod("get_ground_item_at_index", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_ground_item_at_index"] = py.MustNewMethod("get_ground_item_at_index", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return c.groundItems[args[0].(py.Int)], nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["get_ground_items"] = py.MustNewMethod("get_ground_items", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		objs := make([]py.Object, c.groundItemCount)
 		for i := 0; i < c.groundItemCount; i++ {
@@ -1300,7 +1311,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 		return py.NewListFromItems(objs), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_nearest_ground_item_by_id"] = py.MustNewMethod("get_nearest_ground_item_by_id", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_nearest_ground_item_by_id"] = py.MustNewMethod("get_nearest_ground_item_by_id", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var (
 			ids       []int
 			reachable = false
@@ -1368,8 +1379,8 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 
 		return item, nil
-	}, py.METH_STATIC, "")
-	module.Globals["get_nearest_ground_item_by_id_in_rect"] = py.MustNewMethod("get_nearest_ground_item_by_id_in_rect", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["get_nearest_ground_item_by_id_in_rect"] = py.MustNewMethod("get_nearest_ground_item_by_id_in_rect", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var (
 			ids       []int
 			x         = -1
@@ -1436,22 +1447,22 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 
 		return obj, nil
-	}, py.METH_STATIC, "")
-	module.Globals["is_ground_item_at"] = py.MustNewMethod("is_ground_item_at", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["is_ground_item_at"] = py.MustNewMethod("is_ground_item_at", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.isGroundItemAt(int(args[0].(py.Int)), int(args[1].(py.Int)), int(args[2].(py.Int)))), nil
-	}, py.METH_STATIC, "")
-	module.Globals["pickup_item"] = py.MustNewMethod("pickup_item", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["pickup_item"] = py.MustNewMethod("pickup_item", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.pickupGroundItem(args[0].(*groundItem))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["use_item_on_ground_item"] = py.MustNewMethod("use_item_on_ground_item", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["use_item_on_ground_item"] = py.MustNewMethod("use_item_on_ground_item", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.useInventoryItemOnGroundItem(args[0].(*item), args[1].(*groundItem))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["cast_on_ground_item"] = py.MustNewMethod("cast_on_ground_item", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["cast_on_ground_item"] = py.MustNewMethod("cast_on_ground_item", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.castOnGroundItem(int(args[0].(py.Int)), args[1].(*groundItem))
 		return py.None, nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 
 	// inventory items
 
@@ -1462,7 +1473,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 		return py.NewListFromItems(objs), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_inventory_item_by_id"] = py.MustNewMethod("get_inventory_item_by_id", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_inventory_item_by_id"] = py.MustNewMethod("get_inventory_item_by_id", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var ids []int
 
 		if len(args) > 0 {
@@ -1481,58 +1492,58 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 
 		return item, nil
-	}, py.METH_STATIC, "")
-	module.Globals["use_item"] = py.MustNewMethod("use_item", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["use_item"] = py.MustNewMethod("use_item", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.useInventoryItem(args[0].(*item))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["drop_item"] = py.MustNewMethod("drop_item", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["drop_item"] = py.MustNewMethod("drop_item", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.dropInventoryItem(args[0].(*item))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["equip_item"] = py.MustNewMethod("equip_item", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["equip_item"] = py.MustNewMethod("equip_item", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.equipInventoryItem(args[0].(*item))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["unequip_item"] = py.MustNewMethod("unequip_item", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["unequip_item"] = py.MustNewMethod("unequip_item", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.unequipInventoryItem(args[0].(*item))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["use_item_with_item"] = py.MustNewMethod("use_item_with_item", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["use_item_with_item"] = py.MustNewMethod("use_item_with_item", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.useInventoryItemOnInventoryItem(args[0].(*item), args[1].(*item))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["cast_on_item"] = py.MustNewMethod("cast_on_item", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["cast_on_item"] = py.MustNewMethod("cast_on_item", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.castOnInventoryItem(int(args[0].(py.Int)), args[1].(*item))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["use_item_on_object"] = py.MustNewMethod("use_item_on_object", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["use_item_on_object"] = py.MustNewMethod("use_item_on_object", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.useInventoryItemOnObject(args[0].(*item), args[1].(*object))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["use_item_on_wall_object"] = py.MustNewMethod("use_item_on_wall_object", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["use_item_on_wall_object"] = py.MustNewMethod("use_item_on_wall_object", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.useInventoryItemOnWallObject(args[0].(*item), args[1].(*wallObject))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["use_item_on_npc"] = py.MustNewMethod("use_item_on_npc", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["use_item_on_npc"] = py.MustNewMethod("use_item_on_npc", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.useInventoryItemOnNPC(args[0].(*item), args[1].(*npc))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["use_item_on_player"] = py.MustNewMethod("use_item_on_player", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["use_item_on_player"] = py.MustNewMethod("use_item_on_player", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.useInventoryItemOnPlayer(args[0].(*item), args[1].(*player))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["get_inventory_item_at_index"] = py.MustNewMethod("get_inventory_item_at_index", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["get_inventory_item_at_index"] = py.MustNewMethod("get_inventory_item_at_index", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return c.inventory[args[0].(py.Int)], nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 
 	// npcs
 	module.Globals["get_npc_count"] = py.MustNewMethod("get_npc_count", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.npcCount), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_npc_at_index"] = py.MustNewMethod("get_npc_at_index", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_npc_at_index"] = py.MustNewMethod("get_npc_at_index", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return c.npcs[args[0].(py.Int)], nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["get_npcs"] = py.MustNewMethod("get_npcs", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		objs := make([]py.Object, c.npcCount)
 		for i := 0; i < c.npcCount; i++ {
@@ -1540,7 +1551,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 		return py.NewListFromItems(objs), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_nearest_npc_by_id"] = py.MustNewMethod("get_nearest_npc_by_id", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_nearest_npc_by_id"] = py.MustNewMethod("get_nearest_npc_by_id", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (ret py.Object, err0 error) {
 		var (
 			ids       []int
 			inCombat  = true
@@ -1623,8 +1634,8 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 
 		return npc, nil
-	}, py.METH_STATIC, "")
-	module.Globals["get_nearest_npc_by_id_in_rect"] = py.MustNewMethod("get_nearest_npc_by_id_in_rect", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["get_nearest_npc_by_id_in_rect"] = py.MustNewMethod("get_nearest_npc_by_id_in_rect", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var (
 			ids       []int
 			x         = -1
@@ -1707,23 +1718,23 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 
 		return npc, nil
-	}, py.METH_STATIC, "")
-	module.Globals["attack_npc"] = py.MustNewMethod("attack_npc", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["attack_npc"] = py.MustNewMethod("attack_npc", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.attackNPC(args[0].(*npc))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["talk_to_npc"] = py.MustNewMethod("talk_to_npc", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["talk_to_npc"] = py.MustNewMethod("talk_to_npc", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.talkToNPC(args[0].(*npc))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["thieve_npc"] = py.MustNewMethod("thieve_npc", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["thieve_npc"] = py.MustNewMethod("thieve_npc", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.thieveNPC(args[0].(*npc))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["cast_on_npc"] = py.MustNewMethod("cast_on_npc", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["cast_on_npc"] = py.MustNewMethod("cast_on_npc", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.castOnNPC(int(args[0].(py.Int)), args[1].(*npc))
 		return py.None, nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 
 	// quest menu
 
@@ -1740,10 +1751,10 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["get_option_menu_count"] = py.MustNewMethod("get_option_menu_count", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.optionMenuCount), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_option_menu_option"] = py.MustNewMethod("get_option_menu_option", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_option_menu_option"] = py.MustNewMethod("get_option_menu_option", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.String(c.optionMenu[int(args[0].(py.Int))]), nil
-	}, py.METH_STATIC, "")
-	module.Globals["get_option_menu_index"] = py.MustNewMethod("get_option_menu_index", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["get_option_menu_index"] = py.MustNewMethod("get_option_menu_index", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		needle := string(args[0].(py.String))
 		idx := -1
 		for i := 0; i < c.optionMenuCount; i++ {
@@ -1753,11 +1764,11 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 			}
 		}
 		return py.Int(idx), nil
-	}, py.METH_STATIC, "")
-	module.Globals["answer"] = py.MustNewMethod("answer", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["answer"] = py.MustNewMethod("answer", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.answer(int(args[0].(py.Int)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 
 	// players
 
@@ -1774,62 +1785,62 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["get_player_count"] = py.MustNewMethod("get_player_count", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.playerCount), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_player_at_index"] = py.MustNewMethod("get_player_at_index", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_player_at_index"] = py.MustNewMethod("get_player_at_index", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return c.players[args[0].(py.Int)], nil
-	}, py.METH_STATIC, "")
-	module.Globals["get_player_by_name"] = py.MustNewMethod("get_player_by_name", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["get_player_by_name"] = py.MustNewMethod("get_player_by_name", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		player := c.getPlayerByName(string(args[0].(py.String)))
 		if player == nil {
 			return py.None, nil
 		}
 		return player, nil
-	}, py.METH_STATIC, "")
-	module.Globals["attack_player"] = py.MustNewMethod("attack_player", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["attack_player"] = py.MustNewMethod("attack_player", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.attackPlayer(args[0].(*player))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["cast_on_player"] = py.MustNewMethod("cast_on_player", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["cast_on_player"] = py.MustNewMethod("cast_on_player", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.castOnPlayer(int(args[0].(py.Int)), args[1].(*player))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["trade_player"] = py.MustNewMethod("trade_player", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["trade_player"] = py.MustNewMethod("trade_player", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.tradePlayer(args[0].(*player))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["follow_player"] = py.MustNewMethod("follow_player", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["follow_player"] = py.MustNewMethod("follow_player", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.followPlayer(args[0].(*player))
 		return py.None, nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 
 	// messaging
 
-	module.Globals["send_chat_message"] = py.MustNewMethod("send_chat_message", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["send_chat_message"] = py.MustNewMethod("send_chat_message", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.sendChatMessage(string(args[0].(py.String)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["send_private_message"] = py.MustNewMethod("send_private_message", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["send_private_message"] = py.MustNewMethod("send_private_message", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.sendPrivateMessage(string(args[0].(py.String)), string(args[1].(py.String)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["add_friend"] = py.MustNewMethod("add_friend", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["add_friend"] = py.MustNewMethod("add_friend", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.addFriend(string(args[0].(py.String)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["remove_friend"] = py.MustNewMethod("remove_friend", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["remove_friend"] = py.MustNewMethod("remove_friend", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.removeFriend(string(args[0].(py.String)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["add_ignore"] = py.MustNewMethod("add_ignore", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["add_ignore"] = py.MustNewMethod("add_ignore", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.addIgnore(string(args[0].(py.String)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["remove_ignore"] = py.MustNewMethod("remove_ignore", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["remove_ignore"] = py.MustNewMethod("remove_ignore", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.removeIgnore(string(args[0].(py.String)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["get_friend_count"] = py.MustNewMethod("get_friend_count", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["get_friend_count"] = py.MustNewMethod("get_friend_count", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.friendListCount), nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["get_friends"] = py.MustNewMethod("get_friends", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		objs := make([]py.Object, c.friendListCount)
 		for i := 0; i < c.friendListCount; i++ {
@@ -1837,12 +1848,12 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 		return py.NewListFromItems(objs), nil
 	}, py.METH_STATIC, "")
-	module.Globals["is_friend"] = py.MustNewMethod("is_friend", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["is_friend"] = py.MustNewMethod("is_friend", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.isFriend(string(args[0].(py.String)))), nil
-	}, py.METH_STATIC, "")
-	module.Globals["is_ignored"] = py.MustNewMethod("is_ignored", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["is_ignored"] = py.MustNewMethod("is_ignored", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.isIgnored(string(args[0].(py.String)))), nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["get_ignored"] = py.MustNewMethod("get_ignored", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		objs := make([]py.Object, c.ignoreListCount)
 		for i := 0; i < c.ignoreListCount; i++ {
@@ -1887,22 +1898,22 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["is_trade_confirm_screen"] = py.MustNewMethod("is_trade_offer_screen", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.tradeScreen2Active), nil
 	}, py.METH_STATIC, "")
-	module.Globals["trade_offer_item"] = py.MustNewMethod("trade_offer_item", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["trade_offer_item"] = py.MustNewMethod("trade_offer_item", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.offerItemToTrade(int(args[0].(py.Int)), args[1].(*item))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["has_my_offer"] = py.MustNewMethod("has_my_offer", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["has_my_offer"] = py.MustNewMethod("has_my_offer", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.hasTradeOffer(int(args[0].(py.Int)), int(args[1].(py.Int)))), nil
-	}, py.METH_STATIC, "")
-	module.Globals["has_my_confirm"] = py.MustNewMethod("has_my_confirm", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["has_my_confirm"] = py.MustNewMethod("has_my_confirm", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.hasTradeConfirm(int(args[0].(py.Int)), int(args[1].(py.Int)))), nil
-	}, py.METH_STATIC, "")
-	module.Globals["has_recipient_offer"] = py.MustNewMethod("has_recipient_offer", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["has_recipient_offer"] = py.MustNewMethod("has_recipient_offer", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.hasRecipientOffer(int(args[0].(py.Int)), int(args[1].(py.Int)))), nil
-	}, py.METH_STATIC, "")
-	module.Globals["has_recipient_confirm"] = py.MustNewMethod("has_recipient_confirm", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["has_recipient_confirm"] = py.MustNewMethod("has_recipient_confirm", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.hasRecipientConfirm(int(args[0].(py.Int)), int(args[1].(py.Int)))), nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["is_trade_accepted"] = py.MustNewMethod("is_trade_accepted", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.tradeAccepted), nil
 	}, py.METH_STATIC, "")
@@ -1934,7 +1945,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 		return py.NewListFromItems(objs), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_nearest_object_by_id"] = py.MustNewMethod("get_nearest_object_by_id", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_nearest_object_by_id"] = py.MustNewMethod("get_nearest_object_by_id", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var (
 			ids       []int
 			reachable = false
@@ -2002,8 +2013,8 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 
 		return obj, nil
-	}, py.METH_STATIC, "")
-	module.Globals["get_nearest_object_by_id_in_rect"] = py.MustNewMethod("get_nearest_object_by_id_in_rect", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["get_nearest_object_by_id_in_rect"] = py.MustNewMethod("get_nearest_object_by_id_in_rect", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var (
 			ids       []int
 			x         = -1
@@ -2070,35 +2081,35 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 
 		return obj, nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["get_object_count"] = py.MustNewMethod("get_object_count", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.objectCount), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_object_at_index"] = py.MustNewMethod("get_object_at_index", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_object_at_index"] = py.MustNewMethod("get_object_at_index", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return c.objects[args[0].(py.Int)], nil
-	}, py.METH_STATIC, "")
-	module.Globals["get_object_from_coords"] = py.MustNewMethod("get_object_from_coords", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["get_object_from_coords"] = py.MustNewMethod("get_object_from_coords", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		obj := c.getObjectFromCoords(int(args[0].(py.Int)), int(args[1].(py.Int)))
 		if obj == nil {
 			return py.None, nil
 		}
 		return obj, nil
-	}, py.METH_STATIC, "")
-	module.Globals["is_object_at"] = py.MustNewMethod("is_object_at", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["is_object_at"] = py.MustNewMethod("is_object_at", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.isObjectAt(int(args[0].(py.Int)), int(args[1].(py.Int)))), nil
-	}, py.METH_STATIC, "")
-	module.Globals["at_object"] = py.MustNewMethod("at_object", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["at_object"] = py.MustNewMethod("at_object", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.atObject(args[0].(*object))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["at_object2"] = py.MustNewMethod("at_object2", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["at_object2"] = py.MustNewMethod("at_object2", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.atObject2(args[0].(*object))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["cast_on_object"] = py.MustNewMethod("cast_on_object", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["cast_on_object"] = py.MustNewMethod("cast_on_object", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.castOnObject(int(args[0].(py.Int)), args[1].(*object))
 		return py.None, nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 
 	// wall objects
 
@@ -2109,7 +2120,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 		return py.NewListFromItems(objs), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_nearest_wall_object_by_id"] = py.MustNewMethod("get_nearest_wall_object_by_id", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_nearest_wall_object_by_id"] = py.MustNewMethod("get_nearest_wall_object_by_id", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var (
 			ids       []int
 			reachable = false
@@ -2177,8 +2188,8 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 
 		return obj, nil
-	}, py.METH_STATIC, "")
-	module.Globals["get_nearest_wall_object_by_id_in_rect"] = py.MustNewMethod("get_nearest_wall_object_by_id_in_rect", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["get_nearest_wall_object_by_id_in_rect"] = py.MustNewMethod("get_nearest_wall_object_by_id_in_rect", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var (
 			ids       []int
 			x         = -1
@@ -2245,35 +2256,35 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 
 		return obj, nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["get_wall_object_count"] = py.MustNewMethod("get_wall_object_count", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.wallObjectCount), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_wall_object_at_index"] = py.MustNewMethod("get_wall_object_at_index", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_wall_object_at_index"] = py.MustNewMethod("get_wall_object_at_index", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return c.wallObjects[args[0].(py.Int)], nil
-	}, py.METH_STATIC, "")
-	module.Globals["get_wall_object_from_coords"] = py.MustNewMethod("get_wall_object_from_coords", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["get_wall_object_from_coords"] = py.MustNewMethod("get_wall_object_from_coords", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		obj := c.getWallObjectFromCoords(int(args[0].(py.Int)), int(args[1].(py.Int)))
 		if obj == nil {
 			return py.None, nil
 		}
 		return obj, nil
-	}, py.METH_STATIC, "")
-	module.Globals["is_wall_object_at"] = py.MustNewMethod("is_wall_object_at", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["is_wall_object_at"] = py.MustNewMethod("is_wall_object_at", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.isWallObjectAt(int(args[0].(py.Int)), int(args[1].(py.Int)))), nil
-	}, py.METH_STATIC, "")
-	module.Globals["at_wall_object"] = py.MustNewMethod("at_wall_object", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["at_wall_object"] = py.MustNewMethod("at_wall_object", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.atWallObject(args[0].(*wallObject))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["at_wall_object2"] = py.MustNewMethod("at_wall_object2", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["at_wall_object2"] = py.MustNewMethod("at_wall_object2", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.atWallObject2(args[0].(*wallObject))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["cast_on_wall_object"] = py.MustNewMethod("cast_on_wall_object", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["cast_on_wall_object"] = py.MustNewMethod("cast_on_wall_object", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.castOnWallObject(int(args[0].(py.Int)), args[1].(*wallObject))
 		return py.None, nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 
 	// banking
 	module.Globals["get_bank_items"] = py.MustNewMethod("get_bank_items", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
@@ -2283,15 +2294,15 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 		return py.NewListFromItems(objs), nil
 	}, py.METH_STATIC, "")
-	module.Globals["deposit"] = py.MustNewMethod("deposit", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["deposit"] = py.MustNewMethod("deposit", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.deposit(int(args[0].(py.Int)), int(args[1].(py.Int)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["withdraw"] = py.MustNewMethod("withdraw", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["withdraw"] = py.MustNewMethod("withdraw", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.withdraw(int(args[0].(py.Int)), int(args[1].(py.Int)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["get_bank_count"] = py.MustNewMethod("get_bank_count", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["get_bank_count"] = py.MustNewMethod("get_bank_count", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var (
 			ids []int
 		)
@@ -2312,16 +2323,16 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 
 		return py.Int(c.bankCount(ids...)), nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["get_bank_size"] = py.MustNewMethod("get_bank_size", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.bankItemCount), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_bank_item_at_index"] = py.MustNewMethod("get_bank_item_at_index", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_bank_item_at_index"] = py.MustNewMethod("get_bank_item_at_index", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return c.bankItems[args[0].(py.Int)], nil
-	}, py.METH_STATIC, "")
-	module.Globals["has_bank_item"] = py.MustNewMethod("has_bank_item", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["has_bank_item"] = py.MustNewMethod("has_bank_item", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.hasBankItem(int(args[0].(py.Int)))), nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["is_bank_open"] = py.MustNewMethod("is_bank_open", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.banking), nil
 	}, py.METH_STATIC, "")
@@ -2331,17 +2342,17 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	}, py.METH_STATIC, "")
 
 	// prayers
-	module.Globals["enable_prayer"] = py.MustNewMethod("enable_prayer", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["enable_prayer"] = py.MustNewMethod("enable_prayer", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.enablePrayer(int(args[0].(py.Int)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["disable_prayer"] = py.MustNewMethod("disable_prayer", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["disable_prayer"] = py.MustNewMethod("disable_prayer", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.disablePrayer(int(args[0].(py.Int)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["is_prayer_enabled"] = py.MustNewMethod("is_prayer_enabled", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["is_prayer_enabled"] = py.MustNewMethod("is_prayer_enabled", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.prayers[int(args[0].(py.Int))]), nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 
 	// shops
 	module.Globals["get_shop_items"] = py.MustNewMethod("get_shop_items", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
@@ -2351,30 +2362,30 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 		return py.NewListFromItems(objs), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_shop_item_count"] = py.MustNewMethod("get_shop_item_count", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_shop_item_count"] = py.MustNewMethod("get_shop_item_count", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Int(c.shopItemCount), nil
-	}, py.METH_STATIC, "")
-	module.Globals["get_shop_item_at_index"] = py.MustNewMethod("get_shop_item_at_index", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["get_shop_item_at_index"] = py.MustNewMethod("get_shop_item_at_index", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return c.shopItems[args[0].(py.Int)], nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["is_shop_open"] = py.MustNewMethod("is_shop_open", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.shopping), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_shop_item_by_id"] = py.MustNewMethod("get_shop_item_by_id", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_shop_item_by_id"] = py.MustNewMethod("get_shop_item_by_id", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		v := c.getShopItemByID(int(args[0].(py.Int)))
 		if v == nil {
 			return py.None, nil
 		}
 		return v, nil
-	}, py.METH_STATIC, "")
-	module.Globals["buy_shop_item"] = py.MustNewMethod("buy_shop_item", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["buy_shop_item"] = py.MustNewMethod("buy_shop_item", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.buyItem(int(args[0].(py.Int)), int(args[1].(py.Int)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
-	module.Globals["sell_shop_item"] = py.MustNewMethod("sell_shop_item", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["sell_shop_item"] = py.MustNewMethod("sell_shop_item", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.sellItem(int(args[0].(py.Int)), int(args[1].(py.Int)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["close_shop"] = py.MustNewMethod("close_shop", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.closeShop()
 		return py.None, nil
@@ -2388,23 +2399,22 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}
 		return py.NewListFromItems(objs), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_quest"] = py.MustNewMethod("get_quest", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_quest"] = py.MustNewMethod("get_quest", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return c.quests[int(args[0].(py.Int))], nil
-	}, py.METH_STATIC, "")
-	module.Globals["is_quest_complete"] = py.MustNewMethod("is_quest_complete", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	}), py.METH_STATIC, "")
+	module.Globals["is_quest_complete"] = py.MustNewMethod("is_quest_complete", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.quests[int(args[0].(py.Int))].isComplete()), nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 
 	// misc
-
-	module.Globals["send_appearance_update"] = py.MustNewMethod("send_appearance_update", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["send_appearance_update"] = py.MustNewMethod("send_appearance_update", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		c.sendAppearanceUpdate(int(args[0].(py.Int)), int(args[1].(py.Int)), int(args[2].(py.Int)), int(args[3].(py.Int)), int(args[4].(py.Int)), int(args[5].(py.Int)), int(args[6].(py.Int)))
 		return py.None, nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 	module.Globals["is_system_update"] = py.MustNewMethod("is_system_update", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		return py.Bool(c.systemUpdate), nil
 	}, py.METH_STATIC, "")
-	module.Globals["get_collision_flags_at"] = py.MustNewMethod("get_collision_flags_at", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	module.Globals["get_collision_flags_at"] = py.MustNewMethod("get_collision_flags_at", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var (
 			skipLocal = false
 			x         = int(args[0].(py.Int))
@@ -2417,5 +2427,5 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 			return py.Int(c.world.getTile(x, z)), nil
 		}
 		return py.Int(c.combinedTile(x, z)), nil
-	}, py.METH_STATIC, "")
+	}), py.METH_STATIC, "")
 }
