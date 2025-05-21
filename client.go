@@ -31,7 +31,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.10.1"
+	botVersion       = "1.10.2"
 )
 
 var (
@@ -1875,6 +1875,9 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 					for i := 0; i < c.groundItemCount; i++ {
 						if c.groundItems[i].x == x && c.groundItems[i].z == z && c.groundItems[i].id == id {
 							id = -123
+							if c.script != nil && c.script.onGroundItemDespawned != nil {
+								c.script.callOnGroundItemDespawned(c.groundItems[i])
+							}
 						} else {
 							if i != count {
 								c.groundItems[count].id = c.groundItems[i].id
