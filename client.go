@@ -31,7 +31,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.10.2"
+	botVersion       = "1.10.3"
 )
 
 var (
@@ -1038,6 +1038,9 @@ func (c *client) init() {
 	}
 	for i := 0; i < len(c.ignoreList); i++ {
 		c.ignoreList[i] = &ignored{}
+	}
+	for i := 0; i < len(c.myTradeItems); i++ {
+		c.myTradeItems[i] = &tradeItem{}
 	}
 }
 
