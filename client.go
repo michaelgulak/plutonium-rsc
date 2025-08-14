@@ -31,7 +31,7 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.10.4"
+	botVersion       = "1.11.0"
 )
 
 var (
@@ -223,9 +223,10 @@ type item struct {
 }
 
 type shopItem struct {
-	id     int
-	amount int
-	price  int
+	id        int
+	amount    int
+	buyPrice  int
+	sellPrice int
 }
 
 type friend struct {
@@ -2342,10 +2343,10 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 		}
 	case 101: // shop open
 		c.shopItemCount = p.readByteAsInt()
-		p.readByte()           // shop type
-		p.readByte()           // sell mod
-		buyMod := p.readByte() // buy mod
-		pmult := p.readByte()  // price multiplier
+		p.readByte()                 // shop type
+		sellMod := p.readByteAsInt() // sell mod
+		buyMod := p.readByteAsInt()  // buy mod
+		pmult := p.readByteAsInt()   // price multiplier
 
 		for i := 0; i < c.shopItemCount; i++ {
 			id := p.readShort()
@@ -2354,12 +2355,14 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			shopPrice := p.readShort()
 			if c.shopItems[i] != nil && c.shopItems[i].id == id {
 				c.shopItems[i].amount = amount
-				c.shopItems[i].price = calculatePrice(basePrice, shopPrice, int(buyMod), int(pmult), amount, 1, true)
+				c.shopItems[i].buyPrice = calculatePrice(basePrice, shopPrice, buyMod, pmult, amount, 1, true)
+				c.shopItems[i].sellPrice = calculatePrice(basePrice, shopPrice, sellMod, pmult, amount, 1, true)
 			} else {
 				c.shopItems[i] = &shopItem{
-					id:     id,
-					amount: amount,
-					price:  calculatePrice(basePrice, shopPrice, int(buyMod), int(pmult), amount, 1, true),
+					id:        id,
+					amount:    amount,
+					buyPrice:  calculatePrice(basePrice, shopPrice, buyMod, pmult, amount, 1, true),
+					sellPrice: calculatePrice(basePrice, shopPrice, sellMod, pmult, amount, 1, true),
 				}
 			}
 		}

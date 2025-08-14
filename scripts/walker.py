@@ -53,9 +53,10 @@ def loop():
         
         if not path.complete():
             if not path.walk():
+                log("Recalculating path")
                 path = calculate_path_to(settings.target_x, settings.target_z)
                 if path == None:
-                    log("Failed to repath")
+                    log("Failed to recalculate path")
                     stop_account()
                     return 1000
 

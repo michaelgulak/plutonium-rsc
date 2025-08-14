@@ -12,8 +12,15 @@ import (
 )
 
 const (
-	maxWorldHeight = 4032 // 3776
-	maxWorldWidth  = 1008 // 944
+	maxWorldWidth   = 1008
+	maxWorldHeight  = 3840
+	maxRegionWidth  = 21
+	maxRegionHeight = 80
+
+	startRegionX = 48
+	startRegionY = 37
+	maxRegionX   = 68
+	maxRegionY   = 57
 
 	wallNorth  = 1 << 0
 	wallEast   = 1 << 1
@@ -49,7 +56,7 @@ const (
 )
 
 type world struct {
-	regions       map[int16]map[int16]*region
+	regions       [maxRegionWidth][maxRegionHeight]*region
 	pathWalkerMap map[int32]struct{}
 }
 
@@ -95,8 +102,12 @@ func withinWorld(x, y int) bool {
 
 func newWorld() *world {
 	w := &world{
-		regions:       map[int16]map[int16]*region{},
 		pathWalkerMap: map[int32]struct{}{},
+	}
+	for x := int16(0); x < maxRegionWidth; x++ {
+		for y := int16(0); y < maxRegionHeight; y++ {
+			w.regions[x][y] = newRegion(x, y)
+		}
 	}
 	return w
 }
@@ -104,22 +115,12 @@ func newWorld() *world {
 func (w *world) getRegion(x int, y int) *region {
 	regionX := int16(x / 48)
 	regionY := int16(y / 48)
-
-	var (
-		r0 map[int16]*region
-		ok bool
-	)
-	if r0, ok = w.regions[regionX]; !ok {
-		r0 = map[int16]*region{}
-		w.regions[regionX] = r0
-	}
-
-	var r *region
-	if r, ok = r0[regionY]; !ok {
+	r := w.regions[regionX][regionY]
+	if r == nil {
+		fmt.Printf("[BOT] WARNING: Creating region at (%d, %d) region (%d, %d)\n", x, y, regionX, regionY)
 		r = newRegion(regionX, regionY)
 		w.regions[regionX][regionY] = r
 	}
-
 	return r
 }
 
@@ -134,16 +135,17 @@ func (w *world) getTile(x int, y int) int32 {
 	return r.tiles[x%48][y%48]
 }
 
-func newRegion(regionX int16, regionY int16) (z *region) {
-	z = &region{}
-	z.regionX = regionX
-	z.regionY = regionY
-	z.tile = math.MaxInt32
-	z.tiles = make([][]int32, 48)
-	for i := 0; i < 48; i++ {
-		z.tiles[i] = make([]int32, 48)
+func newRegion(regionX int16, regionY int16) *region {
+	r := &region{
+		regionX: regionX,
+		regionY: regionY,
+		tile:    math.MaxInt32,
+		tiles:   make([][]int32, 48),
 	}
-	return
+	for i := 0; i < 48; i++ {
+		r.tiles[i] = make([]int32, 48)
+	}
+	return r
 }
 
 func (r *region) checkRedundantRegion() {
@@ -172,15 +174,12 @@ func fileToBuffer(r io.ReadCloser) *bytes.Buffer {
 	return buf
 }
 
-func (w *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, height int, bigX int, bigY int) bool {
+func (w *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, height int, bigX int, bigY int) {
 	filename := fmt.Sprintf("h%dx%dy%d", height, sectionX, sectionY)
 	e, err := reader.Open(filename)
 	if err != nil {
 		fmt.Println("loadSection:", err)
 		os.Exit(1)
-	}
-	if e == nil {
-		return false
 	}
 	data := fileToBuffer(e)
 	s := unpackSector(data)
@@ -203,13 +202,13 @@ func (w *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, 
 			}
 			verticalWall := byte(sectorTile.verticalWall)
 			if verticalWall > 0 && doorDefs[verticalWall-1].Unknown == 0 && doorDefs[verticalWall-1].DoorType != 0 {
-				w.getRegion(bx, by).tiles[bx%48][by%48] |= 1       // 1
-				w.getRegion(bx, by-1).tiles[bx%48][(by-1)%48] |= 4 // 4
+				w.getRegion(bx, by).tiles[bx%48][by%48] |= 1
+				w.getRegion(bx, by-1).tiles[bx%48][(by-1)%48] |= 4
 			}
 			horizontalWall := byte(sectorTile.horizontalWall)
 			if horizontalWall > 0 && doorDefs[horizontalWall-1].Unknown == 0 && doorDefs[horizontalWall-1].DoorType != 0 {
 				w.getRegion(bx, by).tiles[bx%48][by%48] |= 2
-				w.getRegion(bx-1, by).tiles[(bx-1)%48][by%48] |= 8 // 8
+				w.getRegion(bx-1, by).tiles[(bx-1)%48][by%48] |= 8
 			}
 			diagonalWalls := uint16(sectorTile.diagonalWalls)
 			if diagonalWalls > 0 && diagonalWalls < 12000 && doorDefs[diagonalWalls-1].Unknown == 0 && doorDefs[diagonalWalls-1].DoorType != 0 {
@@ -221,7 +220,6 @@ func (w *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, 
 
 		}
 	}
-	return true
 }
 
 func (w *world) loadWorld() {
@@ -233,30 +231,26 @@ func (w *world) loadWorld() {
 		os.Exit(1)
 	}
 	defer tileArchive.Close()
-	sectors := 0
 	floorCount := 4
 	for lvl := 0; lvl < floorCount; lvl++ {
-		wildX := 2304
-		wildY := 1776 - lvl*944
-		for sx := 0; sx <= 1008-48; sx += 48 {
-			for sy := 0; sy < 944; sy += 48 {
-				x := (sx + wildX) / 48
-				y := (sy + lvl*944 + wildY) / 48
-				if w.loadSection(tileArchive, x, y, lvl, sx, sy+944*lvl) {
-					sectors++
-				}
+		for x := startRegionX; x <= maxRegionX; x++ {
+			for y := startRegionY; y <= maxRegionY; y++ {
+				sx := (x - startRegionX) * 48
+				sy := (y - startRegionY) * 48
+				w.loadSection(tileArchive, x, y, lvl, sx, sy+944*lvl)
 			}
 		}
 	}
 
 	for lvl := 0; lvl < 4; lvl++ {
-		for sx := 0; sx < 20; sx++ {
+		for sx := 0; sx < 21; sx++ {
 			for sy := 0; sy < 20; sy++ {
-				region := w.getRegion(sx*48, sy*48+(48*20*lvl))
+				region := w.getRegion(sx*48, sy*48+(960*lvl))
 				region.checkRedundantRegion()
 			}
 		}
 	}
+
 	objectLocStr := filepath.Join(settings.executablePath, settings.DataSettings.Directory, settings.DataSettings.SceneryLocs)
 	f, err := os.Open(objectLocStr)
 	if err != nil {

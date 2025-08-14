@@ -136,7 +136,8 @@ func init() {
 	// shop item
 	shopItemType.Dict["id"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*shopItem).id), nil }}
 	shopItemType.Dict["amount"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*shopItem).amount), nil }}
-	shopItemType.Dict["price"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*shopItem).price), nil }}
+	shopItemType.Dict["buy_price"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*shopItem).buyPrice), nil }}
+	shopItemType.Dict["sell_price"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*shopItem).sellPrice), nil }}
 	// friend
 	friendType.Dict["username"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.String(self.(*friend).username), nil }}
 	friendType.Dict["online"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Bool(self.(*friend).online), nil }}

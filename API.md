@@ -56,7 +56,7 @@ Called once before the script starts running. The account will be logged in and 
 
 ###### stop_account()
 
-Tells the bot to close the account loop, terminating the running account. Usually used with on_kill_signal() after the account is out of combat and the script prepares everything to be able to kill the account loop.
+Tells the bot to close the account loop, terminating the running account.
 
 ###### in_rect(area_x, area_z, width, height)
 
@@ -76,7 +76,7 @@ Checks whether the client coords are equal to `x` and `z`.
 
 ###### set_wakeup_at(int)
 
-Changes the default (0) wakeup fatigue setting to whatever you want.
+Changes the default (0) wakeup fatigue setting.
 
 ###### set_fatigue_tricking(True)
 
@@ -89,7 +89,7 @@ Prints to the console with user prefix.
 
 ###### debug(str)
 
-Prints to the console if the debug flag is set to true.
+Prints to the console if the debug flag is on.
 
 ###### walk_to(x, z)
 ###### walk_to_entity(x, z)
@@ -130,7 +130,7 @@ Proper use is like this:
 ###### is_skilling()
 ###### is_sleeping()
 
-Can only be used in event handlers.
+Only useful in event handlers.
 
 ###### get_collision_flags_at(x, z, skip_local=True)
 
@@ -455,7 +455,7 @@ Contains the following fields: `id`, `amount`.
 
 #### Shop Item Object
 
-Contains the following fields: `id`, `amount`, `price`.
+Contains the following fields: `id`, `amount`, `buy_price`, `sell_price`.
 
 ###### get_shop_item_count()
 ###### get_shop_item_at_index(index)
