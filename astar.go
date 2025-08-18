@@ -26,7 +26,7 @@ const (
 )
 
 type astarPathFinder struct {
-	depth       int
+	depth       int16
 	costBoard   [][]*node
 	worldStart  *point
 	pointStart  *point
@@ -37,15 +37,15 @@ type astarPathFinder struct {
 }
 
 type point struct {
-	x int
-	y int
+	x int16
+	y int16
 }
 
 type node struct {
-	fCost        int
-	gCost        int
-	hCost        int
-	state        int
+	fCost        int32
+	gCost        int32
+	hCost        int32
+	state        byte
 	southBlocked bool
 	northBlocked bool
 	westBlocked  bool
@@ -56,8 +56,8 @@ type node struct {
 
 type path struct {
 	waypoints *Deque[*point]
-	startX    int
-	startY    int
+	startX    int16
+	startY    int16
 }
 
 type longPath struct {
@@ -74,13 +74,20 @@ func abs(a int) int {
 	return a
 }
 
+func abs16(a int16) int16 {
+	if a < 0 {
+		return -a
+	}
+	return a
+}
+
 func calcDistance(one, two *point) int {
-	xdiff := abs(one.x - two.x)
-	ydiff := abs(one.y - two.y)
+	xdiff := abs16(one.x - two.x)
+	ydiff := abs16(one.y - two.y)
 
 	var (
-		shortL int
-		longL  int
+		shortL int16
+		longL  int16
 	)
 	if xdiff > ydiff {
 		shortL = ydiff
@@ -93,10 +100,10 @@ func calcDistance(one, two *point) int {
 		longL = ydiff
 	}
 
-	return shortL*diagCost + (longL-shortL)*basicCost
+	return int(shortL)*diagCost + (int(longL)-int(shortL))*basicCost
 }
 
-func newAstarPathFinder(c *client, start *point, end *point, depth int, skipLocal bool) *astarPathFinder {
+func newAstarPathFinder(c *client, start *point, end *point, depth int16, skipLocal bool) *astarPathFinder {
 	p := &astarPathFinder{
 		costBoard:   nil,
 		openNodes:   []*node{},
@@ -112,7 +119,7 @@ func newAstarPathFinder(c *client, start *point, end *point, depth int, skipLoca
 	return p
 }
 
-func newNode(x int, y int) *node {
+func newNode(x, y int16) *node {
 	return &node{
 		position: &point{x, y},
 		state:    initState,
@@ -135,18 +142,18 @@ func (p *astarPathFinder) buildPath() *path {
 	return p.path
 }
 
-func (p *astarPathFinder) generateTraversalInfo(c *client, center *point, depth int, skipLocal bool) {
+func (p *astarPathFinder) generateTraversalInfo(c *client, center *point, depth int16, skipLocal bool) {
 	if depth < 1 {
 		return
 	}
 	p.costBoard = make([][]*node, 2*depth+1)
 	p.initBoard(p.costBoard, 2*depth+1)
-	var curPosX int
-	var curPosY int
+	var curPosX int16
+	var curPosY int16
 
 	for x := -depth; x <= depth; x++ {
 		for y := -depth; y <= depth; y++ {
-			cdx, cdy := center.x-x, center.y+y
+			cdx, cdy := int(center.x-x), int(center.y+y)
 			_, ok := c.world.pathWalkerMap[int32(cdx<<16)|int32(cdy)]
 			curPosX = x + depth
 			curPosY = y + depth
@@ -206,7 +213,7 @@ func (p *astarPathFinder) generateTraversalInfo(c *client, center *point, depth 
 
 func (p *astarPathFinder) findNextNode() *node {
 	var (
-		minimum = math.MaxInt
+		minimum = int32(math.MaxInt32)
 		minNode *node
 	)
 	for _, node := range p.openNodes {
@@ -241,20 +248,22 @@ func (p *astarPathFinder) findPath() *path {
 	}
 }
 
-func (p *astarPathFinder) initBoard(board [][]*node, depth int) {
+func (p *astarPathFinder) initBoard(board [][]*node, depth int16) {
 	if board == nil {
 		return
 	}
-	for i := 0; i < len(p.costBoard); i++ {
+	lengthX := int16(len(p.costBoard))
+	for i := int16(0); i < lengthX; i++ {
 		board[i] = make([]*node, depth)
-		for j := 0; j < len(p.costBoard[i]); j++ {
+		lengthY := int16(len(p.costBoard[i]))
+		for j := int16(0); j < lengthY; j++ {
 			board[i][j] = newNode(i, j)
 		}
 	}
 }
 
 func (n *node) calcGCost(p *astarPathFinder) {
-	n.gCost = calcDistance(n.position, p.pointEnd)
+	n.gCost = int32(calcDistance(n.position, p.pointEnd))
 }
 
 func (n *node) calcHCost() {
@@ -415,7 +424,7 @@ func diagBlocked(a *astarPathFinder, n *node, dir int) bool {
 	return true
 }
 
-func (n *node) update(a *astarPathFinder, node *node, cost int) {
+func (n *node) update(a *astarPathFinder, node *node, cost int32) {
 	if n.state == initState {
 		n.state = openState
 		n.fCost = node.fCost + cost
@@ -434,7 +443,7 @@ func (n *node) update(a *astarPathFinder, node *node, cost int) {
 	n.parent = node.position
 }
 
-func newPath(startX, startY int) *path {
+func newPath(startX, startY int16) *path {
 	return &path{
 		startX:    startX,
 		startY:    startY,
@@ -442,6 +451,6 @@ func newPath(startX, startY int) *path {
 	}
 }
 
-func (p *path) addWaypoint(x int, y int) {
+func (p *path) addWaypoint(x, y int16) {
 	p.waypoints.PushFront(&point{x, y})
 }

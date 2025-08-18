@@ -370,7 +370,7 @@ func longPathProcess(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Ob
 		return py.None, nil
 	}
 	pt := n.points[n.currentPt]
-	if pt.x == n.script.c.x && pt.y == n.script.c.z {
+	if pt.x == int16(n.script.c.x) && pt.y == int16(n.script.c.z) {
 		n.currentPt++
 	}
 	return py.None, nil
@@ -382,7 +382,7 @@ func longPathSetNearest(self py.Object, args py.Tuple, kwargs py.StringDict) (py
 	minIdx := 0
 	minDist := math.MaxInt
 	for i, p := range n.points {
-		if dist := distance(x, z, p.x, p.y); dist <= minDist {
+		if dist := distance(x, z, int(p.x), int(p.y)); dist <= minDist {
 			minDist = dist
 			minIdx = i
 		}
@@ -402,7 +402,7 @@ func longPathWalk(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Objec
 		return py.None, nil
 	}
 	pt := n.points[n.currentPt]
-	return py.Bool(n.script.c.walkTo(pt.x, pt.y, pt.x, pt.y, false, false)), nil
+	return py.Bool(n.script.c.walkTo(int(pt.x), int(pt.y), int(pt.x), int(pt.y), false, false)), nil
 }
 
 func (s *script) addHooks(module *py.Module) {
@@ -977,8 +977,8 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		points := make([]*point, coords.Len()/2)
 		for i := 0; i < len(points); i++ {
 			points[i] = &point{
-				x: int(coords.Items[i*2].(py.Int)),
-				y: int(coords.Items[i*2+1].(py.Int)),
+				x: int16(coords.Items[i*2].(py.Int)),
+				y: int16(coords.Items[i*2+1].(py.Int)),
 			}
 		}
 		return &longPath{
@@ -987,24 +987,24 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		}, nil
 	}), py.METH_STATIC, "")
 	module.Globals["calculate_path"] = py.MustNewMethod("calculate_path", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-		startX, startZ := int(args[0].(py.Int)), int(args[1].(py.Int))
-		x, z := int(args[2].(py.Int)), int(args[3].(py.Int))
-		depth := -1
+		startX, startZ := int16(args[0].(py.Int)), int16(args[1].(py.Int))
+		x, z := int16(args[2].(py.Int)), int16(args[3].(py.Int))
+		depth := int16(-1)
 		skipLocal := false
-		maxDepth := 512
+		maxDepth := int16(512)
 		if len(args) > 4 {
 			switch v := args[4].(type) {
 			case py.Int:
-				depth = int(v)
+				depth = int16(v)
 			case py.Float:
-				depth = int(float64(v))
+				depth = int16(float64(v))
 			}
 		}
 		if skipLocal0, ok := kwargs["skip_local"]; ok {
 			skipLocal = bool(skipLocal0.(py.Bool))
 		}
 		if maxDepth0, ok := kwargs["max_depth"]; ok {
-			maxDepth = int(maxDepth0.(py.Int))
+			maxDepth = int16(maxDepth0.(py.Int))
 		}
 		path := c.generateLongPath(startX, startZ, x, z, depth, skipLocal, maxDepth)
 		if path == nil {
@@ -1016,25 +1016,25 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		return path, nil
 	}), py.METH_STATIC, "")
 	module.Globals["calculate_path_to"] = py.MustNewMethod("calculate_path_to", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-		x, z := int(args[0].(py.Int)), int(args[1].(py.Int))
-		depth := -1
+		x, z := int16(args[0].(py.Int)), int16(args[1].(py.Int))
+		depth := int16(-1)
 		skipLocal := false
-		maxDepth := 512
+		maxDepth := int16(512)
 		if len(args) > 2 {
 			switch v := args[2].(type) {
 			case py.Int:
-				depth = int(v)
+				depth = int16(v)
 			case py.Float:
-				depth = int(float64(v))
+				depth = int16(float64(v))
 			}
 		}
 		if skipLocal0, ok := kwargs["skip_local"]; ok {
 			skipLocal = bool(skipLocal0.(py.Bool))
 		}
 		if maxDepth0, ok := kwargs["max_depth"]; ok {
-			maxDepth = int(maxDepth0.(py.Int))
+			maxDepth = int16(maxDepth0.(py.Int))
 		}
-		path := c.generateLongPath(c.x, c.z, x, z, depth, skipLocal, maxDepth)
+		path := c.generateLongPath(int16(c.x), int16(c.z), x, z, depth, skipLocal, maxDepth)
 		if path == nil {
 			if s.c.account.debug {
 				fmt.Printf("[%s] Path not found to (%d, %d)\n", c.user, x, z)
@@ -1046,11 +1046,11 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["calculate_path_through"] = py.MustNewMethod("calculate_path_through", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var (
 			l         *py.List
-			depth     = -1
-			startX    = c.x
-			startZ    = c.z
+			depth     = int16(-1)
+			startX    = int16(c.x)
+			startZ    = int16(c.z)
 			skipLocal = false
-			maxDepth  = 512
+			maxDepth  = int16(512)
 		)
 		if l0, ok := kwargs["points"]; ok {
 			l = l0.(*py.List)
@@ -1061,29 +1061,29 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		for i, v := range l.Items {
 			v := v.(py.Tuple)
 			coords[i] = &point{
-				x: int(v[0].(py.Int)),
-				y: int(v[1].(py.Int)),
+				x: int16(v[0].(py.Int)),
+				y: int16(v[1].(py.Int)),
 			}
 		}
 		if depth0, ok := kwargs["depth"]; ok {
 			switch v := depth0.(type) {
 			case py.Int:
-				depth = int(v)
+				depth = int16(v)
 			case py.Float:
-				depth = int(float64(v))
+				depth = int16(float64(v))
 			}
 		}
 		if startX0, ok := kwargs["start_x"]; ok {
-			startX = int(startX0.(py.Int))
+			startX = int16(startX0.(py.Int))
 		}
 		if startZ0, ok := kwargs["start_z"]; ok {
-			startZ = int(startZ0.(py.Int))
+			startZ = int16(startZ0.(py.Int))
 		}
 		if skipLocal0, ok := kwargs["skip_local"]; ok {
 			skipLocal = bool(skipLocal0.(py.Bool))
 		}
 		if maxDepth0, ok := kwargs["max_depth"]; ok {
-			maxDepth = int(maxDepth0.(py.Int))
+			maxDepth = int16(maxDepth0.(py.Int))
 		}
 		path, startError, endError := c.generateLongPathThrough(startX, startZ, coords, depth, skipLocal, maxDepth)
 		if path == nil {
@@ -1095,7 +1095,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		return path, nil
 	}), py.METH_STATIC, "")
 	module.Globals["walk_path_to"] = py.MustNewMethod("walk_path_to", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-		x, z := int(args[0].(py.Int)), int(args[1].(py.Int))
+		x, z := int16(args[0].(py.Int)), int16(args[1].(py.Int))
 		pt := c.generateLongPathPoint(x, z, -1)
 		if pt == nil {
 			if s.c.account.debug {
@@ -1103,17 +1103,17 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 			}
 			return py.Bool(false), nil
 		}
-		c.walkTo(pt.x, pt.y, pt.x, pt.y, false, false)
+		c.walkTo(int(pt.x), int(pt.y), int(pt.x), int(pt.y), false, false)
 		return py.Bool(true), nil
 	}), py.METH_STATIC, "")
 	module.Globals["walk_path_depth_to"] = py.MustNewMethod("walk_path_depth_to", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-		x, z := int(args[0].(py.Int)), int(args[1].(py.Int))
-		var depth int
+		x, z := int16(args[0].(py.Int)), int16(args[1].(py.Int))
+		var depth int16
 		switch v := args[2].(type) {
 		case py.Int:
-			depth = int(v)
+			depth = int16(v)
 		case py.Float:
-			depth = int(float64(v))
+			depth = int16(float64(v))
 		}
 		pt := c.generateLongPathPoint(x, z, depth)
 		if pt == nil {
@@ -1122,7 +1122,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 			}
 			return py.Bool(false), nil
 		}
-		c.walkTo(pt.x, pt.y, pt.x, pt.y, false, false)
+		c.walkTo(int(pt.x), int(pt.y), int(pt.x), int(pt.y), false, false)
 		return py.Bool(true), nil
 	}), py.METH_STATIC, "")
 	module.Globals["get_pid"] = py.MustNewMethod("get_pid", func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {

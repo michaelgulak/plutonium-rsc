@@ -73,10 +73,23 @@ func max(a, b int) int {
 	return b
 }
 
+func max16(a, b int16) int16 {
+	if a > b {
+		return a
+	}
+	return b
+}
+
 func distance(x1, z1, x2, z2 int) int {
 	dx := abs(x1 - x2)
 	dy := abs(z1 - z2)
 	return max(dx, dy)
+}
+
+func distance16(x1, z1, x2, z2 int16) int16 {
+	dx := abs16(x1 - x2)
+	dy := abs16(z1 - z2)
+	return max16(dx, dy)
 }
 
 func (c *client) distanceTo(x, z int) int {
@@ -529,16 +542,16 @@ func (c *client) getShopAmount(id int) int {
 	return 0
 }
 
-func (c *client) generateLongPathPoint(x, z, depth int) *point {
+func (c *client) generateLongPathPoint(x, z, depth int16) *point {
 	if depth == -1 {
-		depth = int(distance(c.x, c.z, x, z) * 4)
+		depth = int16(distance16(int16(c.x), int16(c.z), x, z) * 4)
 	}
 
 	if depth > 800 {
 		return nil
 	}
 
-	p := newAstarPathFinder(c, &point{c.x, c.z}, &point{x, z}, depth, false)
+	p := newAstarPathFinder(c, &point{int16(c.x), int16(c.z)}, &point{x, z}, depth, false)
 
 	path := p.findPath()
 
@@ -563,10 +576,10 @@ func (c *client) generateLongPathPoint(x, z, depth int) *point {
 	return pt
 }
 
-func (c *client) generateLongPath(startX, startZ, x, z, depth int, skipLocal bool, maxDepth int) *longPath {
+func (c *client) generateLongPath(startX, startZ, x, z, depth int16, skipLocal bool, maxDepth int16) *longPath {
 	var path *path
 	if depth == -1 {
-		depth = int(math.Pow(2, math.Ceil(math.Log2(float64(distance(startX, startZ, x, z))))))
+		depth = int16(math.Pow(2, math.Ceil(math.Log2(float64(distance16(startX, startZ, x, z))))))
 		for {
 			if depth > maxDepth {
 				return nil
@@ -612,7 +625,7 @@ func (c *client) generateLongPath(startX, startZ, x, z, depth int, skipLocal boo
 	return lp
 }
 
-func (c *client) generateLongPathThrough(startX, startZ int, coords []*point, depth int, skipLocal bool, maxDepth int) (*longPath, *point, *point) {
+func (c *client) generateLongPathThrough(startX, startZ int16, coords []*point, depth int16, skipLocal bool, maxDepth int16) (*longPath, *point, *point) {
 	totalPath := []*point{}
 	lastX, lastZ := startX, startZ
 	initialDepth := depth
@@ -620,7 +633,7 @@ func (c *client) generateLongPathThrough(startX, startZ int, coords []*point, de
 		x, z := v.x, v.y
 		var path *path
 		if initialDepth == -1 {
-			depth = int(math.Pow(2, math.Ceil(math.Log2(float64(distance(lastX, lastZ, x, z))))))
+			depth = int16(math.Pow(2, math.Ceil(math.Log2(float64(distance16(lastX, lastZ, x, z))))))
 			for {
 				if depth > maxDepth {
 					return nil, &point{lastX, lastZ}, &point{x, z}

@@ -112,19 +112,18 @@ func newWorld() *world {
 	return w
 }
 
-func (w *world) getRegion(x int, y int) *region {
+func (w *world) getRegion(x, y int) *region {
 	regionX := int16(x / 48)
 	regionY := int16(y / 48)
 	r := w.regions[regionX][regionY]
 	if r == nil {
-		fmt.Printf("[BOT] WARNING: Creating region at (%d, %d) region (%d, %d)\n", x, y, regionX, regionY)
 		r = newRegion(regionX, regionY)
 		w.regions[regionX][regionY] = r
 	}
 	return r
 }
 
-func (w *world) getTile(x int, y int) int32 {
+func (w *world) getTile(x, y int) int32 {
 	if !withinWorld(x, y) {
 		return math.MaxInt32
 	}
@@ -135,7 +134,7 @@ func (w *world) getTile(x int, y int) int32 {
 	return r.tiles[x%48][y%48]
 }
 
-func newRegion(regionX int16, regionY int16) *region {
+func newRegion(regionX, regionY int16) *region {
 	r := &region{
 		regionX: regionX,
 		regionY: regionY,
@@ -174,7 +173,7 @@ func fileToBuffer(r io.ReadCloser) *bytes.Buffer {
 	return buf
 }
 
-func (w *world) loadSection(reader *zip.ReadCloser, sectionX int, sectionY int, height int, bigX int, bigY int) {
+func (w *world) loadSection(reader *zip.ReadCloser, sectionX, sectionY, height, bigX, bigY int) {
 	filename := fmt.Sprintf("h%dx%dy%d", height, sectionX, sectionY)
 	e, err := reader.Open(filename)
 	if err != nil {
@@ -504,7 +503,7 @@ func (l *localWorld) getTile(x, z int) int32 {
 	return l.tiles[xz]
 }
 
-func (c *client) findPath(startX int, startZ int, xLow int, xHigh int, zLow int, zHigh int, reachBorder bool) int {
+func (c *client) findPath(startX, startZ, xLow, xHigh, zLow, zHigh int, reachBorder bool) int {
 	baseX := c.regionX
 	baseZ := c.regionZ
 
