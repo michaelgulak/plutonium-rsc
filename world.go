@@ -115,12 +115,7 @@ func newWorld() *world {
 func (w *world) getRegion(x, y int) *region {
 	regionX := int16(x / 48)
 	regionY := int16(y / 48)
-	r := w.regions[regionX][regionY]
-	if r == nil {
-		r = newRegion(regionX, regionY)
-		w.regions[regionX][regionY] = r
-	}
-	return r
+	return w.regions[regionX][regionY]
 }
 
 func (w *world) getTile(x, y int) int32 {

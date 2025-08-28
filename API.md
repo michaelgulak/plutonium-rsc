@@ -51,6 +51,7 @@ Called once before the script starts running. The account will be logged in and 
 ###### on_wall_object_spawned(wall_object)
 ###### on_wall_object_despawned(wall_object)
 ###### on_fatigue_update(fatigue, accurate_fatigue)
+###### on_bot_message(sender, message)
 
 ## Base
 
@@ -160,6 +161,10 @@ Only useful in event handlers.
 ###### random(min, max)
 
 Returns a random integer between min and max, inclusive. Min and max must be >= 0.
+
+###### send_bot_message(username, message)
+
+Sends an inter-process message to the script that is running for `username`. `message` must be a dict. The message can be received with the `on_bot_message` event. Note that the receiver has a buffer of 100 messages, after which the script will throw an error. The buffer is drained once the receiver receives the messages.
 
 ## Paths
 

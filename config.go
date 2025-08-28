@@ -31,6 +31,7 @@ type account struct {
 	progressDur        time.Duration
 	lastProgressReport time.Time
 	needsFirstNotif    bool
+	botMessages        chan *botMessage
 }
 
 type ocrSettings struct {
@@ -89,11 +90,11 @@ type accountConfig struct {
 	Account struct {
 		User      string
 		Pass      string
-		Autologin interface{}
-		Enabled   interface{}
-		Debug     interface{}
+		Autologin any
+		Enabled   any
+		Debug     any
 	}
-	Script interface{}
+	Script any
 }
 
 func parseConfig(filePath string) {
@@ -140,6 +141,7 @@ func loadAccount(path string) (*account, error) {
 		password:        config.Account.Pass,
 		script:          &script{},
 		needsFirstNotif: true,
+		botMessages:     make(chan *botMessage, botMessagesSize),
 	}
 
 	if autologin, ok := config.Account.Autologin.(bool); ok {
@@ -158,7 +160,7 @@ func loadAccount(path string) (*account, error) {
 		acct.debug = debug
 	}
 
-	if script, ok := config.Script.(map[string]interface{}); ok {
+	if script, ok := config.Script.(map[string]any); ok {
 		name := script["name"].(string)
 		acct.script.path = filepath.Join(settings.executablePath, settings.ScriptSettings.Directory, name)
 		acct.script.pathDir = filepath.Dir(acct.script.path)
@@ -174,7 +176,7 @@ func loadAccount(path string) (*account, error) {
 		if scriptArgs, ok := script["settings"]; ok {
 			acct.script.settings = py.StringDict{}
 
-			for k, v := range scriptArgs.(map[string]interface{}) {
+			for k, v := range scriptArgs.(map[string]any) {
 				setting := convertType(v)
 				if setting == nil {
 					return nil, fmt.Errorf("unhandled type: %v", v)
@@ -212,7 +214,7 @@ func loadAccounts() ([]*account, error) {
 	return accounts, nil
 }
 
-func convertType(v interface{}) py.Object {
+func convertType(v any) py.Object {
 	switch v := v.(type) {
 	case bool:
 		return py.Bool(v)
@@ -228,7 +230,7 @@ func convertType(v interface{}) py.Object {
 		return py.Float(v.AsTime(time.UTC).Unix())
 	case toml.LocalDate:
 		return py.Float(v.AsTime(time.UTC).Unix())
-	case []interface{}:
+	case []any:
 		if len(v) == 0 {
 			return py.NewList()
 		}
@@ -237,7 +239,7 @@ func convertType(v interface{}) py.Object {
 			objs = append(objs, convertType(v0))
 		}
 		return py.NewListFromItems(objs)
-	case map[string]interface{}:
+	case map[string]any:
 		dict := py.StringDict{}
 		for k, v0 := range v {
 			dict[k] = convertType(v0)

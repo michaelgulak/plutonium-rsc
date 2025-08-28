@@ -31,7 +31,8 @@ const (
 	readWriteTimeout = 10
 	connectTimeout   = 30
 	maxPacketSize    = 30000
-	botVersion       = "1.11.1"
+	botMessagesSize  = 100
+	botVersion       = "1.11.2"
 )
 
 var (
@@ -60,6 +61,7 @@ type client struct {
 	scriptKillSignal   chan struct{}
 	scriptStopSignal   chan struct{}
 	scriptDCSignal     chan int
+	accounts           []*account
 
 	script *script
 
@@ -419,6 +421,7 @@ func (b *bot) loadAccounts(user, pass, acctFile, scriptPath string, autologin bo
 			enabled:     true,
 			debug:       true,
 			progressDur: noProgressDurSet,
+			botMessages: make(chan *botMessage, botMessagesSize),
 		}
 		if scriptPath != "" {
 			pathDir := filepath.Dir(scriptPath)
@@ -505,6 +508,7 @@ clientLoop:
 			scriptStopSignal: make(chan struct{}, 1),
 			scriptDCSignal:   make(chan int, 1),
 			script:           acc.script,
+			accounts:         b.accounts,
 		}
 
 		if c.script != nil {
@@ -592,21 +596,13 @@ func (b *bot) eventLoop(c *client) (bool, time.Duration) {
 		progressTimerChan <-chan time.Time
 		progressTimer     *time.Timer
 		scriptTimerChan   <-chan time.Time
+		botMessages       <-chan *botMessage
 		scriptTimer       *time.Timer
 		idleTimer         = time.NewTimer(5 * time.Second)
 		localClosing      = b.closing
 		scriptStopped     = false
+		waitingLoad       = true
 	)
-
-	if c.account.progressDur != noProgressDurSet && c.script != nil && c.script.running {
-		progressTimer = time.NewTimer(c.account.progressDur - time.Since(c.account.lastProgressReport))
-		progressTimerChan = progressTimer.C
-	}
-
-	if c.script != nil && c.script.running {
-		scriptTimer = time.NewTimer(100 * time.Millisecond)
-		scriptTimerChan = scriptTimer.C
-	}
 
 	defer func() {
 		if progressTimer != nil && !progressTimer.Stop() {
@@ -622,6 +618,18 @@ func (b *bot) eventLoop(c *client) (bool, time.Duration) {
 
 loop:
 	for {
+		if waitingLoad && !c.loading {
+			if c.script != nil && c.script.running {
+				scriptTimer = time.NewTimer(0)
+				scriptTimerChan = scriptTimer.C
+				if c.account.progressDur != noProgressDurSet {
+					progressTimer = time.NewTimer(c.account.progressDur - time.Since(c.account.lastProgressReport))
+					progressTimerChan = progressTimer.C
+				}
+				botMessages = c.account.botMessages
+			}
+			waitingLoad = false
+		}
 		select {
 		case <-c.closed:
 			break loop
@@ -640,16 +648,12 @@ loop:
 			opcode := packet.readByteAsInt()
 			c.handlePacket(packet, opcode, len(packet.buf)-1)
 		case <-progressTimerChan:
-			if !c.loading {
-				c.account.lastProgressReport = time.Now()
-				if c.script != nil && c.script.running && c.script.onProgressReport != nil {
-					c.script.callOnProgressReport()
-					c.account.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(c.account.progressDur).Format(time.RFC1123))
-				}
-				progressTimer.Reset(c.account.progressDur)
-			} else {
-				progressTimer.Reset(time.Second)
+			c.account.lastProgressReport = time.Now()
+			if c.script != nil && c.script.running && c.script.onProgressReport != nil {
+				c.script.callOnProgressReport()
+				c.account.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(c.account.progressDur).Format(time.RFC1123))
 			}
+			progressTimer.Reset(c.account.progressDur)
 		case <-c.scriptKillSignal:
 			c.close()
 			fmt.Printf("[%s] Script kill signal received, terminating\n", c.user)
@@ -666,7 +670,7 @@ loop:
 			c.close()
 			return false, time.Second * time.Duration(waitTime)
 		case <-scriptTimerChan:
-			if !c.sleeping && !c.loading {
+			if !c.sleeping {
 				if !c.script.inited {
 					if c.script.onInit != nil {
 						c.script.callOnInit()
@@ -676,6 +680,10 @@ loop:
 				scriptTimer.Reset(time.Duration(c.script.loop()) * time.Millisecond)
 			} else {
 				scriptTimer.Reset(50 * time.Millisecond)
+			}
+		case msg := <-botMessages:
+			if c.script != nil && c.script.onBotMessage != nil {
+				c.script.callOnBotMessage(msg.sender, msg.dict)
 			}
 		case <-localClosing:
 			if c.script != nil && c.script.running {
@@ -1010,7 +1018,7 @@ func writePacket(conn net.Conn, p *RSCPacket) error {
 	return nil
 }
 
-func (a *account) writeProgressReportf(s0 string, args ...interface{}) error {
+func (a *account) writeProgressReportf(s0 string, args ...any) error {
 	_, err := a.progressFile.Write([]byte(fmt.Sprintf(s0, args...)))
 	if err != nil {
 		fmt.Printf("[%s] Unable to save progress report: %s\n", a.username, err)

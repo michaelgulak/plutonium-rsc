@@ -57,8 +57,14 @@ type script struct {
 	onSleepWordSent       *py.Function
 	onServerTick          *py.Function
 	onInit                *py.Function
+	onBotMessage          *py.Function
 
 	bankOptionMenuTimeout time.Time
+}
+
+type botMessage struct {
+	sender string
+	dict   py.StringDict
 }
 
 var (
@@ -218,10 +224,8 @@ func (c *client) loadScript() error {
 
 func (s *script) loop() int {
 	res, err := s.loopFn.M__call__(nil, nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(res, err)
+
 	res0, ok := res.(py.Int)
 	if !ok {
 		fmt.Printf("[%s] Script [%s] did not return a sleep time\n", s.c.user, s.path)
@@ -481,262 +485,202 @@ func (s *script) addHooks(module *py.Module) {
 	if onInit, ok := module.Globals["on_init"]; ok {
 		s.onInit = onInit.(*py.Function)
 	}
+	if onBotMessage, ok := module.Globals["on_bot_message"]; ok {
+		s.onBotMessage = onBotMessage.(*py.Function)
+	}
+}
+
+func (s *script) dumpError(_ py.Object, err error) {
+	if err != nil {
+		fmt.Printf("[%s] Error\n", s.c.account.username)
+		py.TracebackDump(err)
+		os.Exit(1)
+	}
 }
 
 func (s *script) callOnServerMessage(message string) {
 	if !s.running {
 		return
 	}
-	if strings.HasSuffix(message, "moment") {
-		s.bankOptionMenuTimeout = time.Unix(0, 0)
-	}
-	_, err := s.onServerMessage.M__call__(py.Tuple([]py.Object{py.String(message)}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onServerMessage.M__call__(py.Tuple([]py.Object{py.String(message)}), nil))
 }
 
 func (s *script) callOnTradeRequest(name string) {
 	if !s.running {
 		return
 	}
-	_, err := s.onTradeRequest.M__call__(py.Tuple([]py.Object{py.String(name)}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onTradeRequest.M__call__(py.Tuple([]py.Object{py.String(name)}), nil))
 }
 
 func (s *script) callOnChatMessage(message, from string) {
 	if !s.running {
 		return
 	}
-	_, err := s.onChatMessage.M__call__(py.Tuple([]py.Object{py.String(message), py.String(from)}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onChatMessage.M__call__(py.Tuple([]py.Object{py.String(message), py.String(from)}), nil))
 }
 
 func (s *script) callOnPrivateMessage(message, from string) {
 	if !s.running {
 		return
 	}
-	_, err := s.onPrivateMessage.M__call__(py.Tuple([]py.Object{py.String(message), py.String(from)}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onPrivateMessage.M__call__(py.Tuple([]py.Object{py.String(message), py.String(from)}), nil))
 }
 
 func (s *script) callOnPlayerDamaged(damage int, p *player) {
 	if !s.running {
 		return
 	}
-	_, err := s.onPlayerDamaged.M__call__(py.Tuple([]py.Object{py.Int(damage), p}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onPlayerDamaged.M__call__(py.Tuple([]py.Object{py.Int(damage), p}), nil))
 }
 
 func (s *script) callOnNPCDamaged(damage int, n *npc) {
 	if !s.running {
 		return
 	}
-	_, err := s.onNPCDamaged.M__call__(py.Tuple([]py.Object{py.Int(damage), n}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onNPCDamaged.M__call__(py.Tuple([]py.Object{py.Int(damage), n}), nil))
 }
 
 func (s *script) callOnNPCSpawned(n *npc) {
 	if !s.running {
 		return
 	}
-	_, err := s.onNPCSpawned.M__call__(py.Tuple([]py.Object{n}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onNPCSpawned.M__call__(py.Tuple([]py.Object{n}), nil))
 }
 
 func (s *script) callOnNPCDespawned(n *npc) {
 	if !s.running {
 		return
 	}
-	_, err := s.onNPCDespawned.M__call__(py.Tuple([]py.Object{n}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onNPCDespawned.M__call__(py.Tuple([]py.Object{n}), nil))
 }
 
 func (s *script) callOnNPCProjectile(projectileType int, n *npc, p *player) {
 	if !s.running {
 		return
 	}
-	_, err := s.onNPCProjectile.M__call__(py.Tuple([]py.Object{py.Int(projectileType), n, p}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onNPCProjectile.M__call__(py.Tuple([]py.Object{py.Int(projectileType), n, p}), nil))
 }
 
 func (s *script) callOnNPCMessage(message string, n *npc, p *player) {
 	if !s.running {
 		return
 	}
-	_, err := s.onNPCMessage.M__call__(py.Tuple([]py.Object{py.String(message), n, p}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onNPCMessage.M__call__(py.Tuple([]py.Object{py.String(message), n, p}), nil))
 }
 
 func (s *script) callOnDeath() {
 	if !s.running {
 		return
 	}
-	_, err := s.onDeath.M__call__(nil, nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onDeath.M__call__(nil, nil))
 }
 
 func (s *script) callOnGroundItemSpawned(g *groundItem) {
 	if !s.running {
 		return
 	}
-	_, err := s.onGroundItemSpawned.M__call__(py.Tuple([]py.Object{g}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onGroundItemSpawned.M__call__(py.Tuple([]py.Object{g}), nil))
 }
 
 func (s *script) callOnGroundItemDespawned(g *groundItem) {
 	if !s.running {
 		return
 	}
-	_, err := s.onGroundItemDespawned.M__call__(py.Tuple([]py.Object{g}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onGroundItemDespawned.M__call__(py.Tuple([]py.Object{g}), nil))
 }
 
 func (s *script) callOnObjectSpawned(o *object) {
 	if !s.running {
 		return
 	}
-	_, err := s.onObjectSpawned.M__call__(py.Tuple([]py.Object{o}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onObjectSpawned.M__call__(py.Tuple([]py.Object{o}), nil))
 }
 
 func (s *script) callOnObjectDespawned(o *object) {
 	if !s.running {
 		return
 	}
-	_, err := s.onObjectDespawned.M__call__(py.Tuple([]py.Object{o}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onObjectDespawned.M__call__(py.Tuple([]py.Object{o}), nil))
 }
 
 func (s *script) callOnWallObjectSpawned(o *wallObject) {
 	if !s.running {
 		return
 	}
-	_, err := s.onWallObjectSpawned.M__call__(py.Tuple([]py.Object{o}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onWallObjectSpawned.M__call__(py.Tuple([]py.Object{o}), nil))
 }
 
 func (s *script) callOnWallObjectDespawned(o *wallObject) {
 	if !s.running {
 		return
 	}
-	_, err := s.onWallObjectDespawned.M__call__(py.Tuple([]py.Object{o}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onWallObjectDespawned.M__call__(py.Tuple([]py.Object{o}), nil))
 }
 
 func (s *script) callOnKillSignal() {
 	if !s.running {
 		return
 	}
-	_, err := s.onKillSignal.M__call__(nil, nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onKillSignal.M__call__(nil, nil))
 }
 
 func (s *script) callOnLoad() {
 	if !s.running {
 		return
 	}
-	_, err := s.onLoad.M__call__(nil, nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onLoad.M__call__(nil, nil))
 }
 
 func (s *script) callOnSystemUpdate(seconds int) {
 	if !s.running {
 		return
 	}
-	_, err := s.onSystemUpdate.M__call__(py.Tuple([]py.Object{py.Int(seconds)}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onSystemUpdate.M__call__(py.Tuple([]py.Object{py.Int(seconds)}), nil))
 }
 
 func (s *script) callOnFatigueUpdate(fatigue int, accurateFatigue float64) {
 	if !s.running {
 		return
 	}
-	_, err := s.onFatigueUpdate.M__call__(py.Tuple([]py.Object{py.Int(fatigue), py.Float(accurateFatigue)}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onFatigueUpdate.M__call__(py.Tuple([]py.Object{py.Int(fatigue), py.Float(accurateFatigue)}), nil))
 }
 
 func (s *script) callOnSleepWordSent() {
 	if !s.running {
 		return
 	}
-	_, err := s.onSleepWordSent.M__call__(nil, nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onSleepWordSent.M__call__(nil, nil))
 }
 
 func (s *script) callOnServerTick() {
 	if !s.running {
 		return
 	}
-	_, err := s.onServerTick.M__call__(py.Tuple([]py.Object{py.Int(s.tick)}), nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
-	}
+	s.dumpError(
+		s.onServerTick.M__call__(py.Tuple([]py.Object{py.Int(s.tick)}), nil))
+
 	s.tick++
 }
 
@@ -744,11 +688,16 @@ func (s *script) callOnInit() {
 	if !s.running {
 		return
 	}
-	_, err := s.onInit.M__call__(nil, nil)
-	if err != nil {
-		py.TracebackDump(err)
-		os.Exit(1)
+	s.dumpError(
+		s.onInit.M__call__(nil, nil))
+}
+
+func (s *script) callOnBotMessage(sender string, message py.StringDict) {
+	if !s.running {
+		return
 	}
+	s.dumpError(
+		s.onBotMessage.M__call__(py.Tuple([]py.Object{py.String(sender), message}), nil))
 }
 
 func makeSafeFunc(f func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error)) func(self py.Object, args py.Tuple, kwargs py.StringDict) (ret py.Object, err0 error) {
@@ -972,6 +921,23 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		c.scriptStopSignal <- struct{}{}
 		return py.None, nil
 	}, py.METH_STATIC, "")
+	module.Globals["send_bot_message"] = py.MustNewMethod("send_bot_message", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		username := strings.ToLower(string(args[0].(py.String)))
+		message := args[1].(py.StringDict)
+		for _, acc := range c.accounts {
+			if strings.ToLower(acc.username) == username {
+				if len(acc.botMessages) >= botMessagesSize {
+					return py.None, fmt.Errorf("too many messages in buffer")
+				}
+				acc.botMessages <- &botMessage{
+					sender: c.user,
+					dict:   message,
+				}
+				return py.None, nil
+			}
+		}
+		return py.None, fmt.Errorf("no account with username [%s] found", username)
+	}), py.METH_STATIC, "")
 	module.Globals["create_path"] = py.MustNewMethod("create_path", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		coords := args[0].(*py.List)
 		points := make([]*point, coords.Len()/2)
