@@ -52,6 +52,7 @@ Called once before the script starts running. The account will be logged in and 
 ###### on_wall_object_despawned(wall_object)
 ###### on_fatigue_update(fatigue, accurate_fatigue)
 ###### on_bot_message(sender, message)
+###### on_option_menu(options)
 
 ## Base
 
@@ -164,7 +165,7 @@ Returns a random integer between min and max, inclusive. Min and max must be >= 
 
 ###### send_bot_message(username, message)
 
-Sends an inter-process message to the script that is running for `username`. `message` must be a dict. The message can be received with the `on_bot_message` event. Note that the receiver has a buffer of 100 messages, after which the script will throw an error. The buffer is drained once the receiver receives the messages.
+Sends an in-process message to the script that is running for `username`. `message` must be a dict. The message can be received with the `on_bot_message` event. Note that the receiver has a buffer of 100 messages, after which the script will throw an error. The buffer is drained once the receiver receives the messages. Be careful passing non-primitive objects as these objects will not be deep copied - errors may occur if you modify the objects after sending/receiving them.
 
 ## Paths
 
@@ -182,7 +183,7 @@ The `set_nearest` method can be called on the path to set the path index to the 
 
 Calculates a path from the client's current coordinates to the specified coordinates. Returns a path object or `None` if a path was not found.
 
-The `depth` argument is optional. Use a depth for the A* algorithm for optimal use of this method. Otherwise it will test depths sequentially, wasting CPU.
+The `depth` argument is optional. Use a depth for the A* algorithm for optimal use of this method. Otherwise it will test depths sequentially, wasting CPU and memory.
 
 The `skip_local` argument is optional. Must use kwargs to use it. If set to true, will skip local blocked tiles and allow you to calculate a blocked path, for example.
 

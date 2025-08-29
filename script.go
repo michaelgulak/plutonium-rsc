@@ -58,6 +58,7 @@ type script struct {
 	onServerTick          *py.Function
 	onInit                *py.Function
 	onBotMessage          *py.Function
+	onOptionMenu          *py.Function
 
 	bankOptionMenuTimeout time.Time
 }
@@ -488,6 +489,9 @@ func (s *script) addHooks(module *py.Module) {
 	if onBotMessage, ok := module.Globals["on_bot_message"]; ok {
 		s.onBotMessage = onBotMessage.(*py.Function)
 	}
+	if onOptionMenu, ok := module.Globals["on_option_menu"]; ok {
+		s.onOptionMenu = onOptionMenu.(*py.Function)
+	}
 }
 
 func (s *script) dumpError(_ py.Object, err error) {
@@ -698,6 +702,14 @@ func (s *script) callOnBotMessage(sender string, message py.StringDict) {
 	}
 	s.dumpError(
 		s.onBotMessage.M__call__(py.Tuple([]py.Object{py.String(sender), message}), nil))
+}
+
+func (s *script) callOnOptionMenu(menu []string) {
+	if !s.running {
+		return
+	}
+	s.dumpError(
+		s.onOptionMenu.M__call__(py.Tuple([]py.Object{py.NewListFromStrings(menu)}), nil))
 }
 
 func makeSafeFunc(f func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error)) func(self py.Object, args py.Tuple, kwargs py.StringDict) (ret py.Object, err0 error) {
@@ -924,6 +936,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["send_bot_message"] = py.MustNewMethod("send_bot_message", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		username := strings.ToLower(string(args[0].(py.String)))
 		message := args[1].(py.StringDict)
+
 		for _, acc := range c.accounts {
 			if strings.ToLower(acc.username) == username {
 				if len(acc.botMessages) >= botMessagesSize {
@@ -931,7 +944,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 				}
 				acc.botMessages <- &botMessage{
 					sender: c.user,
-					dict:   message,
+					dict:   message.Copy(),
 				}
 				return py.None, nil
 			}
@@ -1719,7 +1732,11 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		return py.Int(c.optionMenuCount), nil
 	}, py.METH_STATIC, "")
 	module.Globals["get_option_menu_option"] = py.MustNewMethod("get_option_menu_option", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
-		return py.String(c.optionMenu[int(args[0].(py.Int))]), nil
+		idx := int(args[0].(py.Int))
+		if idx >= c.optionMenuCount {
+			return py.None, nil
+		}
+		return py.String(c.optionMenu[idx]), nil
 	}), py.METH_STATIC, "")
 	module.Globals["get_option_menu_index"] = py.MustNewMethod("get_option_menu_index", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		needle := string(args[0].(py.String))

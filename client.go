@@ -32,7 +32,7 @@ const (
 	connectTimeout   = 30
 	maxPacketSize    = 30000
 	botMessagesSize  = 100
-	botVersion       = "1.11.2"
+	botVersion       = "1.11.3"
 )
 
 var (
@@ -62,6 +62,11 @@ type client struct {
 	scriptStopSignal   chan struct{}
 	scriptDCSignal     chan int
 	accounts           []*account
+	progressTimer      *time.Timer
+	progressTimerChan  <-chan time.Time
+	scriptTimer        *time.Timer
+	scriptTimerChan    <-chan time.Time
+	botMessages        <-chan *botMessage
 
 	script *script
 
@@ -591,25 +596,31 @@ out:
 	c.conn.Close()
 }
 
+func (c *client) initChans() {
+	if c.script != nil && c.script.running {
+		c.scriptTimer = time.NewTimer(0)
+		c.scriptTimerChan = c.scriptTimer.C
+		if c.account.progressDur != noProgressDurSet {
+			c.progressTimer = time.NewTimer(c.account.progressDur - time.Since(c.account.lastProgressReport))
+			c.progressTimerChan = c.progressTimer.C
+		}
+		c.botMessages = c.account.botMessages
+	}
+}
+
 func (b *bot) eventLoop(c *client) (bool, time.Duration) {
 	var (
-		progressTimerChan <-chan time.Time
-		progressTimer     *time.Timer
-		scriptTimerChan   <-chan time.Time
-		botMessages       <-chan *botMessage
-		scriptTimer       *time.Timer
-		idleTimer         = time.NewTimer(5 * time.Second)
-		localClosing      = b.closing
-		scriptStopped     = false
-		waitingLoad       = true
+		idleTimer     = time.NewTimer(5 * time.Second)
+		localClosing  = b.closing
+		scriptStopped = false
 	)
 
 	defer func() {
-		if progressTimer != nil && !progressTimer.Stop() {
-			<-progressTimer.C
+		if c.progressTimer != nil && !c.progressTimer.Stop() {
+			<-c.progressTimer.C
 		}
-		if scriptTimer != nil && !scriptStopped && !scriptTimer.Stop() {
-			<-scriptTimer.C
+		if c.scriptTimer != nil && !scriptStopped && !c.scriptTimer.Stop() {
+			<-c.scriptTimer.C
 		}
 		if !idleTimer.Stop() {
 			<-idleTimer.C
@@ -618,18 +629,6 @@ func (b *bot) eventLoop(c *client) (bool, time.Duration) {
 
 loop:
 	for {
-		if waitingLoad && !c.loading {
-			if c.script != nil && c.script.running {
-				scriptTimer = time.NewTimer(0)
-				scriptTimerChan = scriptTimer.C
-				if c.account.progressDur != noProgressDurSet {
-					progressTimer = time.NewTimer(c.account.progressDur - time.Since(c.account.lastProgressReport))
-					progressTimerChan = progressTimer.C
-				}
-				botMessages = c.account.botMessages
-			}
-			waitingLoad = false
-		}
 		select {
 		case <-c.closed:
 			break loop
@@ -647,20 +646,20 @@ loop:
 		case packet := <-c.packetChan:
 			opcode := packet.readByteAsInt()
 			c.handlePacket(packet, opcode, len(packet.buf)-1)
-		case <-progressTimerChan:
+		case <-c.progressTimerChan:
 			c.account.lastProgressReport = time.Now()
 			if c.script != nil && c.script.running && c.script.onProgressReport != nil {
 				c.script.callOnProgressReport()
 				c.account.writeProgressReportf("Next progress report scheduled for %s", time.Now().Add(c.account.progressDur).Format(time.RFC1123))
 			}
-			progressTimer.Reset(c.account.progressDur)
+			c.progressTimer.Reset(c.account.progressDur)
 		case <-c.scriptKillSignal:
 			c.close()
 			fmt.Printf("[%s] Script kill signal received, terminating\n", c.user)
 			return true, 0
 		case <-c.scriptStopSignal:
-			if !scriptTimer.Stop() {
-				<-scriptTimer.C
+			if !c.scriptTimer.Stop() {
+				<-c.scriptTimer.C
 			}
 			c.script.running = false
 			scriptStopped = true
@@ -669,7 +668,7 @@ loop:
 			c.conn.Close()
 			c.close()
 			return false, time.Second * time.Duration(waitTime)
-		case <-scriptTimerChan:
+		case <-c.scriptTimerChan:
 			if !c.sleeping {
 				if !c.script.inited {
 					if c.script.onInit != nil {
@@ -677,13 +676,13 @@ loop:
 					}
 					c.script.inited = true
 				}
-				scriptTimer.Reset(time.Duration(c.script.loop()) * time.Millisecond)
+				c.scriptTimer.Reset(time.Duration(c.script.loop()) * time.Millisecond)
 			} else {
-				scriptTimer.Reset(50 * time.Millisecond)
+				c.scriptTimer.Reset(50 * time.Millisecond)
 			}
-		case msg := <-botMessages:
+		case msg := <-c.botMessages:
 			if c.script != nil && c.script.onBotMessage != nil {
-				c.script.callOnBotMessage(msg.sender, msg.dict)
+				c.script.callOnBotMessage(msg.sender, msg.dict.Copy())
 			}
 		case <-localClosing:
 			if c.script != nil && c.script.running {
@@ -1909,7 +1908,6 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 						c.script.callOnGroundItemSpawned(c.groundItems[c.groundItemCount])
 					}
 					c.groundItemCount++
-
 				}
 			}
 		}
@@ -2224,6 +2222,9 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			c.optionMenu[i] = p.readString()
 		}
 		c.optionMenuVisible = true
+		if c.script != nil && c.script.onOptionMenu != nil {
+			c.script.callOnOptionMenu(c.optionMenu[:c.optionMenuCount])
+		}
 	case 252: // hide option menu
 		c.optionMenuVisible = false
 	case 120: // private message
@@ -2478,6 +2479,7 @@ func (c *client) handlePacket(p *RSCPacket, opcode, length int) {
 			if c.script != nil && c.script.onLoad != nil {
 				c.script.callOnLoad()
 			}
+			c.initChans()
 		}
 	case 183: // can't logout response packet
 		if c.account.debug {
