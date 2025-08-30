@@ -32,7 +32,7 @@ const (
 	connectTimeout   = 30
 	maxPacketSize    = 30000
 	botMessagesSize  = 100
-	botVersion       = "1.11.3"
+	botVersion       = "1.11.4"
 )
 
 var (
@@ -1330,10 +1330,6 @@ func (c *client) readPacket() (*RSCPacket, error) {
 
 	if length > maxPacketSize {
 		return nil, fmt.Errorf("packet size too large: %d", length)
-	}
-
-	if length < 0 {
-		return nil, fmt.Errorf("negative packet length")
 	}
 
 	readLength := 0

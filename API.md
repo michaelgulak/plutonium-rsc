@@ -8,7 +8,7 @@
 
 `settings` dict with script settings
 
-`WALL_NORTH`, `WALL_EAST`, `WALL_SOUTH`, `WALL_WEST`, `WALL_NORTHEAST`, `WALL_NORTHWEST`, `WALL_SOUTHEAST`, `WALL_SOUTHWEST`, `FULL_BLOCK`,`WEST_BLOCKED`, `SOUTH_BLOCKED`, `NORTH_BLOCKED`, `EAST_BLOCKED`, `SOUTHEAST_BLOCKED`, `SOUTHWEST_BLOCKED`, `NORTHEAST_BLOCKED`, `NORTHWEST_BLOCKED` collision flags
+`WALL_NORTH`, `WALL_EAST`, `WALL_SOUTH`, `WALL_WEST`, `WALL_NORTHEAST`, `WALL_NORTHWEST`, `WALL_SOUTHEAST`, `WALL_SOUTHWEST`, `FULL_BLOCK`, `FULL_BLOCK_A`, `FULL_BLOCK_B`, `FULL_BLOCK_C`, `WEST_BLOCKED`, `SOUTH_BLOCKED`, `NORTH_BLOCKED`, `EAST_BLOCKED`, `SOUTHEAST_BLOCKED`, `SOUTHWEST_BLOCKED`, `NORTHEAST_BLOCKED`, `NORTHWEST_BLOCKED` collision flags
 
 ## Events
 
@@ -134,9 +134,9 @@ Proper use is like this:
 
 Only useful in event handlers.
 
-###### get_collision_flags_at(x, z, skip_local=True)
+###### get_collision_flags_at(x, z, skip_local=True, include_locs=True)
 
-`skip_local` is optional.
+`skip_local` and `include_locs` are optional. Objects of type 2 with a usable direction such as gates will not be included with `include_locs`, and if a loc is found at the specified coordinates this method will always return `FULL_BLOCK_C`.
 
 ###### get_combat_style()
 ###### set_combat_style(id)

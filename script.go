@@ -745,6 +745,9 @@ func (s *script) addPreGlobals(module *py.ModuleImpl) {
 	module.Globals["WALL_SOUTHEAST"] = py.Int(wallSouthEast)
 	module.Globals["WALL_SOUTHWEST"] = py.Int(wallSouthWest)
 	module.Globals["FULL_BLOCK"] = py.Int(fullBlock)
+	module.Globals["FULL_BLOCK_A"] = py.Int(fullBlockA)
+	module.Globals["FULL_BLOCK_B"] = py.Int(fullBlockB)
+	module.Globals["FULL_BLOCK_C"] = py.Int(fullBlockC)
 	module.Globals["WEST_BLOCKED"] = py.Int(westBlocked)
 	module.Globals["SOUTH_BLOCKED"] = py.Int(southBlocked)
 	module.Globals["NORTH_BLOCKED"] = py.Int(northBlocked)
@@ -790,6 +793,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["WALL_SOUTHEAST"] = py.Int(wallSouthEast)
 	module.Globals["WALL_SOUTHWEST"] = py.Int(wallSouthWest)
 	module.Globals["FULL_BLOCK"] = py.Int(fullBlock)
+	module.Globals["FULL_BLOCK_A"] = py.Int(fullBlockA)
+	module.Globals["FULL_BLOCK_B"] = py.Int(fullBlockB)
+	module.Globals["FULL_BLOCK_C"] = py.Int(fullBlockC)
 	module.Globals["WEST_BLOCKED"] = py.Int(westBlocked)
 	module.Globals["SOUTH_BLOCKED"] = py.Int(southBlocked)
 	module.Globals["NORTH_BLOCKED"] = py.Int(northBlocked)
@@ -2400,14 +2406,15 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	}, py.METH_STATIC, "")
 	module.Globals["get_collision_flags_at"] = py.MustNewMethod("get_collision_flags_at", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var (
-			skipLocal = false
-			x         = int(args[0].(py.Int))
-			z         = int(args[1].(py.Int))
+			x = int(args[0].(py.Int))
+			z = int(args[1].(py.Int))
 		)
-		if skipLocal0, ok := kwargs["skip_local"].(py.Bool); ok {
-			skipLocal = bool(skipLocal0)
+		if includeLocs, ok := kwargs["include_locs"].(py.Bool); ok && bool(includeLocs) {
+			if _, ok := c.world.pathWalkerMap[int32((x<<16)|z)]; ok {
+				return py.Int(fullBlockC), nil
+			}
 		}
-		if skipLocal {
+		if skipLocal, ok := kwargs["skip_local"].(py.Bool); ok && bool(skipLocal) {
 			return py.Int(c.world.getTile(x, z)), nil
 		}
 		return py.Int(c.combinedTile(x, z)), nil
