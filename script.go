@@ -2408,15 +2408,20 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		var (
 			x = int(args[0].(py.Int))
 			z = int(args[1].(py.Int))
+			a int32
+			b int32
 		)
 		if includeLocs, ok := kwargs["include_locs"].(py.Bool); ok && bool(includeLocs) {
 			if _, ok := c.world.pathWalkerMap[int32((x<<16)|z)]; ok {
-				return py.Int(fullBlockC), nil
+				a = int32(fullBlockC)
 			}
 		}
 		if skipLocal, ok := kwargs["skip_local"].(py.Bool); ok && bool(skipLocal) {
-			return py.Int(c.world.getTile(x, z)), nil
+			b = c.world.getTile(x, z)
+		} else {
+			b = c.combinedTile(x, z)
 		}
-		return py.Int(c.combinedTile(x, z)), nil
+
+		return py.Int(a | b), nil
 	}), py.METH_STATIC, "")
 }
