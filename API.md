@@ -136,7 +136,7 @@ Only useful in event handlers.
 
 ###### get_collision_flags_at(x, z, skip_local=True, include_locs=True)
 
-`skip_local` and `include_locs` are optional. Objects of type 2 with a usable direction such as gates will not be included with `include_locs`, and if a loc is found at the specified coordinates this method will always return `FULL_BLOCK_C`.
+`skip_local` and `include_locs` are optional. Objects of type 2 with a usable direction such as gates will not be included with `include_locs`, and if a loc is found at the specified coordinates this method will always include `FULL_BLOCK_C`.
 
 ###### get_combat_style()
 ###### set_combat_style(id)
