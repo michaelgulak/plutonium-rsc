@@ -2406,22 +2406,32 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	}, py.METH_STATIC, "")
 	module.Globals["get_collision_flags_at"] = py.MustNewMethod("get_collision_flags_at", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		var (
-			x = int(args[0].(py.Int))
-			z = int(args[1].(py.Int))
-			a int32
-			b int32
+			x               = int(args[0].(py.Int))
+			z               = int(args[1].(py.Int))
+			pathWalkerFlags int32
+			mapFlags        int32
 		)
 		if includeLocs, ok := kwargs["include_locs"].(py.Bool); ok && bool(includeLocs) {
 			if _, ok := c.world.pathWalkerMap[int32((x<<16)|z)]; ok {
-				a = int32(fullBlockC)
+				pathWalkerFlags = int32(fullBlockC)
 			}
 		}
 		if skipLocal, ok := kwargs["skip_local"].(py.Bool); ok && bool(skipLocal) {
-			b = c.world.getTile(x, z)
+			mapFlags = c.world.getTile(x, z)
 		} else {
-			b = c.combinedTile(x, z)
+			mapFlags = c.combinedTile(x, z)
 		}
 
-		return py.Int(a | b), nil
+		return py.Int(pathWalkerFlags | mapFlags), nil
+	}), py.METH_STATIC, "")
+	module.Globals["find_local_path_length"] = py.MustNewMethod("find_local_path_length", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+		var (
+			lowX        = int(args[0].(py.Int))
+			lowZ        = int(args[1].(py.Int))
+			highX       = int(args[2].(py.Int))
+			highZ       = int(args[3].(py.Int))
+			reachBorder = bool(args[4].(py.Bool))
+		)
+		return py.Int(c.findPathLength(c.x, c.z, lowX, highX, lowZ, highZ, reachBorder)), nil
 	}), py.METH_STATIC, "")
 }

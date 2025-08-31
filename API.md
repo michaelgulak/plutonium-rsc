@@ -138,6 +138,10 @@ Only useful in event handlers.
 
 `skip_local` and `include_locs` are optional. Objects of type 2 with a usable direction such as gates will not be included with `include_locs`, and if a loc is found at the specified coordinates this method will always include `FULL_BLOCK_C`.
 
+###### find_local_path_length(low_x, low_z, high_x, high_z, reach_border)
+
+Uses authentic pathfinding to determine the path length to a certain area, tile, or object. Returns -1 if the coordinates are unreachable. To use it for a single target tile, low and high coordinates should be equal and `reach_border` should be set to false. This method will only factor in objects that are loaded into your view area, and will fail if you check something more than 96 tiles away. If finding the path length to an object, the high coordinates should correspond with the object's width and height, and `reach_border` should be true.
+
 ###### get_combat_style()
 ###### set_combat_style(id)
 ###### get_max_stat(id)

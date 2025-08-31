@@ -515,14 +515,13 @@ func (c *client) findPath(startX, startZ, xLow, xHigh, zLow, zHigh int, reachBor
 			c.pathFindSource[x][y] = 0
 		}
 	}
-	var20 := 0
 	openListRead := 0
 	x := startX
 	z := startZ
 	c.pathFindSource[startX][startZ] = 99
-	c.pathX[var20] = int16(startX)
-	c.pathZ[var20] = int16(startZ)
-	openListWrite := var20 + 1
+	c.pathX[0] = int16(startX)
+	c.pathZ[0] = int16(startZ)
+	openListWrite := 1
 	openListSize := len(c.pathX)
 	complete := false
 
@@ -616,6 +615,132 @@ func (c *client) findPath(startX, startZ, xLow, xHigh, zLow, zHigh int, reachBor
 				c.pathZ[openListRead] = int16(z)
 				openListRead++
 			}
+			if source&sourceSouth != 0 {
+				z++
+			} else if sourceNorth&source != 0 {
+				z--
+			}
+			if sourceWest&source != 0 {
+				x++
+			} else if source&sourceEast != 0 {
+				x--
+			}
+			source = c.pathFindSource[x][z]
+		}
+		return openListRead
+	}
+}
+
+func (c *client) findPathLength(startX, startZ, xLow, xHigh, zLow, zHigh int, reachBorder bool) int {
+	baseX := c.regionX
+	baseZ := c.regionZ
+
+	startX = startX - c.regionX
+	startZ = startZ - c.regionZ
+
+	xLow = xLow - c.regionX
+	xHigh = xHigh - c.regionX
+	zLow = zLow - c.regionZ
+	zHigh = zHigh - c.regionZ
+
+	for x := 0; x < 96; x++ {
+		for y := 0; y < 96; y++ {
+			c.pathFindSource[x][y] = 0
+		}
+	}
+
+	openListRead := 0
+	x := startX
+	z := startZ
+	c.pathX[0] = int16(startX)
+	c.pathZ[0] = int16(startZ)
+	c.pathFindSource[startX][startZ] = 99
+	openListWrite := 1
+	openListSize := len(c.pathX)
+	complete := false
+
+	for openListRead != openListWrite {
+		x = int(c.pathX[openListRead])
+		z = int(c.pathZ[openListRead])
+		openListRead = (1 + openListRead) % openListSize
+		if x >= xLow && x <= xHigh && z >= zLow && z <= zHigh {
+			complete = true
+			break
+		}
+		if reachBorder {
+			if x > 0 && xLow <= x-1 && xHigh >= x-1 && zLow <= z && zHigh >= z && c.combinedTile(baseX+x-1, baseZ+z)&wallWest == 0 {
+				complete = true
+				break
+			}
+			if x < 95 && 1+x >= xLow && x+1 <= xHigh && z >= zLow && zHigh >= z && wallEast&c.combinedTile(baseX+x+1, baseZ+z) == 0 {
+				complete = true
+				break
+			}
+			if z > 0 && xLow <= x && xHigh >= x && z-1 >= zLow && zHigh >= z-1 && wallSouth&c.combinedTile(baseX+x, baseZ+z-1) == 0 {
+				complete = true
+				break
+			}
+			if z < 95 && xLow <= x && x <= xHigh && zLow <= z+1 && zHigh >= z+1 && wallNorth&c.combinedTile(baseX+x, baseZ+z+1) == 0 {
+				complete = true
+				break
+			}
+		}
+		if x > 0 && c.pathFindSource[x-1][z] == 0 && c.combinedTile(baseX+x-1, baseZ+z)&westBlocked == 0 {
+			c.pathX[openListWrite] = int16(x - 1)
+			c.pathZ[openListWrite] = int16(z)
+			c.pathFindSource[x-1][z] = sourceWest
+			openListWrite = (openListWrite + 1) % openListSize
+		}
+		if x < 95 && c.pathFindSource[1+x][z] == 0 && c.combinedTile(baseX+1+x, baseZ+z)&eastBlocked == 0 {
+			c.pathX[openListWrite] = int16(1 + x)
+			c.pathZ[openListWrite] = int16(z)
+			c.pathFindSource[x+1][z] = sourceEast
+			openListWrite = (1 + openListWrite) % openListSize
+		}
+		if z > 0 && c.pathFindSource[x][z-1] == 0 && southBlocked&c.combinedTile(baseX+x, baseZ+z-1) == 0 {
+			c.pathX[openListWrite] = int16(x)
+			c.pathZ[openListWrite] = int16(z - 1)
+			c.pathFindSource[x][z-1] = sourceSouth
+			openListWrite = (openListWrite + 1) % openListSize
+		}
+		if z < 95 && c.pathFindSource[x][1+z] == 0 && northBlocked&c.combinedTile(baseX+x, baseZ+1+z) == 0 {
+			c.pathX[openListWrite] = int16(x)
+			c.pathZ[openListWrite] = int16(z + 1)
+			c.pathFindSource[x][z+1] = sourceNorth
+			openListWrite = (openListWrite + 1) % openListSize
+		}
+		if x > 0 && z > 0 && southBlocked&c.combinedTile(baseX+x, baseZ+z-1) == 0 && westBlocked&c.combinedTile(baseX+x-1, baseZ+z) == 0 && southWestBlocked&c.combinedTile(baseX+x-1, baseZ+z-1) == 0 && c.pathFindSource[x-1][z-1] == 0 {
+			c.pathX[openListWrite] = int16(x - 1)
+			c.pathZ[openListWrite] = int16(z - 1)
+			c.pathFindSource[x-1][z-1] = int16(sourceSouthWest)
+			openListWrite = (1 + openListWrite) % openListSize
+		}
+		if x < 95 && z > 0 && c.combinedTile(baseX+x, baseZ+z-1)&southBlocked == 0 && c.combinedTile(baseX+1+x, baseZ+z)&eastBlocked == 0 && c.combinedTile(baseX+x+1, baseZ+z-1)&southEastBlocked == 0 && c.pathFindSource[1+x][z-1] == 0 {
+			c.pathX[openListWrite] = int16(1 + x)
+			c.pathZ[openListWrite] = int16(z - 1)
+			c.pathFindSource[x+1][z-1] = int16(sourceSouthEast)
+			openListWrite = (1 + openListWrite) % openListSize
+		}
+		if x > 0 && z < 95 && c.combinedTile(baseX+x, baseZ+1+z)&northBlocked == 0 && c.combinedTile(baseX+x-1, baseZ+z)&westBlocked == 0 && c.combinedTile(baseX+x-1, baseZ+1+z)&northWestBlocked == 0 && c.pathFindSource[x-1][1+z] == 0 {
+			c.pathX[openListWrite] = int16(x - 1)
+			c.pathZ[openListWrite] = int16(1 + z)
+			openListWrite = (1 + openListWrite) % openListSize
+			c.pathFindSource[x-1][z+1] = int16(sourceNorthWest)
+		}
+		if x < 95 && z < 95 && northBlocked&c.combinedTile(baseX+x, baseZ+1+z) == 0 && c.combinedTile(baseX+x+1, baseZ+z)&eastBlocked == 0 && northEastBlocked&c.combinedTile(baseX+x+1, baseZ+1+z) == 0 && c.pathFindSource[x+1][1+z] == 0 {
+			c.pathX[openListWrite] = int16(1 + x)
+			c.pathZ[openListWrite] = int16(1 + z)
+			c.pathFindSource[1+x][1+z] = int16(sourceNorthEast)
+			openListWrite = (openListWrite + 1) % openListSize
+		}
+	}
+	if !complete {
+		return -1
+	} else {
+		openListRead = 0
+		source := c.pathFindSource[x][z]
+		for x != startX || z != startZ {
+			openListRead++
 			if source&sourceSouth != 0 {
 				z++
 			} else if sourceNorth&source != 0 {
