@@ -6,6 +6,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/go-python/gpython/py"
@@ -32,6 +33,7 @@ type account struct {
 	lastProgressReport time.Time
 	needsFirstNotif    bool
 	botMessages        chan *botMessage
+	botMessageLock     *sync.Mutex
 }
 
 type ocrSettings struct {
@@ -142,6 +144,7 @@ func loadAccount(path string) (*account, error) {
 		script:          &script{},
 		needsFirstNotif: true,
 		botMessages:     make(chan *botMessage, botMessagesSize),
+		botMessageLock:  &sync.Mutex{},
 	}
 
 	if autologin, ok := config.Account.Autologin.(bool); ok {

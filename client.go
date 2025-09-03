@@ -420,13 +420,14 @@ func (b *bot) loadAccounts(user, pass, acctFile, scriptPath string, autologin bo
 		}
 	} else {
 		acct := &account{
-			username:    user,
-			password:    pass,
-			autologin:   autologin,
-			enabled:     true,
-			debug:       true,
-			progressDur: noProgressDurSet,
-			botMessages: make(chan *botMessage, botMessagesSize),
+			username:       user,
+			password:       pass,
+			autologin:      autologin,
+			enabled:        true,
+			debug:          true,
+			progressDur:    noProgressDurSet,
+			botMessages:    make(chan *botMessage, botMessagesSize),
+			botMessageLock: &sync.Mutex{},
 		}
 		if scriptPath != "" {
 			pathDir := filepath.Dir(scriptPath)

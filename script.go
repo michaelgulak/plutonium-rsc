@@ -945,6 +945,9 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 
 		for _, acc := range c.accounts {
 			if strings.ToLower(acc.username) == username {
+				acc.botMessageLock.Lock()
+				defer acc.botMessageLock.Unlock()
+
 				if len(acc.botMessages) >= botMessagesSize {
 					return py.None, fmt.Errorf("too many messages in buffer")
 				}
