@@ -60,13 +60,6 @@ type path struct {
 	startY    int16
 }
 
-type longPath struct {
-	points    []*point
-	currentPt int
-	length    int
-	script    *script
-}
-
 func abs(a int) int {
 	if a < 0 {
 		return -a

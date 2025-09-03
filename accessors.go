@@ -561,28 +561,28 @@ func (c *client) generateLongPathPoint(x, z, depth int16) *point {
 
 	path.waypoints.PushBack(&point{x, z})
 
-	coordsAwayThreshold := 10
+	stepSize := 10
 	var pt *point
-	if path.waypoints.Len() <= coordsAwayThreshold {
+	if path.waypoints.Len() <= stepSize {
 		pt = path.waypoints.Back()
 	} else {
-		pts := make([]*point, coordsAwayThreshold)
-		for i := 0; i < coordsAwayThreshold; i++ {
+		pts := make([]*point, stepSize)
+		for i := 0; i < stepSize; i++ {
 			pts[i] = path.waypoints.PopFront()
 		}
-		pt = pts[coordsAwayThreshold-1]
+		pt = pts[stepSize-1]
 	}
 
 	return pt
 }
 
-func (c *client) generateLongPath(startX, startZ, x, z, depth int16, skipLocal bool, maxDepth int16) *longPath {
+func (c *client) generateLongPath(startX, startZ, x, z, depth int16, skipLocal bool, maxDepth int16) (*longPath, []*point) {
 	var path *path
 	if depth == -1 {
 		depth = int16(math.Pow(2, math.Ceil(math.Log2(float64(distance16(startX, startZ, x, z))))))
 		for {
 			if depth > maxDepth {
-				return nil
+				return nil, nil
 			}
 			p := newAstarPathFinder(c, &point{startX, startZ}, &point{x, z}, depth, skipLocal)
 			path = p.findPath()
@@ -597,35 +597,41 @@ func (c *client) generateLongPath(startX, startZ, x, z, depth int16, skipLocal b
 		path = p.findPath()
 
 		if path == nil {
-			return nil
+			return nil, nil
 		}
 	}
 
 	path.waypoints.PushBack(&point{x, z})
 
-	coordsAwayThreshold := 10
+	stepSize := 10
 
-	lp := &longPath{points: []*point{}, script: c.script, length: path.waypoints.Len()}
+	lp := &longPath{
+		points:   []*point{},
+		script:   c.script,
+		length:   path.waypoints.Len(),
+		stepSize: stepSize,
+	}
 
-	if path.waypoints.Len() <= coordsAwayThreshold {
-		lp.points = append(lp.points, path.waypoints.Back())
+	coords := make([]*point, path.waypoints.Len())
+	for i := 0; i < lp.length; i++ {
+		coords[i] = path.waypoints.PopFront()
+	}
+
+	if lp.length <= stepSize {
+		lp.points = append(lp.points, coords[len(coords)-1])
 	} else {
-		pts := make([]*point, coordsAwayThreshold)
-		for path.waypoints.Len() >= coordsAwayThreshold {
-			for i := 0; i < coordsAwayThreshold; i++ {
-				pts[i] = path.waypoints.PopFront()
-			}
-			lp.points = append(lp.points, pts[coordsAwayThreshold-1])
+		for i := stepSize - 1; i < len(coords); i += stepSize {
+			lp.points = append(lp.points, coords[i])
 		}
-		if path.waypoints.Len() > 0 {
-			lp.points = append(lp.points, path.waypoints.Back())
+		if (len(coords) % stepSize) != 0 {
+			lp.points = append(lp.points, coords[len(coords)-1])
 		}
 	}
 
-	return lp
+	return lp, coords
 }
 
-func (c *client) generateLongPathThrough(startX, startZ int16, coords []*point, depth int16, skipLocal bool, maxDepth int16) (*longPath, *point, *point) {
+func (c *client) generateLongPathThrough(startX, startZ int16, coords []*point, depth int16, skipLocal bool, maxDepth int16) (*longPath, []*point, *point, *point) {
 	totalPath := []*point{}
 	lastX, lastZ := startX, startZ
 	initialDepth := depth
@@ -636,7 +642,7 @@ func (c *client) generateLongPathThrough(startX, startZ int16, coords []*point, 
 			depth = int16(math.Pow(2, math.Ceil(math.Log2(float64(distance16(lastX, lastZ, x, z))))))
 			for {
 				if depth > maxDepth {
-					return nil, &point{lastX, lastZ}, &point{x, z}
+					return nil, nil, &point{lastX, lastZ}, &point{x, z}
 				}
 				p := newAstarPathFinder(c, &point{lastX, lastZ}, &point{x, z}, depth, skipLocal)
 				path = p.findPath()
@@ -651,7 +657,7 @@ func (c *client) generateLongPathThrough(startX, startZ int16, coords []*point, 
 			path = p.findPath()
 
 			if path == nil {
-				return nil, &point{lastX, lastZ}, &point{x, z}
+				return nil, nil, &point{lastX, lastZ}, &point{x, z}
 			}
 		}
 
@@ -665,26 +671,31 @@ func (c *client) generateLongPathThrough(startX, startZ int16, coords []*point, 
 		lastZ = z
 	}
 
-	coordsAwayThreshold := 10
+	stepSize := 10
 
-	lp := &longPath{points: []*point{}, script: c.script, length: len(totalPath)}
+	lp := &longPath{
+		points:   []*point{},
+		script:   c.script,
+		length:   len(totalPath),
+		stepSize: stepSize,
+	}
 
-	if len(totalPath) <= coordsAwayThreshold {
+	if len(totalPath) <= stepSize {
 		pt := totalPath[len(totalPath)-1]
 		lp.points = append(lp.points, pt)
 	} else {
 		count := 1
 		for _, p := range totalPath {
-			if count%coordsAwayThreshold == 0 {
+			if count%stepSize == 0 {
 				lp.points = append(lp.points, p)
 			}
 			count++
 		}
-		if (count-1)%coordsAwayThreshold != 0 {
+		if (count-1)%stepSize != 0 {
 			pt := totalPath[len(totalPath)-1]
 			lp.points = append(lp.points, pt)
 		}
 	}
 
-	return lp, nil, nil
+	return lp, totalPath, nil, nil
 }

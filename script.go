@@ -68,6 +68,15 @@ type botMessage struct {
 	dict   py.StringDict
 }
 
+type longPath struct {
+	points    []*point
+	currentPt int
+	length    int
+	script    *script
+	stepSize  int
+	coords    *py.List
+}
+
 var (
 	npcType        = py.NewType("npc", "")
 	playerType     = py.NewType("player", "")
@@ -155,6 +164,7 @@ func init() {
 	questType.Dict["name"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.String(self.(*quest).name), nil }}
 	questType.Dict["stage"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*quest).stage), nil }}
 	// path
+	longPathType.Dict["step_size"] = &py.Property{Fget: func(self py.Object) (py.Object, error) { return py.Int(self.(*longPath).stepSize), nil }}
 	longPathType.Dict["complete"] = py.MustNewMethod("complete", longPathComplete, py.METH_CLASS, "")
 	longPathType.Dict["reset"] = py.MustNewMethod("reset", longPathReset, py.METH_CLASS, "")
 	longPathType.Dict["reverse"] = py.MustNewMethod("reverse", longPathReverse, py.METH_CLASS, "")
@@ -164,6 +174,9 @@ func init() {
 	longPathType.Dict["set_nearest"] = py.MustNewMethod("set_nearest", longPathSetNearest, py.METH_CLASS, "")
 	longPathType.Dict["length"] = py.MustNewMethod("length", longPathLength, py.METH_CLASS, "")
 	longPathType.Dict["walk"] = py.MustNewMethod("walk", longPathWalk, py.METH_CLASS, "")
+	longPathType.Dict["coords"] = py.MustNewMethod("coords", longPathCoords, py.METH_CLASS, "")
+	longPathType.Dict["next_coords"] = py.MustNewMethod("next_coords", longPathNextCoords, py.METH_CLASS, "")
+	longPathType.Dict["index"] = py.MustNewMethod("index", longPathIndex, py.METH_CLASS, "")
 }
 
 func (c *client) loadScript() error {
@@ -350,6 +363,13 @@ func longPathReverse(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Ob
 		start++
 		end--
 	}
+	start = 0
+	end = n.coords.Len() - 1
+	for start < end {
+		n.coords.Items[start], n.coords.Items[end] = n.coords.Items[end], n.coords.Items[start]
+		start++
+		end--
+	}
 	return py.None, nil
 }
 
@@ -408,6 +428,23 @@ func longPathWalk(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Objec
 	}
 	pt := n.points[n.currentPt]
 	return py.Bool(n.script.c.walkTo(int(pt.x), int(pt.y), int(pt.x), int(pt.y), false, false)), nil
+}
+
+func longPathCoords(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	n := self.(*longPath)
+	return n.coords, nil
+}
+
+func longPathNextCoords(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	n := self.(*longPath)
+	idxMin := n.currentPt * n.stepSize
+	idxMax := min(n.currentPt*n.stepSize+n.stepSize, n.length)
+	return &py.List{Items: n.coords.Items[idxMin:idxMax]}, nil
+}
+
+func longPathIndex(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
+	n := self.(*longPath)
+	return py.Int(n.currentPt), nil
 }
 
 func (s *script) addHooks(module *py.Module) {
@@ -994,13 +1031,18 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		if maxDepth0, ok := kwargs["max_depth"]; ok {
 			maxDepth = int16(maxDepth0.(py.Int))
 		}
-		path := c.generateLongPath(startX, startZ, x, z, depth, skipLocal, maxDepth)
+		path, coords := c.generateLongPath(startX, startZ, x, z, depth, skipLocal, maxDepth)
 		if path == nil {
 			if s.c.account.debug {
 				fmt.Printf("[%s] Path not found from (%d, %d) to (%d, %d)\n", c.user, startX, startZ, x, z)
 			}
 			return py.None, nil
 		}
+		pyCoords := make([]py.Object, len(coords))
+		for i, coord := range coords {
+			pyCoords[i] = py.Tuple{py.Int(coord.x), py.Int(coord.y)}
+		}
+		path.coords = py.NewListFromItems(pyCoords)
 		return path, nil
 	}), py.METH_STATIC, "")
 	module.Globals["calculate_path_to"] = py.MustNewMethod("calculate_path_to", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
@@ -1022,13 +1064,18 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		if maxDepth0, ok := kwargs["max_depth"]; ok {
 			maxDepth = int16(maxDepth0.(py.Int))
 		}
-		path := c.generateLongPath(int16(c.x), int16(c.z), x, z, depth, skipLocal, maxDepth)
+		path, coords := c.generateLongPath(int16(c.x), int16(c.z), x, z, depth, skipLocal, maxDepth)
 		if path == nil {
 			if s.c.account.debug {
 				fmt.Printf("[%s] Path not found to (%d, %d)\n", c.user, x, z)
 			}
 			return py.None, nil
 		}
+		pyCoords := make([]py.Object, len(coords))
+		for i, coord := range coords {
+			pyCoords[i] = py.Tuple{py.Int(coord.x), py.Int(coord.y)}
+		}
+		path.coords = py.NewListFromItems(pyCoords)
 		return path, nil
 	}), py.METH_STATIC, "")
 	module.Globals["calculate_path_through"] = py.MustNewMethod("calculate_path_through", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
@@ -1073,13 +1120,18 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 		if maxDepth0, ok := kwargs["max_depth"]; ok {
 			maxDepth = int16(maxDepth0.(py.Int))
 		}
-		path, startError, endError := c.generateLongPathThrough(startX, startZ, coords, depth, skipLocal, maxDepth)
+		path, coords, startError, endError := c.generateLongPathThrough(startX, startZ, coords, depth, skipLocal, maxDepth)
 		if path == nil {
 			if s.c.account.debug {
 				fmt.Printf("[%s] Path not found from coords (%d, %d) to (%d, %d)\n", c.user, startError.x, startError.y, endError.x, endError.y)
 			}
 			return py.None, nil
 		}
+		pyCoords := make([]py.Object, len(coords))
+		for i, coord := range coords {
+			pyCoords[i] = py.Tuple{py.Int(coord.x), py.Int(coord.y)}
+		}
+		path.coords = py.NewListFromItems(pyCoords)
 		return path, nil
 	}), py.METH_STATIC, "")
 	module.Globals["walk_path_to"] = py.MustNewMethod("walk_path_to", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
