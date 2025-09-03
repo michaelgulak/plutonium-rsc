@@ -437,6 +437,9 @@ func longPathCoords(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Obj
 
 func longPathNextCoords(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 	n := self.(*longPath)
+	if n.currentPt >= len(n.points) {
+		return py.None, nil
+	}
 	idxMin := n.currentPt * n.stepSize
 	idxMax := min(n.currentPt*n.stepSize+n.stepSize, n.length)
 	return &py.List{Items: n.coords.Items[idxMin:idxMax]}, nil
