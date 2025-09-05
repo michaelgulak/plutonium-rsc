@@ -166,7 +166,7 @@ func (p *astarPathFinder) generateTraversalInfo(c *client, center *point, depth 
 			}
 			var tile int32
 			if skipLocal {
-				tile = c.world.getTile(cdx, cdy)
+				tile = int32(c.world.getTile(cdx, cdy))
 			} else {
 				tile = c.combinedTile(cdx, cdy)
 			}

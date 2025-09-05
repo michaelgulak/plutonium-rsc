@@ -65,8 +65,8 @@ type sector struct {
 }
 
 type region struct {
-	tiles   [][]int32
-	tile    int32
+	tiles   [][]byte
+	tile    byte
 	regionX int16
 	regionY int16
 }
@@ -118,12 +118,12 @@ func (w *world) getRegion(x, y int) *region {
 	return w.regions[regionX][regionY]
 }
 
-func (w *world) getTile(x, y int) int32 {
+func (w *world) getTile(x, y int) byte {
 	if !withinWorld(x, y) {
-		return math.MaxInt32
+		return math.MaxInt8
 	}
 	r := w.getRegion(x, y)
-	if r.tile != math.MaxInt32 {
+	if r.tile != math.MaxInt8 {
 		return r.tile
 	}
 	return r.tiles[x%48][y%48]
@@ -133,11 +133,11 @@ func newRegion(regionX, regionY int16) *region {
 	r := &region{
 		regionX: regionX,
 		regionY: regionY,
-		tile:    math.MaxInt32,
-		tiles:   make([][]int32, 48),
+		tile:    math.MaxInt8,
+		tiles:   make([][]byte, 48),
 	}
 	for i := 0; i < 48; i++ {
-		r.tiles[i] = make([]int32, 48)
+		r.tiles[i] = make([]byte, 48)
 	}
 	return r
 }
@@ -364,22 +364,22 @@ func (c *client) registerGameObject(o *object) {
 				c.localWorld.setTileOr(x, y, fullBlockC)
 			} else if dir == 0 {
 				c.localWorld.setTileOr(x, y, wallEast)
-				if c.world.getTile(x-1, y) != math.MaxInt32 {
+				if c.world.getTile(x-1, y) != math.MaxInt8 {
 					c.localWorld.setTileOr(x-1, y, wallWest)
 				}
 			} else if dir == 2 {
 				c.localWorld.setTileOr(x, y, wallSouth)
-				if c.world.getTile(x, y+1) != math.MaxInt32 {
+				if c.world.getTile(x, y+1) != math.MaxInt8 {
 					c.localWorld.setTileOr(x, y+1, wallNorth)
 				}
 			} else if dir == 4 {
 				c.localWorld.setTileOr(x, y, wallWest)
-				if c.world.getTile(x+1, y) != math.MaxInt32 {
+				if c.world.getTile(x+1, y) != math.MaxInt8 {
 					c.localWorld.setTileOr(x+1, y, wallEast)
 				}
 			} else if dir == 6 {
 				c.localWorld.setTileOr(x, y, wallNorth)
-				if c.world.getTile(x, y-1) != math.MaxInt32 {
+				if c.world.getTile(x, y-1) != math.MaxInt8 {
 					c.localWorld.setTileOr(x, y-1, wallSouth)
 				}
 			}
@@ -396,12 +396,12 @@ func (c *client) registerWallObject(o *wallObject) {
 	x, y := o.x, o.z
 	if dir == 0 {
 		c.localWorld.setTileOr(x, y, wallNorth)
-		if c.world.getTile(x, y-1) != math.MaxInt32 {
+		if c.world.getTile(x, y-1) != math.MaxInt8 {
 			c.localWorld.setTileOr(x, y-1, wallSouth)
 		}
 	} else if dir == 1 {
 		c.localWorld.setTileOr(x, y, wallEast)
-		if c.world.getTile(x-1, y) != math.MaxInt32 {
+		if c.world.getTile(x-1, y) != math.MaxInt8 {
 			c.localWorld.setTileOr(x-1, y, wallWest)
 		}
 	} else if dir == 2 {
@@ -469,12 +469,12 @@ func (c *client) unregisterWallObject(o *wallObject) {
 
 func (c *client) combinedTile(x, z int) int32 {
 	tile1 := c.world.getTile(x, z)
-	if tile1 == math.MaxInt32 {
+	if tile1 == math.MaxInt8 {
 		return math.MaxInt32
 	}
 	tile2 := c.localWorld.getTile(x, z)
 
-	return tile1 | tile2
+	return int32(tile1) | tile2
 }
 
 func newLocalWorld() *localWorld {

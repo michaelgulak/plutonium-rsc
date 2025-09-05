@@ -2475,7 +2475,7 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 			}
 		}
 		if skipLocal, ok := kwargs["skip_local"].(py.Bool); ok && bool(skipLocal) {
-			mapFlags = c.world.getTile(x, z)
+			mapFlags = int32(c.world.getTile(x, z))
 		} else {
 			mapFlags = c.combinedTile(x, z)
 		}
