@@ -32,7 +32,7 @@ const (
 	connectTimeout   = 30
 	maxPacketSize    = 30000
 	botMessagesSize  = 100
-	botVersion       = "1.12.2"
+	botVersion       = "1.12.3"
 )
 
 var (
@@ -1172,7 +1172,12 @@ func encryptRSA(bs []byte) []byte {
 	result := new(big.Int)
 	result.Exp(base, rsaExp, rsaMod)
 
-	return result.Bytes()
+	bs = result.Bytes()
+	// java expects a 0 prepended if the leading bit is 1
+	if bs[0]&0x80 != 0 {
+		bs = append([]byte{0}, bs...)
+	}
+	return bs
 }
 
 func (c *client) login() (bool, time.Duration, error) {
