@@ -1,0 +1,97 @@
+stages:
+  - build
+  - release
+
+default:
+  image: golang:1.21-alpine
+
+############################
+# Build jobs
+############################
+build:linux-amd64:
+  stage: build
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: manual
+  variables:
+    CGO_ENABLED: "0"
+    GOFLAGS: "-trimpath"
+  before_script:
+    - apk add --no-cache zip
+    - go version
+    - mkdir -p dist plutonium
+  script:
+    - GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o plutonium/plutonium
+    - cp -r accounts data ids logs scripts LICENSE README.md settings.toml plutonium/
+    - zip -r dist/plutonium-$CI_COMMIT_TAG-linux-amd64.zip plutonium
+  artifacts:
+    paths:
+      - dist/plutonium-$CI_COMMIT_TAG-linux-amd64.zip
+
+build:windows-amd64:
+  stage: build
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: manual
+  variables:
+    CGO_ENABLED: "0"
+    GOFLAGS: "-trimpath"
+  before_script:
+    - apk add --no-cache zip
+    - go version
+    - mkdir -p dist plutonium  
+  script:
+    - GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o plutonium/plutonium.exe
+    - cp -r accounts data ids logs scripts LICENSE README.md settings.toml plutonium/
+    - zip -r dist/plutonium-$CI_COMMIT_TAG-windows-amd64.zip plutonium
+  artifacts:
+    paths:
+      - dist/plutonium-$CI_COMMIT_TAG-windows-amd64.zip
+
+build:linux-arm64:
+  stage: build
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: manual
+  variables:
+    CGO_ENABLED: "0"
+    GOFLAGS: "-trimpath"
+  before_script:
+    - apk add --no-cache zip
+    - go version
+    - mkdir -p dist plutonium
+  script:
+    - GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o plutonium/plutonium
+    - cp -r accounts data ids logs scripts LICENSE README.md settings.toml plutonium/
+    - zip -r dist/plutonium-$CI_COMMIT_TAG-linux-arm64.zip plutonium
+  artifacts:
+    paths:
+      - dist/plutonium-$CI_COMMIT_TAG-linux-arm64.zip
+
+############################
+# Release job
+############################
+release:
+  stage: release
+  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  rules:
+    - if: $CI_COMMIT_TAG
+      when: always
+  dependencies:
+    - build:linux-arm64
+    - build:linux-amd64
+    - build:windows-amd64
+  script:
+    - echo "Creating GitLab Release for tag $CI_COMMIT_TAG"
+  release:
+    name: "Plutonium $CI_COMMIT_TAG Release"
+    tag_name: $CI_COMMIT_TAG
+    description: "Latest plutonium release with pre-built binaries"
+    assets:
+      links:
+        - name: "Linux (x86-64)"
+          url: "$CI_PROJECT_URL/-/jobs/artifacts/$CI_COMMIT_TAG/raw/dist/plutonium-$CI_COMMIT_TAG-linux-amd64.zip?job=build:linux-amd64"
+        - name: "Windows (x86-64)"
+          url: "$CI_PROJECT_URL/-/jobs/artifacts/$CI_COMMIT_TAG/raw/dist/plutonium-$CI_COMMIT_TAG-windows-amd64.zip?job=build:windows-amd64"
+        - name: "Linux (ARM 64 bit, Raspberry Pi)"
+          url: "$CI_PROJECT_URL/-/jobs/artifacts/$CI_COMMIT_TAG/raw/dist/plutonium-$CI_COMMIT_TAG-linux-arm64.zip?job=build:linux-arm64"

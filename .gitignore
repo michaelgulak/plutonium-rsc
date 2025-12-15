@@ -1,6 +1,6 @@
-/bot
-/bot.exe
-/bot.exe~
+/plutonium
+/plutonium.exe
+/plutonium.exe~
 /accounts/*.toml
 /logs/*.log
 /logs/progress_reports/*.log
