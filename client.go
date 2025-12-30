@@ -32,7 +32,7 @@ const (
 	connectTimeout   = 30
 	maxPacketSize    = 30000
 	botMessagesSize  = 100
-	botVersion       = "1.12.3"
+	botVersion       = "1.12.4"
 )
 
 var (

@@ -1003,15 +1003,21 @@ func (s *script) addGlobals(module *py.Module, c *client) {
 	module.Globals["create_path"] = py.MustNewMethod("create_path", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
 		coords := args[0].(*py.List)
 		points := make([]*point, coords.Len()/2)
+		pyCoords := make([]py.Object, len(points))
+
 		for i := 0; i < len(points); i++ {
+			x, z := coords.Items[i*2].(py.Int), coords.Items[i*2+1].(py.Int)
 			points[i] = &point{
-				x: int16(coords.Items[i*2].(py.Int)),
-				y: int16(coords.Items[i*2+1].(py.Int)),
+				x: int16(x),
+				y: int16(z),
 			}
+			pyCoords[i] = py.Tuple{x, z}
 		}
+
 		return &longPath{
 			points: points,
 			script: s,
+			coords: py.NewListFromItems(pyCoords),
 		}, nil
 	}), py.METH_STATIC, "")
 	module.Globals["calculate_path"] = py.MustNewMethod("calculate_path", makeSafeFunc(func(self py.Object, args py.Tuple, kwargs py.StringDict) (py.Object, error) {
