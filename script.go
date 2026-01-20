@@ -198,6 +198,11 @@ func (c *client) loadScript() error {
 
 		opts.SysPaths = append(opts.SysPaths, s.pathDir)
 
+		scriptsPath := filepath.Join(settings.executablePath, settings.ScriptSettings.Directory)
+		if s.pathDir != scriptsPath {
+			opts.SysPaths = append(opts.SysPaths, scriptsPath)
+		}
+
 		ctx := py.NewContext(opts)
 
 		modImpl := &py.ModuleImpl{
