@@ -32,7 +32,7 @@ const (
 	connectTimeout   = 30
 	maxPacketSize    = 30000
 	botMessagesSize  = 100
-	botVersion       = "1.12.5"
+	botVersion       = "1.12.6"
 )
 
 var (
@@ -327,17 +327,20 @@ type bot struct {
 
 func main() {
 	var (
-		user        string
-		pass        string
-		scriptPath  string
-		regFile     string
-		configPath  string
-		acctFile    string
-		autologin   bool
-		downloadRSA bool
-		version     bool
-		help        bool
-		sigs        = make(chan os.Signal, 1)
+		user          string
+		pass          string
+		scriptPath    string
+		regFile       string
+		configPath    string
+		acctFile      string
+		compilePath   string
+		progReport    int64
+		progReportDur time.Duration
+		autologin     bool
+		downloadRSA   bool
+		version       bool
+		help          bool
+		sigs          = make(chan os.Signal, 1)
 	)
 
 	b := &bot{
@@ -350,10 +353,12 @@ func main() {
 
 	flag.StringVar(&user, "u", "", "OpenRSC username")
 	flag.StringVar(&pass, "p", "", "OpenRSC password")
+	flag.Int64Var(&progReport, "pr", int64(noProgressDurSet), "Progress report minutes")
 	flag.StringVar(&regFile, "r", "", "Register accounts path")
 	flag.StringVar(&scriptPath, "s", "", "Python script path")
 	flag.StringVar(&acctFile, "f", "", "Account file")
 	flag.StringVar(&configPath, "c", "", "Config file path")
+	flag.StringVar(&compilePath, "compile", "", "Compile script at path")
 	flag.BoolVar(&downloadRSA, "d", false, "Download RSA keys")
 	flag.BoolVar(&autologin, "l", false, "Autologin flag")
 	flag.BoolVar(&version, "v", false, "Version flag")
@@ -383,6 +388,20 @@ func main() {
 		return
 	}
 
+	if compilePath != "" {
+		compileScript(compilePath)
+		return
+	}
+
+	progReportDur = time.Duration(progReport)
+	if progReportDur != noProgressDurSet {
+		if progReportDur <= 0 {
+			fmt.Printf("Progress report field should be > 0")
+			os.Exit(1)
+		}
+		progReportDur *= time.Minute
+	}
+
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	go func() {
@@ -394,14 +413,14 @@ func main() {
 	b.checkOCR()
 	loadDefs()
 	b.world.loadWorld()
-	b.loadAccounts(user, pass, acctFile, scriptPath, autologin)
+	b.loadAccounts(user, pass, acctFile, scriptPath, autologin, progReportDur)
 	b.loginWaiter()
 	b.runAccounts()
 
 	fmt.Println("[BOT] All accounts are finished, exiting")
 }
 
-func (b *bot) loadAccounts(user, pass, acctFile, scriptPath string, autologin bool) {
+func (b *bot) loadAccounts(user, pass, acctFile, scriptPath string, autologin bool, progReportDur time.Duration) {
 	var err error
 	if user == "" && pass == "" {
 		if acctFile == "" {
@@ -420,14 +439,15 @@ func (b *bot) loadAccounts(user, pass, acctFile, scriptPath string, autologin bo
 		}
 	} else {
 		acct := &account{
-			username:       user,
-			password:       pass,
-			autologin:      autologin,
-			enabled:        true,
-			debug:          true,
-			progressDur:    noProgressDurSet,
-			botMessages:    make(chan *botMessage, botMessagesSize),
-			botMessageLock: &sync.Mutex{},
+			username:        user,
+			password:        pass,
+			autologin:       autologin,
+			enabled:         true,
+			debug:           true,
+			progressDur:     progReportDur,
+			needsFirstNotif: true,
+			botMessages:     make(chan *botMessage, botMessagesSize),
+			botMessageLock:  &sync.Mutex{},
 		}
 		if scriptPath != "" {
 			pathDir := filepath.Dir(scriptPath)
@@ -518,10 +538,8 @@ clientLoop:
 		}
 
 		if c.script != nil {
-			if err := c.loadScript(); err != nil {
-				fmt.Printf("[%s] Script load error [%s]: %s\n", c.user, c.script.path, err)
-				os.Exit(1)
-			}
+			err := c.loadScript()
+			c.script.dumpError(nil, err)
 
 			if c.account.needsFirstNotif {
 				c.account.writeFirstNotif(c.script.onProgressReport == nil)

@@ -241,6 +241,25 @@ func (c *client) loadScript() error {
 	return nil
 }
 
+func compileScript(path string) {
+	f, err := os.Open(path)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	defer f.Close()
+	raw, err := io.ReadAll(f)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+	_, err = py.Compile(string(raw)+"\n", path, py.ExecMode, 0, true)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
 func (s *script) loop() int {
 	res, err := s.loopFn.M__call__(nil, nil)
 	s.dumpError(res, err)
