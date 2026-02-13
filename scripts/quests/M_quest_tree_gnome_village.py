@@ -50,7 +50,7 @@ def loop():
         init = False
     
     if in_combat() and get_hp_percent() < 60:
-        walk_to(get_x(), get_y())
+        walk_to(get_x(), get_z())
         return 400
     
     if millz_common.use_food():
