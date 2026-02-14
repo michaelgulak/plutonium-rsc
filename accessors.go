@@ -12,7 +12,7 @@ const (
 )
 
 var (
-	bankersID = []int{95, 224, 268, 485, 540, 617}
+	bankersID = []int{95, 224, 268, 485, 540, 617, 792}
 )
 
 func (c *client) getInventoryCountByID(ids ...int) int {
